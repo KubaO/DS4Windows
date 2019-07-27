@@ -2652,20 +2652,8 @@ namespace DS4Windows
 
                 try { Item = m_Xdoc.SelectSingleNode("/" + rootname + "/idleDisconnectTimeout"); Int32.TryParse(Item.InnerText, out idleDisconnectTimeout[device]); }
                 catch { missingSetting = true; }
-                //New method for saving color
-                try
-                {
-                    Item = m_Xdoc.SelectSingleNode("/" + rootname + "/Color");
-                    string[] colors;
-                    if (!string.IsNullOrEmpty(Item.InnerText))
-                        colors = Item.InnerText.Split(',');
-                    else
-                        colors = new string[0];
 
-                    m_Leds[device].red = byte.Parse(colors[0]);
-                    m_Leds[device].green = byte.Parse(colors[1]);
-                    m_Leds[device].blue = byte.Parse(colors[2]);
-                }
+                try { Item = m_Xdoc.SelectSingleNode("/" + rootname + "/Color"); DS4Color.TryParse(Item.InnerText, ref m_Leds[device]); }
                 catch { missingSetting = true; }
 
                 if (m_Xdoc.SelectSingleNode("/" + rootname + "/Color") == null)
@@ -2695,20 +2683,7 @@ namespace DS4Windows
                 try { Item = m_Xdoc.SelectSingleNode("/" + rootname + "/touchSensitivity"); Byte.TryParse(Item.InnerText, out touchSensitivity[device]); }
                 catch { missingSetting = true; }
 
-                //New method for saving color
-                try
-                {
-                    Item = m_Xdoc.SelectSingleNode("/" + rootname + "/LowColor");
-                    string[] colors;
-                    if (!string.IsNullOrEmpty(Item.InnerText))
-                        colors = Item.InnerText.Split(',');
-                    else
-                        colors = new string[0];
-
-                    m_LowLeds[device].red = byte.Parse(colors[0]);
-                    m_LowLeds[device].green = byte.Parse(colors[1]);
-                    m_LowLeds[device].blue = byte.Parse(colors[2]);
-                }
+                try { Item = m_Xdoc.SelectSingleNode("/" + rootname + "/LowColor"); DS4Color.TryParse(Item.InnerText, ref m_LowLeds[device]); }
                 catch { missingSetting = true; }
 
                 if (m_Xdoc.SelectSingleNode("/" + rootname + "/LowColor") == null)
@@ -2722,20 +2697,7 @@ namespace DS4Windows
                     catch { missingSetting = true; }
                 }
 
-                //New method for saving color
-                try
-                {
-                    Item = m_Xdoc.SelectSingleNode("/" + rootname + "/ChargingColor");
-                    string[] colors;
-                    if (!string.IsNullOrEmpty(Item.InnerText))
-                        colors = Item.InnerText.Split(',');
-                    else
-                        colors = new string[0];
-
-                    m_ChargingLeds[device].red = byte.Parse(colors[0]);
-                    m_ChargingLeds[device].green = byte.Parse(colors[1]);
-                    m_ChargingLeds[device].blue = byte.Parse(colors[2]);
-                }
+                try { Item = m_Xdoc.SelectSingleNode("/" + rootname + "/ChargingColor"); DS4Color.TryParse(Item.InnerText, ref m_ChargingLeds[device]); }
                 catch { missingSetting = true; }
 
                 if (m_Xdoc.SelectSingleNode("/" + rootname + "/ChargingColor") == null)
@@ -2747,19 +2709,7 @@ namespace DS4Windows
                     try { Item = m_Xdoc.SelectSingleNode("/" + rootname + "/ChargingBlue"); Byte.TryParse(Item.InnerText, out m_ChargingLeds[device].blue); }
                     catch { missingSetting = true; }
                 }
-
-                try
-                {
-                    Item = m_Xdoc.SelectSingleNode("/" + rootname + "/FlashColor");
-                    string[] colors;
-                    if (!string.IsNullOrEmpty(Item.InnerText))
-                        colors = Item.InnerText.Split(',');
-                    else
-                        colors = new string[0];
-                    m_FlashLeds[device].red = byte.Parse(colors[0]);
-                    m_FlashLeds[device].green = byte.Parse(colors[1]);
-                    m_FlashLeds[device].blue = byte.Parse(colors[2]);
-                }
+                try { Item = m_Xdoc.SelectSingleNode("/" + rootname + "/FlashColor"); DS4Color.TryParse(Item.InnerText, ref m_FlashLeds[device]); }
                 catch { missingSetting = true; }
 
                 try { Item = m_Xdoc.SelectSingleNode("/" + rootname + "/touchpadJitterCompensation"); bool.TryParse(Item.InnerText, out touchpadJitterCompensation[device]); }

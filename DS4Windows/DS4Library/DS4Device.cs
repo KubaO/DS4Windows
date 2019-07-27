@@ -10,13 +10,23 @@ using System.Linq;
 using System.Drawing;
 using DS4Windows.DS4Library;
 
+using System.Xml;
+using System.Xml.Schema;
+using System.Xml.Serialization;
+
 namespace DS4Windows
 {
-    public struct DS4Color : IEquatable<DS4Color>
+    public struct DS4Color : IEquatable<DS4Color>, IXmlSerializable
     {
         public byte red;
         public byte green;
         public byte blue;
+
+        public static implicit operator DS4Color(System.Drawing.Color c)
+        {
+            return new DS4Color(c);
+        }
+        
         public DS4Color(Color c)
         {
             red = c.R;
@@ -75,6 +85,19 @@ namespace DS4Windows
             }
             catch { return false; }
         }
+
+        public void WriteXml(XmlWriter writer)
+        {
+            writer.WriteString($"{red},{green},{blue}");
+        }
+
+        public void ReadXml(XmlReader reader)
+        {
+            string raw = reader.ReadElementContentAsString();
+            TryParse(raw, ref this);
+        }
+
+        public XmlSchema GetSchema() => null;
 
         public override string ToString() => $"Red: {red} Green: {green} Blue: {blue}";
     }
