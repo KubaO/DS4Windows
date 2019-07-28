@@ -11,6 +11,7 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Globalization;
+using System.Xml.Serialization;
 
 namespace DS4Windows
 {
@@ -2621,6 +2622,17 @@ namespace DS4Windows
 
             bool xinputPlug = false;
             bool xinputStatus = false;
+
+            if (File.Exists(profilepath))
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(DS4ProfileLegacy));
+                DS4Profile profile;
+                using (FileStream fs = new FileStream(profilepath, FileMode.Open))
+                    profile = (DS4Profile)serializer.Deserialize(fs);
+                Console.WriteLine("START");
+                serializer.Serialize(Console.Out, profile);
+                Console.WriteLine("END");
+            }
 
             if (File.Exists(profilepath))
             {
