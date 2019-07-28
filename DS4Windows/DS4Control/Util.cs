@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
@@ -140,6 +141,16 @@ namespace DS4Windows
                 Console.WriteLine("{0} {1}", ex.HelpLink, ex.Message);
                 throw;
             }
+        }
+
+        private static T? TryParse<T>(string s) where T : struct
+        {
+            var converter = TypeDescriptor.GetConverter(typeof(T));
+            if (converter != null && converter.CanConvertFrom(typeof(string)))
+            {
+                return (T)converter.ConvertFromString(s);
+            }
+            return default(T);
         }
     }
 }
