@@ -7,7 +7,7 @@ using System.Text;
 namespace DS4Windows
 {
     [SuppressUnmanagedCodeSecurity]
-    class Util
+    static class Util
     {
         public enum PROCESS_INFORMATION_CLASS : int
         {
@@ -88,10 +88,10 @@ namespace DS4Windows
            PROCESS_INFORMATION_CLASS processInformationClass, ref IntPtr processInformation, uint processInformationLength);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        protected static extern IntPtr RegisterDeviceNotification(IntPtr hRecipient, IntPtr NotificationFilter, Int32 Flags);
+        private static extern IntPtr RegisterDeviceNotification(IntPtr hRecipient, IntPtr NotificationFilter, Int32 Flags);
 
         [DllImport("user32.dll", SetLastError = true)]
-        protected static extern Boolean UnregisterDeviceNotification(IntPtr Handle);
+        private static extern Boolean UnregisterDeviceNotification(IntPtr Handle);
 
         public static Boolean RegisterNotify(IntPtr Form, Guid Class, ref IntPtr Handle, Boolean Window = true)
         {
