@@ -2625,7 +2625,7 @@ namespace DS4Windows
 
             if (File.Exists(profilepath))
             {
-                XmlSerializer serializer = new XmlSerializer(typeof(DS4ProfileLegacy));
+                XmlSerializer serializer = new XmlSerializer(typeof(DS4ProfileXML));
                 DS4Profile profile;
                 using (FileStream fs = new FileStream(profilepath, FileMode.Open))
                     profile = (DS4Profile)serializer.Deserialize(fs);

@@ -147,6 +147,10 @@ namespace DS4Windows
 
         public static T? TryParse<T>(string s) where T : struct
         {
+            // This function is like TryParse on basic types, except that
+            // it returns a nullable type. It's useful in LINQ queries.
+            // TODO: A variant returning a collection for use with MultiSelect
+            // would be useful as well.
             var converter = TypeDescriptor.GetConverter(typeof(T));
             if (converter != null && converter.CanConvertFrom(typeof(string)))
             {

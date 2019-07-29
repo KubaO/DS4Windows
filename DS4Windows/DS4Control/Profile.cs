@@ -102,8 +102,16 @@ namespace DS4Windows
         public X<int> sASteeringWheelEmulationRange = 360;
 
         [XmlIgnore] public int[] touchDisInvertTriggers = {-1};
-        [XmlElement("GyroSensitivity")] public X<int> GyroSensitivity = 100;
-        [XmlElement("GyroInvert")] public X<int> GyroInvert = 0;
+        [XmlElement("GyroSensitivity")] public X<int> gyroSensitivity = 100;
+        [XmlElement("GyroSensVerticalScale")] public X<int> gyroSensVerticalScale = 100;
+        [XmlElement("GyroInvert")] public X<int> gyroInvert = 0;
+        [XmlElement("GyroTriggerTurns")] public X<bool> gyroTriggerTurns = true;
+        [XmlElement("GyroSmoothing")] public X<bool> gyroSmoothing = false;
+        [XmlIgnore] public double gyroSmoothWeight = 0.5;
+        [XmlIgnore] public int gyroMouseHorizontalAxis = 0;
+        [XmlElement("GyroMouseDeadZone")] public X<int> gyroMouseDZ;
+        [XmlElement("GyroMouseToggle")] public X<bool> gyroMouseToggle;
+        [XmlIgnore] public int btPollRate = 4;
         [XmlElement("LSCurve")] public X<int> LSCurve = 0;
         [XmlElement("RSCurve")] public X<int> RSCurve = 0;
         [XmlIgnore] public List<string> ProfileActions;
@@ -386,10 +394,35 @@ namespace DS4Windows
         public string _TouchDisInvTriggers
         {
             get => String.Join(",", touchDisInvertTriggers.Select(s => s.ToString()));
-            set => touchDisInvertTriggers = value.Split(',')
-                .Select(s => Util.TryParse<int>(s)).Where(i => i.HasValue).Select(i => i.Value).ToArray();
+            set
+            {
+                var maybe = value.Split(',')
+                    .Select(s => Util.TryParse<int>(s)).Where(i => i.HasValue).Select(i => i.Value).ToArray();
+                if (maybe.Length > 0) touchDisInvertTriggers = maybe;
+            }
         }
 
+        [XmlElement("GyroSmoothingWeight")]
+        public X<int> _GyroSmoothingWeight
+        {
+            get => (int)Math.Round(gyroSmoothWeight / 0.01);
+            set => gyroSmoothWeight = Util.Clamp(value * 0.01, 0.0, 1.0);
+        }
+
+        [XmlElement("GyroMouseHAxis")]
+        public X<int> _GyroMouseHAxis
+        {
+            get => gyroMouseHorizontalAxis;
+            set => gyroMouseHorizontalAxis = Util.Clamp<int>(value, 0, 1);
+        }
+
+        [XmlElement("BTPollRate")]
+        public X<int> _BTPollRate
+        {
+            get => btPollRate;
+            set => btPollRate = Util.Clamp<int>(value, 0, 16);
+        }
+            
         // The section below maps the old profile schema on reading to the
         // current schema. All properties should be write-only, i.e. have a dummy getter,
         // and have ShouldSerialize{PropertyName} return false.
