@@ -1,8 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using DS4Windows.Forms;
 
 namespace DS4Windows
 {
@@ -143,7 +145,7 @@ namespace DS4Windows
             }
         }
 
-        private static T? TryParse<T>(string s) where T : struct
+        public static T? TryParse<T>(string s) where T : struct
         {
             var converter = TypeDescriptor.GetConverter(typeof(T));
             if (converter != null && converter.CanConvertFrom(typeof(string)))
@@ -151,6 +153,62 @@ namespace DS4Windows
                 return (T)converter.ConvertFromString(s);
             }
             return default(T);
+        }
+
+        public static T Clamp<T>(this T val, T min, T max) where T : IComparable<T>
+        {
+            if (val.CompareTo(min) < 0) return min;
+            else if (val.CompareTo(max) > 0) return max;
+            else return val;
+        }
+
+        public struct Clamped<T> : IComparable, IComparable<T>, IEquatable<T>
+            where T : struct, IComparable<T>, IEquatable<T>
+        {
+            private T _value;
+            private readonly  T _min, _max;
+
+            Clamped(T o, T min, T max)
+            {
+                if (min.CompareTo(max) > 0)
+                    throw new ArgumentException($"{min} must be less or equal to {max}", "min");
+                _value = Util.Clamp(o, min, max);
+                _min = min;
+                _max = max;
+            }
+
+            void set(T o)
+            {
+                _value = Util.Clamp(o, _min, _max);
+            }
+
+            T get() => _value;
+            public static implicit operator T(Clamped<T> o) => o._value;
+
+            public int CompareTo(T o) => _value.CompareTo(o);
+
+            public int CompareTo(object o)
+            {
+                if (o != null && !(o is T)) throw
+                    new ArgumentException(
+                        String.Format("Object must be of type {0}", typeof(T).ToString()),
+                        "o");
+                return _value.CompareTo((T)o);
+            }
+
+            public static bool operator >(Clamped<T> l, Clamped<T> r) => l.CompareTo(r) == 1;
+            public static bool operator <(Clamped<T> l, Clamped<T> r) => l.CompareTo(r) == -1;
+            public static bool operator >=(Clamped<T> l, Clamped<T> r) => l.CompareTo(r) >= 0;
+            public static bool operator <=(Clamped<T> l, Clamped<T> r) => l.CompareTo(r) <= 0;
+
+            public bool Equals(T o) => _value.Equals(o);
+
+            public override bool Equals(object o) => (o is T other) ? Equals(other) : false;
+
+            public override int GetHashCode() => _value.GetHashCode();
+
+            private T MinValue { get => _min; }
+            private T MaxValue { get => _max; }
         }
     }
 }

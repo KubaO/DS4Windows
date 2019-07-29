@@ -1963,7 +1963,7 @@ namespace DS4Windows
             return stickOutputCurveId(name);
         }
 
-        private bool SaTriggerCondValue(string text)
+        private static bool SaTriggerCondValue(string text)
         {
             bool result = true;
             switch (text)
@@ -1976,12 +1976,12 @@ namespace DS4Windows
             return result;
         }
 
-        private string SaTriggerCondString(bool value)
+        private static string SaTriggerCondString(bool value)
         {
             string result = value ? "and" : "or";
             return result;
         }
-
+        
         public void SetSaTriggerCond(int index, string text)
         {
             sATriggerCond[index] = SaTriggerCondValue(text);
@@ -2752,14 +2752,14 @@ namespace DS4Windows
                 try {
                     Item = m_Xdoc.SelectSingleNode("/" + rootname + "/L2MaxZone"); int temp = 100;
                     int.TryParse(Item.InnerText, out temp);
-                    l2ModInfo[device].maxZone = Math.Min(Math.Max(temp, 0), 100);
+                    l2ModInfo[device].maxZone = Util.Clamp(temp, 0, 100);
                 }
                 catch { l2ModInfo[device].maxZone = 100; missingSetting = true; }
 
                 try {
                     Item = m_Xdoc.SelectSingleNode("/" + rootname + "/R2MaxZone"); int temp = 100;
                     int.TryParse(Item.InnerText, out temp);
-                    r2ModInfo[device].maxZone = Math.Min(Math.Max(temp, 0), 100);
+                    r2ModInfo[device].maxZone = Util.Clamp(temp, 0, 100);
                 }
                 catch { r2ModInfo[device].maxZone = 100; missingSetting = true; }
 

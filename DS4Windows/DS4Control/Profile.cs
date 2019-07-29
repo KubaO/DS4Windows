@@ -20,9 +20,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
 using System.Text;
+using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
@@ -30,52 +34,78 @@ using System.Xml.Serialization;
 namespace DS4Windows
 {
     [XmlRoot("DS4Windows")]
-    [XmlInclude(typeof(DS4ProfileLegacy))]
+    [XmlInclude(typeof(DS4ProfileXML))]
     public class DS4Profile
     {
-        // Note: The field names here match those in the XML serialization.
-        // If you change names, add [XmlElement("oldName")] with the old name
-        // so that the XML file can be deserialized.
+        // This is the serializable profile that ends up in the XML file.
+        // All XML-specific adaptations are in the DS4ProfileXML adapter class.
+        // All fields marked as XmlIgnore have serialization adapters implemented in DS4ProfileXML.
+
         public X<bool> flushHIDQueue = true;
+        [XmlElement("touchToggle")] public X<bool> enableTouchToggle;
         public X<int> idleDisconnectTimeout = 0;
         public DS4Color Color = System.Drawing.Color.White;
-        public X<byte> RumbleBoost = 100;
-        public X<bool> ledAsBatteryIndicator = false;
+        [XmlElement("RumbleBoost")] public X<byte> rumble = 100;
+        [XmlElement("ledAsBatteryIndicator")] public X<bool> ledAsBattery = false;
         public X<byte> FlashType = 0;
-        public X<byte> flashBatteryAt = 0;
+        [XmlElement("flashBatteryAt")] public X<byte> flashAt = 0;
         public X<byte> touchSensitivity = 100;
-        public DS4Color LowColor = System.Drawing.Color.Black;
-        public DS4Color ChargingColor = System.Drawing.Color.Black;
-        public DS4Color FlashColor = System.Drawing.Color.Black;
+        [XmlElement("LowColor")] public DS4Color LowLed = System.Drawing.Color.Black;
+        [XmlElement("ChargingColor")] public DS4Color ChargingLed = System.Drawing.Color.Black;
+        [XmlElement("FlashColor")] public DS4Color FlashLed = System.Drawing.Color.Black;
         public X<bool> touchpadJitterCompensation = true;
 
         public X<bool> lowerRCOn = false;
         public X<byte> tapSensitivity = 0;
         public X<bool> doubleTap = false;
         public X<int> scrollSensitivity = 0;
-        [XmlElement("LeftTriggerMiddle")] public X<byte> l2DeadZone = 0;
-        [XmlElement("RightTriggerMiddle")] public X<byte> r2DeadZone = 0;
-        public X<int> ButtonMouseSensitivity = 25;
-        public X<double> Rainbow = 0;
-        public X<int> LSDeadZone = 0;
-        public X<int> RSDeadZone = 0;
-        public X<double> SXDeadZone = 0.25;
-        public X<double> SZDeadZone = 0.25;
-        public Sensitivity Sensitivity = new Sensitivity();
-        public X<int> ChargingType = 0;
-        public X<bool> MouseAcceleration = true;
+        [XmlElement("TouchpadInvert")] public X<int> touchpadInvert;
 
-        [XmlIgnore] public X<int> ShiftModifier; // Currently unused
-        public string LaunchProgram = String.Empty;
-        public X<bool> DinputOnly = false;
-        public X<bool> StartTouchpadOff = false;
-        public X<bool> UseTPforControls = false;
-        public X<bool> UseSAforMouse = false;
-        public string SATriggers = String.Empty;
-        public X<int> GyroSensitivity = 100;
-        public X<int> GyroInvert = 0;
-        public X<int> LSCurve = 0;
-        public X<int> RSCurve = 0;
+        [XmlIgnore] public TriggerDeadZoneZInfo l2ModInfo, r2ModInfo;
+        
+        [XmlIgnore] public double LSRotation; // in radians
+        [XmlIgnore] public double RSRotation; // in radians
+
+        [XmlElement("ButtonMouseSensitivity")] public X<int> buttonMouseSensitivity = 25;
+        [XmlElement("Rainbow")] public X<double> rainbow = 0;
+
+        [XmlIgnore] public StickDeadZoneInfo lsModInfo, rsModInfo;
+
+        public X<double> SXDeadZone = 0.02;
+        public X<double> SZDeadZone = 0.02;
+        [XmlIgnore] public double SXMaxZone = 1.0;
+        [XmlIgnore] public double SZMaxZone = 1.0;
+        [XmlIgnore] public double SXAntiDeadZone = 0.0;
+        [XmlIgnore] public double SZAntiDeadZone = 0.0;
+
+        [XmlIgnore] public double LSSens = 1.0;
+        [XmlIgnore] public double RSSens = 1.0;
+        [XmlIgnore] public double l2Sens = 1.0;
+        [XmlIgnore] public double r2Sens = 1.0;
+        [XmlIgnore] public double SXSens = 1.0;
+        [XmlIgnore] public double SZSens = 1.0;
+
+        [XmlElement("ChargingType")] public X<int> chargingType = 0;
+        [XmlElement("MouseAcceleration")] public X<bool> mouseAcceleration = true;
+
+        [XmlIgnore, XmlElement("ShiftModifier")] public X<int> shiftM; // Currently unused
+        [XmlElement("LaunchProgram")] public string launchProgram = String.Empty;
+        [XmlElement("DinputOnly")] public X<bool> dinputOnly = false;
+        [XmlElement("StartTouchpadOff")] public X<bool> startTouchpadOff = false;
+        [XmlElement("UseTPforControls")] public X<bool> useTPforControls = false;
+        [XmlElement("UseSAforMouse")] public X<bool> useSAforMouse = false;
+        [XmlElement("SATriggers")] public string sATriggers = String.Empty;
+        [XmlIgnore] public bool sATriggerCond;
+        [XmlIgnore] public SASteeringWheelEmulationAxisType sASteeringWheelEmulationAxis =
+            SASteeringWheelEmulationAxisType.None;
+        [XmlElement("SASteeringWheelEmulationRange")]
+        public X<int> sASteeringWheelEmulationRange = 360;
+
+        [XmlIgnore] public int[] touchDisInvertTriggers = {-1};
+        [XmlElement("GyroSensitivity")] public X<int> GyroSensitivity = 100;
+        [XmlElement("GyroInvert")] public X<int> GyroInvert = 0;
+        [XmlElement("LSCurve")] public X<int> LSCurve = 0;
+        [XmlElement("RSCurve")] public X<int> RSCurve = 0;
         [XmlIgnore] public List<string> ProfileActions;
 
         [XmlElement("ProfileActions")]
@@ -195,12 +225,11 @@ namespace DS4Windows
                 if ((_type & DS4KeyType.Macro) != 0) sb.Append(DS4KeyType.Macro.ToString());
                 if ((_type & DS4KeyType.HoldMacro) != 0) sb.Append(DS4KeyType.HoldMacro.ToString());
                 if ((_type & DS4KeyType.Unbound) != 0) sb.Append(DS4KeyType.Unbound.ToString());
-
             }
         }
     }
 
-    public class Sensitivity : IXmlSerializable
+    public class Sensitivity
     {
         public double LSSens = 1.0;
         public double RSSens = 1.0;
@@ -208,38 +237,165 @@ namespace DS4Windows
         public double r2Sens = 1.0;
         public double SXSens = 1.0;
         public double SZSens = 1.0;
-
-        public void ReadXml(XmlReader reader)
-        {
-            var raw = reader.ReadElementContentAsString();
-            string[] s = raw.Split('|');
-            if (s.Length == 1) s = raw.Split(',');
-            double[] d = s.Select(str => Math.Min(0.5f, double.Parse(str))).ToArray();
-            LSSens = d[0];
-            RSSens = d[1];
-            l2Sens = d[2];
-            r2Sens = d[3];
-            SXSens = d[4];
-            SZSens = d[5];
-        }
-
-        public void WriteXml(XmlWriter writer)
-        {
-            var raw = $"{LSSens}|{RSSens}|{l2Sens}|{r2Sens}|{SXSens}|{SZSens}";
-            writer.WriteString(raw);
-        }
-
-        public XmlSchema GetSchema() => null;
     }
 
     [Serializable, XmlRoot("DS4Windows")]
-    public sealed class DS4ProfileLegacy : DS4Profile
+    public sealed class DS4ProfileXML : DS4Profile
     {
-        // This is an adapter used to convert the profile to the current
-        // schema. All properties should be write-only, i.e. have a dummy getter,
+        // This class adapts the DS4Profile to storage in the XML file.
+        
+        // The section below maps the XML elements to sub-structure fields.
+
+        public X<byte> LeftTriggerMiddle
+        {
+            get => l2ModInfo.deadZone;
+            set => l2ModInfo.deadZone = value;
+        }
+        public X<byte> RightTriggerMiddle
+        {
+            get => r2ModInfo.deadZone;
+            set => r2ModInfo.deadZone = value;
+        }
+        public X<int> L2AntiDeadZone
+        {
+            get => l2ModInfo.antiDeadZone;
+            set => r2ModInfo.antiDeadZone = value;
+        }
+        public X<int> R2AntiDeadZone
+        {
+            get => r2ModInfo.antiDeadZone;
+            set => r2ModInfo.antiDeadZone = value;
+        }
+        public X<int> L2MaxZone
+        {
+            get => l2ModInfo.maxZone;
+            set => l2ModInfo.maxZone = Util.Clamp((int)value, 0, 100);
+        }
+        public X<int> R2MaxZone
+        {
+            get => r2ModInfo.maxZone;
+            set => r2ModInfo.maxZone = Util.Clamp((int)value, 0, 100);
+        }
+
+        [XmlElement("LSRotation")]
+        public X<int> _LSRotation  // stored in degrees
+        {
+            get => (int)Math.Round(LSRotation * 180.0 / Math.PI);
+            set => LSRotation = value * Math.PI / 180.0;
+        }
+        [XmlElement("RSRotation")]
+        public X<int> _RSRotation  // stored in degrees
+        {
+            get => (int)Math.Round(RSRotation * 180.0 / Math.PI);
+            set => RSRotation = value * Math.PI / 180.0;
+        }
+
+        public X<int> LSDeadZone
+        {
+            get => lsModInfo.deadZone;
+            set => lsModInfo.deadZone = value;
+        }
+        public X<int> RSDeadZone
+        {
+            get => rsModInfo.deadZone;
+            set => rsModInfo.deadZone = value;
+        }
+        public X<int> LSAntiDeadZone
+        {
+            get => lsModInfo.antiDeadZone;
+            set => lsModInfo.antiDeadZone = value;
+        }
+        public X<int> RSAntiDeadZone
+        {
+            get => rsModInfo.antiDeadZone;
+            set => rsModInfo.antiDeadZone = value;
+        }
+
+        public X<int> LSMaxZone
+        {
+            get => lsModInfo.maxZone;
+            set => lsModInfo.maxZone = Util.Clamp((int)value, 0, 100);
+        }
+        public X<int> RSMaxZone
+        {
+            get => rsModInfo.maxZone;
+            set => rsModInfo.maxZone = Util.Clamp((int)value, 0, 100);
+        }
+
+        [XmlElement("SXMaxZone")]
+        public X<int> _SXMaxZone
+        {
+            get => (int) (SXMaxZone * 0.01);
+            set => SXMaxZone = Util.Clamp(value * 0.01, 0.0, 1.0);
+        }
+        [XmlElement("SZMaxZone")]
+        public X<int> _SZMaxZone
+        {
+            get => (int)(SZMaxZone * 0.01);
+            set => SZMaxZone = Util.Clamp(value * 0.01, 0.0, 1.0);
+        }
+        [XmlElement("SXAntiDeadZone")]
+        public X<int> _SXAntiDeadZone
+        {
+            get => (int)(SXAntiDeadZone * 0.01);
+            set => SXAntiDeadZone = Util.Clamp(value * 0.01, 0.0, 1.0);
+        }
+        [XmlElement("SZAntiDeadZone")]
+        public X<int> _SZAntiDeadZone
+        {
+            get => (int)(SZAntiDeadZone * 0.01);
+            set => SZAntiDeadZone = Util.Clamp(value * 0.01, 0.0, 1.0);
+        }
+
+        [XmlElement("Sensitivity")]
+        public string _Sensitivity
+        {
+            get => $"{LSSens}|{RSSens}|{l2Sens}|{r2Sens}|{SXSens}|{SZSens}";
+            set
+            {
+                try
+                {
+                    string[] s = value.Split('|');
+                    if (s.Length == 1) s = value.Split(',');
+                    double[] d = s.Select(str =>  double.Parse(str)).ToArray();
+                    LSSens = d[0] < .5f ? d[0] : 1.0;
+                    RSSens = d[1] < .5f ? d[1] : 1.0;
+                    l2Sens = d[2] < .1f ? d[2] : 1.0;
+                    r2Sens = d[3] < .1f ? d[3] : 1.0;
+                    SXSens = d[4] < .5f ? d[4] : 1.0;
+                    SZSens = d[5] < .5f ? d[5] : 1.0;
+                } catch { }
+            }
+        }
+
+        [XmlElement("SATriggerCond")]
+        public string _SATriggerCond
+        {
+            get => sATriggerCond ? "and" : "or";
+            set => sATriggerCond = value == "and" || value != "or";
+        }
+
+        [XmlElement("SASteeringWheelEmulationAxis")]
+        public string _SASteeringWheelEmulationAxis
+        {
+            get => sASteeringWheelEmulationAxis.ToString();
+            set { SASteeringWheelEmulationAxisType.TryParse(value, out sASteeringWheelEmulationAxis); }
+        }
+
+        [XmlElement("TouchDisInvTriggers")]
+        public string _TouchDisInvTriggers
+        {
+            get => String.Join(",", touchDisInvertTriggers.Select(s => s.ToString()));
+            set => touchDisInvertTriggers = value.Split(',')
+                .Select(s => Util.TryParse<int>(s)).Where(i => i.HasValue).Select(i => i.Value).ToArray();
+        }
+
+        // The section below maps the old profile schema on reading to the
+        // current schema. All properties should be write-only, i.e. have a dummy getter,
         // and have ShouldSerialize{PropertyName} return false.
         // **The dummy getters are essential. XmlSerializer will ignore set-only
         // properties!**
+
         public bool ShouldSerializeRed() => false;
         public byte Red
         {
@@ -261,33 +417,33 @@ namespace DS4Windows
         public bool ShouldSerializeLowRed() => false;
         public byte LowRed
         {
-            set { LowColor.red = value; }
+            set { LowLed.red = value; }
             get { return 0; }
         }
         public bool ShouldSerializeLowGreen() => false;
         public byte LowGreen
         {
-            set { LowColor.green = value; }
+            set { LowLed.green = value; }
         }
         public bool ShouldSerializeLowBlue() => false;
         public byte LowBlue
         {
-            set { LowColor.blue = value; }
+            set { LowLed.blue = value; }
         }
         public bool ShouldSerializeChargingRed() => false;
         public byte ChargingRed
         {
-            set { ChargingColor.red = value; }
+            set { ChargingLed.red = value; }
         }
         public bool ShouldSerializeChargingGreen() => false;
         public byte ChargingGreen
         {
-            set { ChargingColor.green = value; }
+            set { ChargingLed.green = value; }
         }
         public bool ShouldSerializeChargingBlue() => false;
         public byte ChargingBlue
         {
-            set { ChargingColor.blue = value; }
+            set { ChargingLed.blue = value; }
         }
     }
 
@@ -303,55 +459,53 @@ namespace DS4Windows
 
         public void WriteXml(XmlWriter writer)
         {
-            object value = _value;
-            if (value is bool)
-            {
-                writer.WriteString(value.ToString());
-                if (false) writer.WriteString(XmlConvert.ToString((bool)value));
-                // This would be preferable for XML compliance
-            }
-            else if (value is byte)
-                writer.WriteString(XmlConvert.ToString((byte)value));
-            else if (value is ushort)
-                writer.WriteString(XmlConvert.ToString((ushort)value));
-            else if (value is int)
-                writer.WriteString(XmlConvert.ToString((int)value));
-            else if (value is double)
-                writer.WriteString(XmlConvert.ToString((double)value));
-            else
-                throw new NotImplementedException(
-                    string.Format("X<T>: T is of an unsupported type {0}", typeof(T).ToString()));
-          }
+            writer.WriteString(_value.ToString());
+        }
 
         public void ReadXml(XmlReader reader)
         {
             var raw = reader.ReadElementContentAsString();
-            object result = null;
-            try
-            {
-                if (typeof(T) == typeof(bool))
-                {
-                    bool b;
-                    bool ok = Boolean.TryParse(raw, out b);
-                    if (!ok) b = XmlConvert.ToBoolean(raw);
-                    result = b;
-                }
-                else if (typeof(T) == typeof(byte))
-                    result = XmlConvert.ToByte(raw);
-                else if (typeof(T) == typeof(ushort))
-                    result = XmlConvert.ToUInt16(raw);
-                else if (typeof(T) == typeof(int))
-                    result = XmlConvert.ToInt32(raw);
-                else if (typeof(T) == typeof(double))
-                    result = XmlConvert.ToDouble(raw);
-                else
-                    result = new NotImplementedException(
-                        string.Format("X<T>: T is of an unsupported type {0}", typeof(T).ToString()));
-            } catch { }
-            if (result is Exception) throw (Exception)result;
-            else if (result != null) _value = (T) result;
+            var conv = TypeDescriptor.GetConverter(_value);
+            if (conv != null && conv.CanConvertFrom(typeof(string)))
+                _value = (T) conv.ConvertFromInvariantString(raw);
         }
+
         public XmlSchema GetSchema() => null;
+    }
+
+    public struct XRef<T, U> where T : struct
+    {
+        // Based on https://stackoverflow.com/a/2982037/1329652
+        // This has dubious usability.
+        private U _via;
+        private readonly Func<U, T> getter;
+        private readonly Action<U, T> setter;
+        public static implicit operator T(XRef<T, U> o) => o.Value;
+        public XRef(U via, Func<U, T> getter, Action<U, T> setter)
+        {
+            this._via = via;
+            this.getter = getter;
+            this.setter = setter;
+        }
+        
+        public T Value
+        {
+            get => getter(_via);
+            set => setter(_via, value);
+        }
+
+        public void WriteXml(XmlWriter writer)
+        {
+            writer.WriteString(Value.ToString());
+        }
+
+        public void ReadXml(XmlReader reader)
+        {
+            var raw = reader.ReadElementContentAsString();
+            var conv = TypeDescriptor.GetConverter(default(T));
+            if (conv.CanConvertFrom(typeof(string)))
+                Value = (T)conv.ConvertFromInvariantString(raw);
+        }
     }
 
     public class NamedElements<T> : IXmlSerializable, IEnumerable<T> where T : INamedElement, new()
