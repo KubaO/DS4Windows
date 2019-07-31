@@ -111,17 +111,30 @@ namespace DS4Windows
         [XmlIgnore] public int gyroMouseHorizontalAxis = 0;
         [XmlElement("GyroMouseDeadZone")] public X<int> gyroMouseDZ;
         [XmlElement("GyroMouseToggle")] public X<bool> gyroMouseToggle;
-        [XmlIgnore] public int btPollRate = 4;
         [XmlElement("LSCurve")] public X<int> LSCurve = 0;
         [XmlElement("RSCurve")] public X<int> RSCurve = 0;
-        [XmlIgnore] public List<string> ProfileActions;
+        [XmlIgnore] public int btPollRate = 4;
 
-        [XmlElement("ProfileActions")]
-        public string _ProfileActions
-        {
-            get { return (ProfileActions != null) ? String.Join("/", ProfileActions) : String.Empty; }
-            set { ProfileActions = value?.Split('/').ToList(); }
-        }
+        // Todo below
+        [XmlIgnore] public BezierCurve lsOutBezierCurveObj;
+        [XmlElement("LSOutputCurveMode")] public X<int> lsOutCurveMode = 0;
+        [XmlIgnore] public BezierCurve rsOutBezierCurveObj;
+        [XmlElement("RSOutputCurveMode")] public X<int> rsOutCurveMode = 0;
+        [XmlIgnore] public SquareStickInfo squStickInfo;
+
+        [XmlIgnore] public BezierCurve l2OutBezierCurveObj;
+        [XmlElement("L2OutputCurveMode")] public X<int> l2OutCurveMode = 0;
+        [XmlIgnore] public BezierCurve r2OutBezierCurveObj;
+        [XmlElement("R2OutputCurveMode")] public X<int> r2OutCurveMode = 0;
+        [XmlIgnore] public BezierCurve sxOutBezierCurveObj;
+        [XmlElement("SXOutputCurveMode")] public X<int> sxOutCurveMode = 0;
+        [XmlIgnore] public BezierCurve szOutBezierCurveObj;
+        [XmlElement("SZOutputCurveMode")] public X<int> szOutCurveMode = 0;
+        [XmlElement("TrackballMode")] public X<bool> TrackballMode = false;
+        [XmlElement("TrackballFriction")] public X<double> TrackballFriction = 10.0;
+        [XmlIgnore] public OutContType outputDevType = OutContType.X360;
+
+        [XmlIgnore] public List<string> profileActions;
 
         public ModNode Control;
         public ModNode ShiftControl;
@@ -422,7 +435,85 @@ namespace DS4Windows
             get => btPollRate;
             set => btPollRate = Util.Clamp<int>(value, 0, 16);
         }
-            
+
+        [XmlElement("LSOutputCurveCustom")]
+        public string _LSOutputCurveCustom
+        {
+            get => lsOutBezierCurveObj.CustomDefinition;
+            set => lsOutBezierCurveObj.CustomDefinition = value;
+        }
+
+        [XmlElement("RSOutputCurveCustom")]
+        public string _RSOutputCurveCustom
+        {
+            get => rsOutBezierCurveObj.CustomDefinition;
+            set => rsOutBezierCurveObj.CustomDefinition = value;
+        }
+
+        [XmlElement("LSSquareStick")]
+        public X<bool> _LSSquareStick
+        {
+            get => squStickInfo.lsMode;
+            set => squStickInfo.lsMode = value;
+        }
+
+        [XmlElement("SquareStickRoundness")]
+        public X<double> _SquareStickRoundness
+        {
+            get => squStickInfo.roundness;
+            set => squStickInfo.roundness = value;
+        }
+
+        [XmlElement("RSSquareStick")]
+        public X<bool> _RSSquareStick
+        {
+            get => squStickInfo.rsMode;
+            set => squStickInfo.rsMode = value;
+        }
+
+        [XmlElement("L2OutputCurveCustom")]
+        public string _L2OutputCurveCustom
+        {
+            get => l2OutBezierCurveObj.CustomDefinition;
+            set => l2OutBezierCurveObj.CustomDefinition = value;
+        }
+
+        [XmlElement("R2OutputCurveCustom")]
+        public string _R2OutputCurveCustom
+        {
+            get => r2OutBezierCurveObj.CustomDefinition;
+            set => r2OutBezierCurveObj.CustomDefinition = value;
+        }
+
+        [XmlElement("SXOutputCurveCustom")]
+        public string _SXOutputCurveCustom
+        {
+            get => sxOutBezierCurveObj.CustomDefinition;
+            set => sxOutBezierCurveObj.CustomDefinition = value;
+        }
+
+        [XmlElement("SZOutputCurveCustom")]
+        public string _SZOutputCurveCustom
+        {
+            get => szOutBezierCurveObj.CustomDefinition;
+            set => szOutBezierCurveObj.CustomDefinition = value;
+        }
+
+        [XmlElement("OutputContDevice")]
+        public string _OutputContDevice
+        {
+            get => outputDevType.ToString();
+            set => outputDevType = BackingStore.OutContDeviceId(value);
+        }
+
+        [XmlElement("ProfileActions")]
+        public string _ProfileActions
+        {
+            get => (profileActions != null) ? String.Join("/", profileActions) : String.Empty;
+            set => profileActions = value?.Split('/').ToList();
+        }
+
+
         // The section below maps the old profile schema on reading to the
         // current schema. All properties should be write-only, i.e. have a dummy getter,
         // and have ShouldSerialize{PropertyName} return false.
@@ -592,9 +683,7 @@ namespace DS4Windows
                 var contents = reader.ReadInnerXml();
                 writer.WriteRaw(contents);
                 writer.WriteEndElement();
-                while (reader.Read() && !reader.IsStartElement())
-                {
-                }
+                while (reader.Read() && !reader.IsStartElement()) { }
             }
         }
 

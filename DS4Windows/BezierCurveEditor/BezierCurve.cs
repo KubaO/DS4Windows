@@ -89,6 +89,11 @@ namespace DS4Windows
             return InitBezierCurve(mX1, mY1, mX2, mY2, gamepadAxisType);
         }
 
+        BezierCurve(double x1, double y1, double x2, double y2, AxisType gamepadAxisType)
+        {
+            InitBezierCurve(x1, y1, x2, y2, gamepadAxisType);
+        }
+
         public bool InitBezierCurve(double x1, double y1, double x2, double y2, AxisType gamepadAxisType)
         {
             bool bRetValue = true;

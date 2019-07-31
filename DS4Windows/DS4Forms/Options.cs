@@ -11,6 +11,10 @@ namespace DS4Windows.Forms
     public partial class Options : Form
     {
         public int device;
+        private DeviceBackingStore dev
+        {
+            get => Global.cfg[device]; 
+        }
         public string filename;
         public Timer inputtimer = new Timer(), sixaxisTimer = new Timer();
         public List<Button> buttons = new List<Button>();
@@ -329,6 +333,8 @@ namespace DS4Windows.Forms
 
         public void Reload(int deviceNum, string name)
         {
+            var aux = Global.aux[deviceNum];
+            var dev = cfg[deviceNum];
             loading = true;
             device = deviceNum;
             filename = name;
@@ -360,14 +366,14 @@ namespace DS4Windows.Forms
             if (filename != "")
             {
                 if (device == 4) //if temp device is called
-                    ProfilePath[4] = name;
+                    cfg[4].profilePath = name;
 
                 LoadProfile(device, false, Program.rootHub);
 
                 //devOutContType = Global.OutContType[device];
-                Global.outDevTypeTemp[device] = Global.OutContType[device];
+                aux.outDevTypeTemp = Global.OutContType[device];
 
-                if (Rainbow[device] == 0)
+                if (dev.rainbow == 0)
                 {
                     btnRainbow.Image = greyscale;
                     ToggleRainbow(false);
@@ -378,7 +384,7 @@ namespace DS4Windows.Forms
                     ToggleRainbow(true);
                 }
 
-                DS4Color color = MainColor[device];
+                DS4Color color = dev.mainColor;
                 tBRedBar.Value = color.red;
                 tBGreenBar.Value = color.green;
                 tBBlueBar.Value = color.blue;
@@ -391,28 +397,28 @@ namespace DS4Windows.Forms
                 btnLightBgImg = RecolorImage(btnLightBg, main);
                 btnLightbar.Refresh();
 
-                cBLightbyBattery.Checked = LedAsBatteryIndicator[device];
-                nUDflashLED.Value = FlashAt[device];
+                cBLightbyBattery.Checked = dev.ledAsBatteryIndicator;
+                nUDflashLED.Value = dev.flashAt;
                 pnlLowBattery.Visible = cBLightbyBattery.Checked;
                 lbFull.Text = (cBLightbyBattery.Checked ? "Full:" : "Color:");
                 //pnlFull.Location = new Point(pnlFull.Location.X, (cBLightbyBattery.Checked ? (int)(dpix * 42) : (pnlFull.Location.Y + pnlLowBattery.Location.Y) / 2));
-                DS4Color lowColor = LowColor[device];
+                DS4Color lowColor = dev.lowColor;
                 tBLowRedBar.Value = lowColor.red;
                 tBLowGreenBar.Value = lowColor.green;
                 tBLowBlueBar.Value = lowColor.blue;
 
-                DS4Color cColor = ChargingColor[device];
+                DS4Color cColor = dev.chargingColor;
                 btnChargingColor.BackColor = Color.FromArgb(cColor.red, cColor.green, cColor.blue);
-                byte tempFlashType = FlashType[device];
+                byte tempFlashType = dev.flashType;
                 if (tempFlashType > cBFlashType.Items.Count - 1)
                     cBFlashType.SelectedIndex = 0;
                 else
                     cBFlashType.SelectedIndex = tempFlashType;
 
-                DS4Color fColor = FlashColor[device];
+                DS4Color fColor = dev.flashColor;
                 if (fColor.Equals(new DS4Color { red = 0, green = 0, blue = 0 }))
                 {
-                    if (Rainbow[device] == 0)
+                    if (dev.rainbow == 0)
                         btnFlashColor.BackColor = main;
                     else
                         btnFlashColor.BackgroundImage = rainbowImg;
@@ -420,34 +426,34 @@ namespace DS4Windows.Forms
                 else
                     btnFlashColor.BackColor = Color.FromArgb(fColor.red, fColor.green, fColor.blue);
 
-                nUDRumbleBoost.Value = RumbleBoost[device];
-                nUDTouch.Value = TouchSensitivity[device];
-                cBSlide.Checked = TouchSensitivity[device] > 0;
-                nUDScroll.Value = ScrollSensitivity[device];
-                cBScroll.Checked = ScrollSensitivity[device] != 0;
-                nUDTap.Value = TapSensitivity[device];
-                cBTap.Checked = TapSensitivity[device] > 0;
-                cBDoubleTap.Checked = DoubleTap[device];
-                cBTouchpadJitterCompensation.Checked = TouchpadJitterCompensation[device];
+                nUDRumbleBoost.Value = dev.rumbleBoost;
+                nUDTouch.Value = dev.touchSensitivity;
+                cBSlide.Checked = dev.touchSensitivity > 0;
+                nUDScroll.Value = dev.scrollSensitivity;
+                cBScroll.Checked = dev.scrollSensitivity != 0;
+                nUDTap.Value = dev.tapSensitivity;
+                cBTap.Checked = dev.tapSensitivity > 0;
+                cBDoubleTap.Checked = dev.doubleTap;
+                cBTouchpadJitterCompensation.Checked = dev.touchpadJitterCompensation;
 
-                tempInt = TouchpadInvert[device];
+                tempInt = dev.touchpadInvert;
                 touchpadInvertComboBox.SelectedIndex = touchpadInvertToValue[tempInt];
 
-                cBlowerRCOn.Checked = LowerRCOn[device];
-                cBFlushHIDQueue.Checked = FlushHIDQueue[device];
-                enableTouchToggleCheckbox.Checked = getEnableTouchToggle(device);
-                nUDIdleDisconnect.Value = Math.Round((decimal)(IdleDisconnectTimeout[device] / 60d), 1);
-                cBIdleDisconnect.Checked = IdleDisconnectTimeout[device] > 0;
-                numUDMouseSens.Value = ButtonMouseSensitivity[device];
-                cBMouseAccel.Checked = MouseAccel[device];
+                cBlowerRCOn.Checked = dev.lowerRCOn;
+                cBFlushHIDQueue.Checked = dev.flushHIDQueue;
+                enableTouchToggleCheckbox.Checked = dev.enableTouchToggle;
+                nUDIdleDisconnect.Value = Math.Round((decimal)(dev.idleDisconnectTimeout / 60d), 1);
+                cBIdleDisconnect.Checked = dev.idleDisconnectTimeout > 0;
+                numUDMouseSens.Value = dev.ButtonMouseSensitivity;
+                cBMouseAccel.Checked = dev.mouseAccel;
                 pBHoveredButton.Image = null;
 
                 alphacolor = Math.Max(tBLowRedBar.Value, Math.Max(tBGreenBar.Value, tBBlueBar.Value));
                 reg = Color.FromArgb(lowColor.red, lowColor.green, lowColor.blue);
                 full = HuetoRGB(reg.GetHue(), reg.GetBrightness(), reg);
                 lowColorChooserButton.BackColor = Color.FromArgb((alphacolor > 205 ? 255 : (alphacolor + 50)), full);
-                nUDRainbow.Value = (decimal)Rainbow[device];
-                int tempWhileCharging = ChargingType[device];
+                nUDRainbow.Value = (decimal)dev.rainbow;
+                int tempWhileCharging = dev.chargingType;
                 if (tempWhileCharging > cBWhileCharging.Items.Count - 1)
                     cBWhileCharging.SelectedIndex = 0;
                 else
@@ -465,237 +471,195 @@ namespace DS4Windows.Forms
 
                 try
                 {
-                    nUDL2.Value = Math.Round((decimal)L2ModInfo[device].deadZone / 255, 2);
-                }
-                catch
-                {
                     nUDL2.Value = 0;
+                    nUDL2.Value = Math.Round((decimal)dev.l2ModInfo.deadZone / 255, 2);
                 }
+                catch { }
+
                 try
-                {
-                    nUDR2.Value = Math.Round((decimal)R2ModInfo[device].deadZone / 255, 2);
-                }
-                catch
                 {
                     nUDR2.Value = 0;
+                    nUDR2.Value = Math.Round((decimal)dev.r2ModInfo.deadZone / 255, 2);
                 }
+                catch { }
 
                 try
-                {
-                    nUDL2AntiDead.Value = (decimal)(L2ModInfo[device].antiDeadZone / 100d);
-                }
-                catch
                 {
                     nUDL2AntiDead.Value = 0;
+                    nUDL2AntiDead.Value = (decimal)(dev.l2ModInfo.antiDeadZone / 100d);
                 }
+                catch { }
+
                 try
-                {
-                    nUDR2AntiDead.Value = (decimal)(R2ModInfo[device].antiDeadZone / 100d);
-                }
-                catch
                 {
                     nUDR2AntiDead.Value = 0;
+                    nUDR2AntiDead.Value = (decimal)(dev.r2ModInfo.antiDeadZone / 100d);
                 }
+                catch { }
 
                 try
-                {
-                    nUDL2Maxzone.Value = (decimal)(L2ModInfo[device].maxZone / 100d);
-                }
-                catch
                 {
                     nUDL2Maxzone.Value = 1;
+                    nUDL2Maxzone.Value = (decimal)(dev.l2ModInfo.maxZone / 100d);
                 }
+                catch { }
+
                 try
-                {
-                    nUDR2Maxzone.Value = (decimal)(R2ModInfo[device].maxZone / 100d);
-                }
-                catch
                 {
                     nUDR2Maxzone.Value = 1;
+                    nUDR2Maxzone.Value = (decimal)(dev.r2ModInfo.maxZone / 100d);
                 }
+                catch { }
 
                 try
-                {
-                    nUDLS.Value = Math.Round((decimal)(LSModInfo[device].deadZone / 127d), 3);
-                }
-                catch
                 {
                     nUDLS.Value = 0;
+                    nUDLS.Value = Math.Round((decimal)(dev.lsModInfo.deadZone / 127d), 3);
                 }
+                catch { }
+
                 try
-                {
-                    nUDRS.Value = Math.Round((decimal)(RSModInfo[device].deadZone / 127d), 3);
-                }
-                catch
                 {
                     nUDRS.Value = 0;
+                    nUDRS.Value = Math.Round((decimal)(dev.rsModInfo.deadZone / 127d), 3);
                 }
+                catch { }
 
                 try
-                {
-                    nUDLSAntiDead.Value = (decimal)(LSModInfo[device].antiDeadZone / 100d);
-                }
-                catch
                 {
                     nUDLSAntiDead.Value = 0;
+                    nUDLSAntiDead.Value = (decimal)(dev.lsModInfo.antiDeadZone / 100d);
                 }
+                catch { }
+
                 try
-                {
-                    nUDRSAntiDead.Value = (decimal)(RSModInfo[device].antiDeadZone / 100d);
-                }
-                catch
                 {
                     nUDRSAntiDead.Value = 0;
+                    nUDRSAntiDead.Value = (decimal)(dev.rsModInfo.antiDeadZone / 100d);
                 }
+                catch { }
 
                 try
-                {
-                    nUDLSMaxZone.Value = (decimal)(LSModInfo[device].maxZone / 100d);
-                }
-                catch
                 {
                     nUDLSMaxZone.Value = 1;
+                    nUDLSMaxZone.Value = (decimal)(dev.lsModInfo.maxZone / 100d);
                 }
+                catch { }
+
                 try
-                {
-                    nUDRSMaxZone.Value = (decimal)(RSModInfo[device].maxZone / 100d);
-                }
-                catch
                 {
                     nUDRSMaxZone.Value = 1;
+                    nUDRSMaxZone.Value = (decimal)(dev.rsModInfo.maxZone / 100d);
                 }
+                catch { }
 
                 try
-                {
-                    nUDLSRotation.Value = (decimal)(LSRotation[device] * 180.0 / Math.PI);
-                }
-                catch
                 {
                     nUDLSRotation.Value = 0.0m;
+                    nUDLSRotation.Value = (decimal)(dev.LSRotation* 180.0 / Math.PI);
                 }
+                catch { }
 
                 try
                 {
-                    nUDRSRotation.Value = (decimal)(RSRotation[device] * 180.0 / Math.PI);
+                    nUDRSRotation.Value = (decimal)(dev.RSRotation* 180.0 / Math.PI);
                 }
-                catch
-                {
-                    nUDRSRotation.Value = 0.0m;
-                }
+                catch { }
 
                 try
-                {
-                    nUDSX.Value = (decimal)SXDeadzone[device];
-                }
-                catch
                 {
                     nUDSX.Value = 0.25m;
+                    nUDSX.Value = (decimal)dev.SXDeadzone;
                 }
+                catch { }
 
                 try
-                {
-                    nUDSZ.Value = (decimal)SZDeadzone[device];
-                }
-                catch
                 {
                     nUDSZ.Value = 0.25m;
+                    nUDSZ.Value = (decimal)dev.SZDeadzone;
                 }
+                catch { }
 
                 try
-                {
-                    nUDSixAxisXMaxZone.Value = (decimal)SXMaxzone[device];
-                }
-                catch
                 {
                     nUDSixAxisXMaxZone.Value = 1.0m;
+                    nUDSixAxisXMaxZone.Value = (decimal)dev.SXMaxzone;
                 }
+                catch { }
 
                 try
-                {
-                    nUDSixAxisZMaxZone.Value = (decimal)SZMaxzone[device];
-                }
-                catch
                 {
                     nUDSixAxisZMaxZone.Value = 1.0m;
+                    nUDSixAxisZMaxZone.Value = (decimal)dev.SZMaxzone;
                 }
+                catch { }
 
                 try
-                {
-                    nUDSixaxisXAntiDead.Value = (decimal)SXAntiDeadzone[device];
-                }
-                catch
                 {
                     nUDSixaxisXAntiDead.Value = 0.0m;
+                    nUDSixaxisXAntiDead.Value = (decimal)dev.SXAntiDeadzone;
                 }
+                catch { }
 
                 try
-                {
-                    nUDSixaxisZAntiDead.Value = (decimal)SZAntiDeadzone[device];
-                }
-                catch
                 {
                     nUDSixaxisZAntiDead.Value = 0.0m;
+                    nUDSixaxisZAntiDead.Value = (decimal)dev.SZAntiDeadzone;
                 }
+                catch { }
 
                 try
-                {
-                    nUDL2S.Value = Math.Round((decimal)L2Sens[device], 2);
-                }
-                catch
                 {
                     nUDL2S.Value = 1;
+                    nUDL2S.Value = Math.Round((decimal)dev.l2Sens, 2);
                 }
+                catch { }
+
                 try
-                {
-                    nUDR2S.Value = Math.Round((decimal)R2Sens[device], 2);
-                }
-                catch
                 {
                     nUDR2S.Value = 1;
+                    nUDR2S.Value = Math.Round((decimal)dev.r2Sens, 2);
                 }
+                catch { }
+
                 try
-                {
-                    nUDLSS.Value = Math.Round((decimal)LSSens[device], 2);
-                }
-                catch
                 {
                     nUDLSS.Value = 1;
+                    nUDLSS.Value = Math.Round((decimal)dev.LSSens, 2);
                 }
+                catch { }
+
                 try
-                {
-                    nUDRSS.Value = Math.Round((decimal)RSSens[device], 2);
-                }
-                catch
                 {
                     nUDRSS.Value = 1;
+                    nUDRSS.Value = Math.Round((decimal)dev.RSSens, 2);
                 }
+                catch { }
+
                 try
-                {
-                    nUDSXS.Value = Math.Round((decimal)SXSens[device], 2);
-                }
-                catch
                 {
                     nUDSXS.Value = 1;
+                    nUDSXS.Value = Math.Round((decimal)dev.SXSens, 2);
                 }
+                catch { }
+
                 try
                 {
-                    nUDSZS.Value = Math.Round((decimal)SZSens[device], 2);
-                }
-                catch
-                {
                     nUDSZS.Value = 1;
+                    nUDSZS.Value = Math.Round((decimal)dev.SZSens, 2);
                 }
+                catch { }
 
-                if (LaunchProgram[device] != string.Empty)
+                if (dev.launchProgram!= string.Empty)
                 {
                     cBLaunchProgram.Checked = true;
-                    pBProgram.Image = Icon.ExtractAssociatedIcon(LaunchProgram[device]).ToBitmap();
-                    btnBrowse.Text = Path.GetFileNameWithoutExtension(LaunchProgram[device]);
+                    pBProgram.Image = Icon.ExtractAssociatedIcon(dev.launchProgram).ToBitmap();
+                    btnBrowse.Text = Path.GetFileNameWithoutExtension(dev.launchProgram);
                 }
 
-                lsSquStickCk.Checked = SquStickInfo[device].lsMode;
-                rsSquStickCk.Checked = SquStickInfo[device].rsMode;
-                RoundnessNUpDown.Value = (decimal)SquStickInfo[device].roundness;
+                lsSquStickCk.Checked = dev.squStickInfo.lsMode;
+                rsSquStickCk.Checked = dev.squStickInfo.rsMode;
+                RoundnessNUpDown.Value = (decimal)dev.squStickInfo.roundness;
 
                 cBDinput.Checked = DinputOnly[device];
                 olddinputcheck = cBDinput.Checked;
@@ -704,11 +668,11 @@ namespace DS4Windows.Forms
                 rBTPMouse.Checked = !UseTPforControls[device];
                 rBSAMouse.Checked = UseSAforMouse[device];
                 rBSAControls.Checked = !UseSAforMouse[device];
-                nUDLSCurve.Value = LSCurve[device];
-                nUDRSCurve.Value = RSCurve[device];
+                nUDLSCurve.Value = dev.lsCurve;
+                nUDRSCurve.Value = dev.rsCurve;
                 cBControllerInput.Checked = DS4Mapping;
-                trackballCk.Checked = TrackballMode[device];
-                trackFrictionNUD.Value = (decimal)TrackballFriction[device];
+                trackballCk.Checked = dev.trackballMode;
+                trackFrictionNUD.Value = (decimal)dev.trackballFriction;
                 if (device < 4)
                 {
                     Program.rootHub.touchPad[device]?.ResetTrackAccel(TrackballFriction[device]);
@@ -1333,7 +1297,7 @@ namespace DS4Windows.Forms
             RSModInfo[device].maxZone = (int)(nUDRSMaxZone.Value * 100);
             LSRotation[device] = (double)nUDLSRotation.Value * Math.PI / 180.0;
             RSRotation[device] = (double)nUDRSRotation.Value * Math.PI / 180.0;
-            ButtonMouseSensitivity[device] = (int)numUDMouseSens.Value;
+            dev.ButtonMouseSensitivity = (int)numUDMouseSens.Value;
             FlashAt[device] = (int)nUDflashLED.Value;
             SXDeadzone[device] = (double)nUDSX.Value;
             SZDeadzone[device] = (double)nUDSZ.Value;
@@ -2135,7 +2099,7 @@ namespace DS4Windows.Forms
 
         private void numUDMouseSens_ValueChanged(object sender, EventArgs e)
         {
-            ButtonMouseSensitivity[device] = (int)numUDMouseSens.Value;
+            dev.ButtonMouseSensitivity = (int)numUDMouseSens.Value;
         }
 
         private void LightBar_MouseDown(object sender, MouseEventArgs e)

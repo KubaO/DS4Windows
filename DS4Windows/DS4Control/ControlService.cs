@@ -398,6 +398,8 @@ namespace DS4Windows
                     int i = 0;
                     for (var devEnum = devices.GetEnumerator(); devEnum.MoveNext(); i++)
                     {
+                        var dev = cfg[i];
+                        var aux = Global.aux[i];
                         DS4Device device = devEnum.Current;
                         //DS4Device device = devices.ElementAt(i);
                         if (showlog)
@@ -415,15 +417,15 @@ namespace DS4Windows
 
                         touchPad[i] = new Mouse(i, device);
 
-                        if (!useTempProfile[i])
+                        if (!aux.useTempProfile)
                         {
                             if (device.isValidSerial() && containsLinkedProfile(device.getMacAddress()))
                             {
-                                ProfilePath[i] = getLinkedProfile(device.getMacAddress());
+                                dev.profilePath = getLinkedProfile(device.getMacAddress());
                             }
                             else
                             {
-                                ProfilePath[i] = OlderProfilePath[i];
+                                dev.profilePath = dev.olderProfilePath;
                             }
 
                             LoadProfile(i, false, this, false, false);
@@ -433,7 +435,7 @@ namespace DS4Windows
 
                         if (!getDInputOnly(i) && device.isSynced())
                         {
-                            useDInputOnly[i] = false;
+                            aux.useDInputOnly = false;
 
                             OutContType contType = Global.OutContType[i];
                             if (contType == OutContType.X360)
@@ -467,7 +469,7 @@ namespace DS4Windows
                         }
                         else
                         {
-                            useDInputOnly[i] = true;
+                            aux.useDInputOnly = true;
                         }
 
                         int tempIdx = i;
@@ -496,9 +498,9 @@ namespace DS4Windows
                         //ind++;
                         if (showlog)
                         {
-                            if (File.Exists(appdatapath + "\\Profiles\\" + ProfilePath[i] + ".xml"))
+                            if (File.Exists(appdatapath + "\\Profiles\\" + dev.profilePath + ".xml"))
                             {
-                                string prolog = Properties.Resources.UsingProfile.Replace("*number*", (i + 1).ToString()).Replace("*Profile name*", ProfilePath[i]);
+                                string prolog = Properties.Resources.UsingProfile.Replace("*number*", (i + 1).ToString()).Replace("*Profile name*", dev.profilePath);
                                 LogDebug(prolog);
                                 AppLogger.LogToTray(prolog);
                             }
@@ -602,7 +604,7 @@ namespace DS4Windows
                         CurrentState[i].Battery = PreviousState[i].Battery = 0; // Reset for the next connection's initial status change.
                         outputDevices[i]?.Disconnect();
                         outputDevices[i] = null;
-                        useDInputOnly[i] = true;
+                        aux[i].useDInputOnly = true;
                         DS4Controllers[i] = null;
                         touchPad[i] = null;
                         lag[i] = false;
@@ -662,6 +664,8 @@ namespace DS4Windows
 
                     for (Int32 Index = 0, arlength = DS4Controllers.Length; Index < arlength; Index++)
                     {
+                        var dev = cfg[Index];
+                        var aux = Global.aux[Index];
                         if (DS4Controllers[Index] == null)
                         {
                             LogDebug(Properties.Resources.FoundController + device.getMacAddress() + " (" + device.getConnectionType() + ")");
@@ -676,15 +680,15 @@ namespace DS4Windows
 
                             touchPad[Index] = new Mouse(Index, device);
 
-                            if (!useTempProfile[Index])
+                            if (!aux.useTempProfile)
                             {
                                 if (device.isValidSerial() && containsLinkedProfile(device.getMacAddress()))
                                 {
-                                    ProfilePath[Index] = getLinkedProfile(device.getMacAddress());
+                                    dev.profilePath = getLinkedProfile(device.getMacAddress());
                                 }
                                 else
                                 {
-                                    ProfilePath[Index] = OlderProfilePath[Index];
+                                    dev.profilePath = dev.olderProfilePath;
                                 }
 
                                 LoadProfile(Index, false, this, false, false);
@@ -713,7 +717,7 @@ namespace DS4Windows
                             
                             if (!getDInputOnly(Index) && device.isSynced())
                             {
-                                useDInputOnly[Index] = false;
+                                aux.useDInputOnly = false;
                                 OutContType contType = Global.OutContType[Index];
                                 if (contType == OutContType.X360)
                                 {
@@ -747,7 +751,7 @@ namespace DS4Windows
                             }
                             else
                             {
-                                useDInputOnly[Index] = true;
+                                aux.useDInputOnly = true;
                             }
 
                             TouchPadOn(Index, device);
@@ -755,9 +759,9 @@ namespace DS4Windows
                             device.StartUpdate();
 
                             //string filename = Path.GetFileName(ProfilePath[Index]);
-                            if (File.Exists(appdatapath + "\\Profiles\\" + ProfilePath[Index] + ".xml"))
+                            if (File.Exists(appdatapath + "\\Profiles\\" + dev.profilePath + ".xml"))
                             {
-                                string prolog = Properties.Resources.UsingProfile.Replace("*number*", (Index + 1).ToString()).Replace("*Profile name*", ProfilePath[Index]);
+                                string prolog = Properties.Resources.UsingProfile.Replace("*number*", (Index + 1).ToString()).Replace("*Profile name*", dev.profilePath);
                                 LogDebug(prolog);
                                 AppLogger.LogToTray(prolog);
                             }
@@ -891,7 +895,7 @@ namespace DS4Windows
 
         private void CheckProfileOptions(int ind, DS4Device device, bool startUp=false)
         {
-            device.setIdleTimeout(getIdleDisconnectTimeout(ind));
+            device.setIdleTimeout(cfg[ind].idleDisconnectTimeout);
             device.setBTPollRate(getBTPollRate(ind));
             touchPad[ind].ResetTrackAccel(getTrackballFriction(ind));
 
@@ -903,7 +907,7 @@ namespace DS4Windows
 
         private void CheckLauchProfileOption(int ind, DS4Device device)
         {
-            string programPath = LaunchProgram[ind];
+            string programPath = cfg[ind].launchProgram;
             if (programPath != string.Empty)
             {
                 System.Diagnostics.Process[] localAll = System.Diagnostics.Process.GetProcesses();
@@ -1103,12 +1107,12 @@ namespace DS4Windows
 
                 if (!synced)
                 {
-                    if (!useDInputOnly[ind])
+                    if (!aux[ind].useDInputOnly)
                     {
                         string tempType = outputDevices[ind].GetDeviceType();
                         outputDevices[ind].Disconnect();
                         outputDevices[ind] = null;
-                        useDInputOnly[ind] = true;
+                        aux[ind].useDInputOnly = true;
                         LogDebug(tempType + " Controller #" + (ind + 1) + " unplugged");
                     }
                 }
@@ -1145,7 +1149,7 @@ namespace DS4Windows
                             LogDebug("DS4 Controller #" + (ind + 1) + " connected");
                         }
 
-                        useDInputOnly[ind] = false;
+                        aux[ind].useDInputOnly = false;
                     }
                 }
             }
@@ -1177,7 +1181,7 @@ namespace DS4Windows
                 if (removingStatus)
                 {
                     CurrentState[ind].Battery = PreviousState[ind].Battery = 0; // Reset for the next connection's initial status change.
-                    if (!useDInputOnly[ind])
+                    if (!aux[ind].useDInputOnly)
                     {
                         string tempType = outputDevices[ind].GetDeviceType();
                         outputDevices[ind].Disconnect();
@@ -1219,7 +1223,7 @@ namespace DS4Windows
                     touchPad[ind] = null;
                     lag[ind] = false;
                     inWarnMonitor[ind] = false;
-                    useDInputOnly[ind] = true;
+                    aux[ind].useDInputOnly = true;
                     uiContext?.Post(new SendOrPostCallback((state) =>
                     {
                         OnControllerRemoved(this, ind);
@@ -1243,7 +1247,7 @@ namespace DS4Windows
 
             if (ind != -1)
             {
-                if (getFlushHIDQueue(ind))
+                if (cfg[ind].flushHIDQueue)
                     device.FlushHID();
 
                 string devError = tempStrings[ind] = device.error;
@@ -1307,12 +1311,12 @@ namespace DS4Windows
                     }), null);
                 }
 
-                if (getEnableTouchToggle(ind))
+                if (cfg[ind].enableTouchToggle)
                     CheckForTouchToggle(ind, cState, pState);
 
                 cState = Mapping.SetCurveAndDeadzone(ind, cState, TempState[ind]);
 
-                if (!recordingMacro && (useTempProfile[ind] ||
+                if (!recordingMacro && (aux[ind].useTempProfile ||
                     containsCustomAction(ind) || containsCustomExtras(ind) ||
                     getProfileActionCount(ind) > 0 ||
                     GetSASteeringWheelEmulationAxis(ind) >= SASteeringWheelEmulationAxisType.VJoy1X))
@@ -1321,7 +1325,7 @@ namespace DS4Windows
                     cState = MappedState[ind];
                 }
 
-                if (!useDInputOnly[ind])
+                if (!aux[ind].useDInputOnly)
                 {
                     outputDevices[ind]?.ConvertandSendReport(cState, ind);
                     //testNewReport(ref x360reports[ind], cState, ind);
@@ -1476,18 +1480,20 @@ namespace DS4Windows
 
         protected virtual void CheckForTouchToggle(int deviceID, DS4State cState, DS4State pState)
         {
+            var dev = cfg[deviceID];
+            var aux = Global.aux[deviceID];
             if (!getUseTPforControls(deviceID) && cState.Touch1 && pState.PS)
             {
-                if (GetTouchActive(deviceID) && touchreleased[deviceID])
+                if (aux.touchpadActive && touchreleased[deviceID])
                 {
-                    TouchActive[deviceID] = false;
+                    aux.touchpadActive = false;
                     LogDebug(Properties.Resources.TouchpadMovementOff);
                     AppLogger.LogToTray(Properties.Resources.TouchpadMovementOff);
                     touchreleased[deviceID] = false;
                 }
                 else if (touchreleased[deviceID])
                 {
-                    TouchActive[deviceID] = true;
+                    aux.touchpadActive = true;
                     LogDebug(Properties.Resources.TouchpadMovementOn);
                     AppLogger.LogToTray(Properties.Resources.TouchpadMovementOn);
                     touchreleased[deviceID] = false;
@@ -1501,7 +1507,7 @@ namespace DS4Windows
         {
             if (deviceID < 4)
             {
-                TouchActive[deviceID] = false;
+                aux[deviceID].touchpadActive = false;
             }
         }
 
@@ -1565,7 +1571,7 @@ namespace DS4Windows
         public void SetDevRumble(DS4Device device,
             byte heavyMotor, byte lightMotor, int deviceNum)
         {
-            byte boost = getRumbleBoost(deviceNum);
+            byte boost = cfg[deviceNum].rumbleBoost;
             uint lightBoosted = ((uint)lightMotor * (uint)boost) / 100;
             if (lightBoosted > 255)
                 lightBoosted = 255;

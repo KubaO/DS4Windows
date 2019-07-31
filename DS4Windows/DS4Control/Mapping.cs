@@ -1447,6 +1447,8 @@ namespace DS4Windows
             Mouse tp, ControlService ctrl)
         {
             /* TODO: This method is slow sauce. Find ways to speed up action execution */
+            DeviceBackingStore dev = cfg[device];
+
             double tempMouseDeltaX = 0.0;
             double tempMouseDeltaY = 0.0;
             int mouseDeltaX = 0;
@@ -1533,8 +1535,8 @@ namespace DS4Windows
                             if (extras[7] == 1)
                             {
                                 if (oldmouse[device] == -1)
-                                    oldmouse[device] = ButtonMouseSensitivity[device];
-                                ButtonMouseSensitivity[device] = extras[8];
+                                    oldmouse[device] = dev.ButtonMouseSensitivity;
+                                dev.ButtonMouseSensitivity = extras[8];
                             }
                         }
                         catch { }
@@ -1545,7 +1547,7 @@ namespace DS4Windows
                         DS4LightBar.forcedFlash[device] = 0;
                         if (oldmouse[device] != -1)
                         {
-                            ButtonMouseSensitivity[device] = oldmouse[device];
+                            dev.ButtonMouseSensitivity = oldmouse[device];
                             oldmouse[device] = -1;
                         }
 
@@ -2769,6 +2771,7 @@ namespace DS4Windows
         private static double getMouseMapping(int device, DS4Controls control, DS4State cState, DS4StateExposed eState,
             DS4StateFieldMapping fieldMapping, int mnum, ControlService ctrl)
         {
+            var dev = cfg[device];
             int controlnum = DS4ControltoInt(control);
 
             int deadzoneL = 0;
@@ -2779,7 +2782,7 @@ namespace DS4Windows
                 deadzoneR = 3;
 
             double value = 0.0;
-            int speed = ButtonMouseSensitivity[device];
+            int speed = dev.ButtonMouseSensitivity;
             double root = 1.002;
             double divide = 10000d;
             //DateTime now = mousenow[mnum];

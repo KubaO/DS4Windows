@@ -86,9 +86,11 @@ namespace DS4Windows
             catch { return false; }
         }
 
+        public string toXMLText() => $"{red},{green},{blue}";
+
         public void WriteXml(XmlWriter writer)
         {
-            writer.WriteString($"{red},{green},{blue}");
+            writer.WriteString(toXMLText());
         }
 
         public void ReadXml(XmlReader reader)
