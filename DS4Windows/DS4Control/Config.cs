@@ -52,6 +52,16 @@ namespace DS4Windows
         bool UseWhiteIcon { get; set; }
         bool UseCustomSteamFolder { get; set; }
         string CustomSteamFolder { get; set; }
+
+		string ProfilePath { get; set; }
+		string ActionsPath { get; set; }
+		string LinkedProfilesPath { get; set; }
+		string ControllerConfigsPath { get; set; }
+
+		List<SpecialAction> Actions { get; }
+        SpecialAction ActionByName(string name);
+        SpecialAction ActionByIndex(int index);
+        int LookupActionIndex(string name);
     }
 
     public interface IDeviceAuxiliaryConfig
@@ -81,57 +91,18 @@ namespace DS4Windows
         bool DinputOnly { get; set; }
 
 #if false
-
-        public byte[] flashType = new byte[5] { 0, 0, 0, 0, 0 };
-        public string[] profilePath = new string[5] { string.Empty, string.Empty, string.Empty, string.Empty, string.Empty };
-        public string[] olderProfilePath = new string[5] { string.Empty, string.Empty, string.Empty, string.Empty, string.Empty };
         public Dictionary<string, string> linkedProfiles = new Dictionary<string, string>();
-        // Cache properties instead of performing a string comparison every frame
-        public bool[] distanceProfiles = new bool[5] { false, false, false, false, false };
 
-        public Byte[] tapSensitivity = new Byte[5] { 0, 0, 0, 0, 0 };
-        public bool[] doubleTap = new bool[5] { false, false, false, false, false };
-        public int[] scrollSensitivity = new int[5] { 0, 0, 0, 0, 0 };
-        public int[] touchpadInvert = new int[5] { 0, 0, 0, 0, 0 };
-        public double[] rainbow = new double[5] { 0.0, 0.0, 0.0, 0.0, 0.0 };
-        public int[] flashAt = new int[5] { 0, 0, 0, 0, 0 };
-        public bool[] mouseAccel = new bool[5] { false, false, false, false, false };
-        public int[] btPollRate = new int[5] { 4, 4, 4, 4, 4 };
         public int[] gyroMouseDZ = new int[5] { MouseCursor.GYRO_MOUSE_DEADZONE, MouseCursor.GYRO_MOUSE_DEADZONE,
             MouseCursor.GYRO_MOUSE_DEADZONE, MouseCursor.GYRO_MOUSE_DEADZONE,
             MouseCursor.GYRO_MOUSE_DEADZONE };
         public bool[] gyroMouseToggle = new bool[5] { false, false, false,
             false, false };
 
-        public SquareStickInfo[] squStickInfo = new SquareStickInfo[5]
         private void setOutBezierCurveObjArrayItem(BezierCurve[] bezierCurveArray, int device, int curveOptionValue, BezierCurve.AxisType axisType)
 
-        public DS4Color[] m_LowLeds = new DS4Color[5]
-        public DS4Color[] m_Leds = new DS4Color[5]
-        public DS4Color[] m_ChargingLeds = new DS4Color[5]
-        public DS4Color[] m_FlashLeds = new DS4Color[5]
-        public bool[] useCustomLeds = new bool[5] { false, false, false, false, false };
-        public DS4Color[] m_CustomLeds = new DS4Color[5]
-
-        public int[] chargingType = new int[5] { 0, 0, 0, 0, 0 };
-        public string[] launchProgram = new string[5] { string.Empty, string.Empty, string.Empty, string.Empty, string.Empty };
-        public bool[] dinputOnly = new bool[5] { false, false, false, false, false };
-        public bool[] startTouchpadOff = new bool[5] { false, false, false, false, false };
-        public bool[] useTPforControls = new bool[5] { false, false, false, false, false };
-        public bool[] useSAforMouse = new bool[5] { false, false, false, false, false };
-        public string[] sATriggers = new string[5] { string.Empty, string.Empty, string.Empty, string.Empty, string.Empty };
-        public bool[] sATriggerCond = new bool[5] { true, true, true, true, true };
-        public SASteeringWheelEmulationAxisType[] sASteeringWheelEmulationAxis = new SASteeringWheelEmulationAxisType[5] { SASteeringWheelEmulationAxisType.None, SASteeringWheelEmulationAxisType.None, SASteeringWheelEmulationAxisType.None, SASteeringWheelEmulationAxisType.None, SASteeringWheelEmulationAxisType.None };
-        public int[] sASteeringWheelEmulationRange = new int[5] { 360, 360, 360, 360, 360 };
-        public int[][] touchDisInvertTriggers = new int[5][] { new int[1] { -1 }, new int[1] { -1 }, new int[1] { -1 },
-            new int[1] { -1 }, new int[1] { -1 } };
-        public int[] lsCurve = new int[5] { 0, 0, 0, 0, 0 };
-        public int[] rsCurve = new int[5] { 0, 0, 0, 0, 0 };
-
-        public List<SpecialAction> actions = new List<SpecialAction>();
         public List<DS4ControlSettings>[] ds4settings = new List<DS4ControlSettings>[5]
 
-        public List<string>[] profileActions = new List<string>[5] { null, null, null, null, null };
         public int[] profileActionCount = new int[5] { 0, 0, 0, 0, 0 };
         public Dictionary<string, SpecialAction>[] profileActionDict = new Dictionary<string, SpecialAction>[5]
 
@@ -139,7 +110,6 @@ namespace DS4Windows
 
         public string useLang = "";
         public bool downloadLang = true;
-        public bool useWhiteIcon;
         public bool flashWhenLate = true;
         public int flashWhenLateAt = 20;
         public bool useUDPServ = false;
@@ -268,6 +238,9 @@ namespace DS4Windows
         bool DistanceProfiles { get; set; }
 
         List<string> ProfileActions { get; set; }
+        SpecialAction ProfileActionByName(string name);
+        SpecialAction ProfileActionByIndex(int index);
+        int LookupProfileActionIndex(string name);
 
         void UpdateDS4CSetting(string buttonName, bool shift, object action, string exts, DS4KeyType kt, int trigger = 0);
         void UpdateDS4Extra(string buttonName, bool shift, string exts);
