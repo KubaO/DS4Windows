@@ -112,6 +112,10 @@ namespace DS4Windows
 
     public interface IDeviceConfig
     {
+        string ProfilePath { get; set; }
+        string OlderProfilePath { get; set; }
+        string LaunchProgram { get; set; }
+
         int BTPollRate { get; set; }
         bool FlushHIDQueue { get; set; }
         int IdleDisconnectTimeout { get; set; }
@@ -159,82 +163,22 @@ namespace DS4Windows
         bool TrackballMode { get; set; }
         double TrackballFriction { get; set; }
 
-        bool UseSAforMouse { get; set; }
+        bool UseSAForMouse { get; set; }
         string SATriggers { get; set; }
         bool SATriggerCond { get; set; }
         SASteeringWheelEmulationAxisType SASteeringWheelEmulationAxis { get; set; } 
         int SASteeringWheelEmulationRange { get; set; }
 
-        TriggerDeadZoneZInfo L2ModInfo { get; set; }
-        byte L2Deadzone { get; set; }        
-        TriggerDeadZoneZInfo R2ModInfo { get; set; } 
-        byte R2Deadzone { get; set; }
+        ITrigger2Config L2 { get; set; }
+        ITrigger2Config R2 { get; set; }
+        IStickConfig LS { get; set; }
+        IStickConfig RS { get; set; }
+        IGyroConfig SX { get; set; }
+        IGyroConfig SZ { get; set; }
 
-        double SXDeadzone { get; set; }
-        double SZDeadzone { get; set; }
+        ISquareStickConfig SquStick { get; set; }
 
-        int LSDeadzone { get; set; } 
-        int RSDeadzone { get; set; }
-
-        int LSAntiDeadzone { get; set; } 
-        int RSAntiDeadzone { get; set; }
-
-        StickDeadZoneInfo LSModInfo { get; set; } 
-        StickDeadZoneInfo RSModInfo { get; set; }
-
-        double SXAntiDeadzone { get; set; }
-        double SZAntiDeadzone { get; set; }
-
-        int LSMaxzone { get; set; }
-        int RSMaxzone { get; set; }
-        
-        double SXMaxzone { get; set; } 
-		double SZMaxzone { get; set; }
-
-        int L2AntiDeadzone { get; set; }
-        int R2AntiDeadzone { get; set; }
-        
-        int L2Maxzone { get; set; } 
-        int R2Maxzone { get; set; }
-        
-        int LSCurve { get; set; }
-        int RSCurve { get; set; }
-
-        double LSRotation { get; set; } 
-        double RSRotation { get; set; } 
-
-        double L2Sens { get; set; } 
-		double R2Sens { get; set; }
-
-        double SXSens { get; set; } 
-        double SZSens { get; set; } 
-
-        double LSSens { get; set; }
-        double RSSens { get; set; }
-
-        SquareStickInfo SquStickInfo { get; set; }
-
-        int LsOutCurveMode { get; set; }
-        BezierCurve lsOutBezierCurveObj { get; set; } 
-        int RsOutCurveMode { get; set; }
-        BezierCurve[] rsOutBezierCurveObj { get; set; }
-
-        int L2OutCurveMode { get; set; }
-        BezierCurve l2OutBezierCurveObj { get; set; }
-        int R2OutCurveMode { get; set; }
-        BezierCurve[] r2OutBezierCurveObj { get; set; }
-
-        int SXOutCurveMode { get; set; }
-        BezierCurve SXOutBezierCurveObj { get; set; }
-        int SZOutCurveMode { get; set; }
-        BezierCurve[] SZOutBezierCurveObj { get; set; }
-
-        void SetOutBezierCurveObjects(BezierCurve[] bezierCurves, int curveOptionValue, BezierCurve.AxisType axisType);
-
-        OutContType OutContType { get; set; }
-        string LaunchProgram { get; set; }
-        string ProfilePath { get; set; }
-        string OlderProfilePath { get; set; }
+        OutContType OutputDevType { get; set; }
         bool DistanceProfiles { get; set; }
 
         List<string> ProfileActions { get; set; }
@@ -242,7 +186,7 @@ namespace DS4Windows
         SpecialAction ProfileActionByIndex(int index);
         int LookupProfileActionIndex(string name);
 
-        List<DS4ControlSettings> DS4Settings { get; }
+        List<DS4ControlSettings> DS4CSettings { get; }
         void UpdateDS4CSetting(string buttonName, bool shift, object action, string exts, DS4KeyType kt, int trigger = 0);
         void UpdateDS4CExtra(string buttonName, bool shift, string exts);
 
@@ -253,10 +197,48 @@ namespace DS4Windows
         int GetDS4STrigger(string buttonName);
         int GetDS4STrigger(DS4Controls control);
         List<DS4ControlSettings> GetDS4CSettings();
-        DS4ControlSettings getDS4CSetting(string control);
-        DS4ControlSettings getDS4CSetting(DS4Controls control);
+        DS4ControlSettings GetDS4CSetting(string control);
+        DS4ControlSettings EetDS4CSetting(DS4Controls control);
         bool HasCustomActions { get; }
         bool HasCustomExtras { get; }
     }
 
+    public interface ITrigger2Config
+    {
+        double Sensitivity { get; set; }
+        int DeadZone { get; set; }
+        int AntiDeadZone { get; set; }
+        int MaxZone { get; set; }
+        int OutCurvePreset { get; set; }
+        BezierCurve OutBezierCurve { get; set; }
+    }
+
+    public interface IStickConfig
+    {
+        double Sensitivity { get; set; }
+        int DeadZone { get; set; }
+        int AntiDeadZone { get; set; }
+        int MaxZone { get; set; }
+        double Rotation { get; set; }
+        int Curve { get; set; }
+        int OutCurvePreset { get; set; }
+        BezierCurve OutBezierCurve { get; set; }
+    }
+
+    public interface IGyroConfig
+    {
+        double Sensitivity { get; set; }
+        double DeadZone { get; set; }
+        double AntiDeadZone { get; set; }
+        double MaxZone { get; set; }
+        int OutCurvePreset { get; set; }
+        BezierCurve OutBezierCurve { get; set; }
+    }
+
+    public interface ISquareStickConfig
+    {
+        bool LSMode { get; set; }
+        bool RSMode { get; set; }
+        double Roundness { get; set; }
+    }
 }

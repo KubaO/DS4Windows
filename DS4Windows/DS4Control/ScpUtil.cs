@@ -679,16 +679,61 @@ namespace DS4Windows
         }
     }
 
-    public class DeviceBackingStore : IDeviceConfig {
-    
-        public DeviceBackingStore(int device) {
-            lsOutCurveMode = 0;
-            rsOutCurveMode = 0;
-            l2OutCurveMode = 0;
-            r2OutCurveMode = 0;
-            sxOutCurveMode = 0;
-            szOutCurveMode = 0;
+    public class SquareStickBackingStore : ISquareStickConfig
+    {
+        public bool LSMode { get; set; } = false;
+        public bool RSMode { get; set; } = false;
+        public double Roundness { get; set; }= 5.0;
+    }
 
+    public class Trigger2BackingStore : ITrigger2Config
+    {
+        public double Sensitivity { get; set; } = 1.0;
+        public int DeadZone { get; set; } = 0;  // Trigger deadzone is expressed in axis units
+        public int AntiDeadZone { get; set; } = 0;
+        public int MaxZone { get; set; } = 100;
+        public int OutCurvePreset
+        {
+            get => (int)OutBezierCurve.Preset;
+            set => OutBezierCurve.SetPreset((BezierCurve.PresetMode)value, BezierCurve.AxisType.L2R2);
+        }
+        public BezierCurve OutBezierCurve { get; set; } = new BezierCurve();
+    }
+
+    public class StickBackingStore : IStickConfig
+    {
+        public double Sensitivity { get; set; } = 1.0;
+        public int DeadZone { get; set; } = 0;
+        public int AntiDeadZone { get; set; } = 0;
+        public int MaxZone { get; set; } = 0;
+        public double Rotation { get; set;  } = 0.0;
+        public int Curve { get; set; } = 0;
+        public int OutCurvePreset
+        {
+            get => (int)OutBezierCurve.Preset;
+            set => OutBezierCurve.SetPreset((BezierCurve.PresetMode)value, BezierCurve.AxisType.L2R2);
+        }
+        public BezierCurve OutBezierCurve { get; set; } = new BezierCurve();
+    }
+
+    public class GyroBackingStore : IGyroConfig
+    {
+        public double Sensitivity { get; set; } = 1.0;
+        public double DeadZone { get; set; } = 0.25;
+        public double MaxZone { get; set; } = 1.0;
+        public double AntiDeadZone { get; set; } = 0.0;
+        public int OutCurvePreset
+        {
+            get => (int)OutBezierCurve.Preset;
+            set => OutBezierCurve.SetPreset((BezierCurve.PresetMode)value, BezierCurve.AxisType.L2R2);
+        }
+        public BezierCurve OutBezierCurve { get; set; } = new BezierCurve();
+    }
+
+    public class DeviceBackingStore : IDeviceConfig
+    {
+        public DeviceBackingStore(int device)
+        {
             Color tempColor = Color.Blue;
             switch (device)
             {
@@ -702,13 +747,17 @@ namespace DS4Windows
             MainColor = new DS4Color(tempColor);
         }
 
+        public string ProfilePath { get; set; } = string.Empty;
+        public string OlderProfilePath { get; set; } = string.Empty;
+        public string LaunchProgram { get; set; } = string.Empty;
+
         public int BtPollRate { get; set; } = 4;
         public bool FlushHIDQueue { get; set; } = false;
         public int IdleDisconnectTimeout { get; set; } = 0;
-        public byte RumbleBoost { get; set; } 100;
+        public byte RumbleBoost { get; set; } = 100;
         public bool LowerRCOn { get; set; } = false;
-        public string profilePath { get; set; } = string.Empty;
-        public string olderProfilePath { get; set; } = string.Empty;
+        public int ChargingType { get; set; } = 0;
+        public bool DInputOnly { get; set; } = false;
 
         public byte FlashType { get; set; } = 0;
         public int FlashAt { get; set; } = 0;
@@ -746,140 +795,32 @@ namespace DS4Windows
         public int ButtonMouseSensitivity { get; set; } = 25;
         public bool MouseAccel { get; set; } = false;
 
-        public bool TrackballMode = false;
-        public double TrackballFriction = 10.0;
+        public bool TrackballMode { get; set; } = false;
+        public double TrackballFriction { get; set; } = 10.0;
 
-        public bool DistanceProfiles { get; set; } = false;
-        public StickDeadZoneInfo lsModInfo { get; set; } = new StickDeadZoneInfo();
-        public StickDeadZoneInfo rsModInfo { get; set; } = new StickDeadZoneInfo();
-        public TriggerDeadZoneZInfo l2ModInfo { get; set; } = new TriggerDeadZoneZInfo();
-        public TriggerDeadZoneZInfo r2ModInfo { get; set; } = new TriggerDeadZoneZInfo();
-
-        // The private ones are unused/legacy/dead/whatever. They were commented out.
-        private byte l2Deadzone = 0, r2Deadzone = 0;
-        private int l2AntiDeadzone = 0, r2AntiDeadzone = 0;
-        private int l2MaxZone = 100, r2MaxZone = 100;
-
-        public double LSRotation = 0.0, RSRotation = 0.0;
-        public double SXDeadzone = 0.25, SZDeadzone = 0.25;
-        public double SXMaxzone = 1.0, SZMaxzone = 1.0;
-        public double SXAntiDeadzone = 0.0, SZAntiDeadzone = 0.0;
-        public double l2Sens = 1.0, r2Sens = 1.0;
-        public double LSSens = 1.0, RSSens = 1.0;
-        public double SXSens = 1.0, SZSens = 1.0;
-
-        public SquareStickInfo squStickInfo = new SquareStickInfo();
-
-
-        private void setOutBezierCurveObj(BezierCurve bezierCurve, int curveOptionValue, BezierCurve.AxisType axisType)
-        {
-            // Set bezier curve obj of axis. 0=Linear (no curve mapping), 1-5=Pre-defined curves, 6=User supplied custom curve string value of a profile (comma separated list of 4 decimal numbers)
-            switch (curveOptionValue)
-            {
-                case 1:
-                    bezierCurve.InitBezierCurve(99.0, 99.0, 0.00, 0.00, axisType);
-                    break; // Enhanced Precision (hard-coded curve) (The same curve as bezier 0.70, 0.28, 1.00, 1.00)
-                case 2:
-                    bezierCurve.InitBezierCurve(0.55, 0.09, 0.68, 0.53, axisType);
-                    break; // Quadric
-                case 3:
-                    bezierCurve.InitBezierCurve(0.74, 0.12, 0.64, 0.29, axisType);
-                    break; // Cubic
-                case 4:
-                    bezierCurve.InitBezierCurve(0.00, 0.00, 0.41, 0.96, axisType);
-                    break; // Easeout Quad
-                case 5:
-                    bezierCurve.InitBezierCurve(0.08, 0.22, 0.22, 0.91, axisType);
-                    break; // Easeout Cubic
-                case 6:
-                    bezierCurve.InitBezierCurve(bezierCurve.CustomDefinition, axisType);
-                    break; // Custom output curve
-            }
-        }
-
-        public BezierCurve lsOutBezierCurveObj = new BezierCurve();
-        public BezierCurve rsOutBezierCurveObj = new BezierCurve();
-        public BezierCurve l2OutBezierCurveObj = new BezierCurve();
-        public BezierCurve r2OutBezierCurveObj = new BezierCurve();
-        public BezierCurve sxOutBezierCurveObj = new BezierCurve();
-        public BezierCurve szOutBezierCurveObj = new BezierCurve();
-
-        private int setNewOutCurveMode(BezierCurve outBezierCurveObj, int value, BezierCurve.AxisType axisType)
-        {
-            if (value >= 1) setOutBezierCurveObj(outBezierCurveObj, value, axisType);
-            return value;
-        }
-
-        private int _lsOutCurveMode = 0;
-        public int lsOutCurveMode
-        {
-            get => _lsOutCurveMode;
-            set => _lsOutCurveMode = setNewOutCurveMode(lsOutBezierCurveObj, value, BezierCurve.AxisType.LSRS);
-        }
-
-        private int _rsOutCurveMode = 0;
-        public int rsOutCurveMode
-        {
-            get => _rsOutCurveMode;
-            set => _rsOutCurveMode = setNewOutCurveMode(lsOutBezierCurveObj, value, BezierCurve.AxisType.LSRS);
-        }
-
-        private int _l2OutCurveMode = 0;
-        public int l2OutCurveMode
-        {
-            get => _l2OutCurveMode;
-            set => _l2OutCurveMode = setNewOutCurveMode(lsOutBezierCurveObj, value, BezierCurve.AxisType.L2R2);
-        }
-
-        private int _r2OutCurveMode = 0;
-        public int r2OutCurveMode
-        {
-            get => _r2OutCurveMode;
-            set => _r2OutCurveMode = setNewOutCurveMode(lsOutBezierCurveObj, value, BezierCurve.AxisType.L2R2);
-        }
-
-        private int _sxOutCurveMode = 0;
-        public int sxOutCurveMode
-        {
-            get => _sxOutCurveMode;
-            set => _sxOutCurveMode = setNewOutCurveMode(lsOutBezierCurveObj, value, BezierCurve.AxisType.SA);
-        }
-
-        private int _szOutCurveMode = 0;
-        public int szOutCurveMode
-        {
-            get => _szOutCurveMode;
-            set => _szOutCurveMode = setNewOutCurveMode(lsOutBezierCurveObj, value, BezierCurve.AxisType.SA);
-        }
-
-
-        public int chargingType = 0;
-        public string launchProgram = string.Empty;
-        public bool dinputOnly = false;
-        public bool useSAforMouse = false;
-        public string sATriggers = string.Empty;
-        public bool sATriggerCond = true;
-        
-        public SASteeringWheelEmulationAxisType sASteeringWheelEmulationAxis =
+        public bool UseSAForMouse { get; set; } = false;
+        public string SATriggers { get; set; } = string.Empty;
+        public bool SATriggerCond { get; set; } = true;
+        public SASteeringWheelEmulationAxisType SASteeringWheelEmulationAxis { get; set; } =
             SASteeringWheelEmulationAxisType.None;
-        public int sASteeringWheelEmulationRange = 360;
-            
+        public int SASteeringWheelEmulationRange { get; set; } = 360;
 
-        public int lsCurve = 0;
-        public int rsCurve = 0;
+        public ITrigger2Config L2 { get; set; } = new Trigger2BackingStore();
+        public ITrigger2Config R2 { get; set; } = new Trigger2BackingStore();
+        public IStickConfig LS { get; set; } = new StickBackingStore();
+        public IStickConfig RS { get; set; } = new StickBackingStore();
+        public IGyroConfig SX { get; set; } = new GyroBackingStore();
+        public IGyroConfig SZ { get; set; } = new GyroBackingStore();
+        public ISquareStickConfig SquStick { get; set; } = new SquareStickConfig();
 
-        public List<DS4ControlSettings> DS4Settings { get; } = new List<DS4ControlSettings>();
+        public OutContType OutputDevType { get; set; } = OutContType.X360;
+        public bool DistanceProfiles { get; set; } = false;
 
-        public List<string> profileActions = null;
-        public Dictionary<string, SpecialAction> profileActionDict = new Dictionary<string, SpecialAction>();
-        public Dictionary<string, int> profileActionIndexDict = new Dictionary<string, int>();
+        public List<string> ProfileActions { get; set; } = null;
+        private Dictionary<string, SpecialAction> profileActionDict = new Dictionary<string, SpecialAction>();
+        private Dictionary<string, int> profileActionIndexDict = new Dictionary<string, int>();
 
-        // Cache whether profile has custom action
-        public bool containsCustomAction = false;
-        // Cache whether profile has custom extras
-        public bool containsCustomExtras = false;
-
-        public OutContType outputDevType = OutContType.X360;
+        public List<DS4ControlSettings> DS4CSettings { get; } = new List<DS4ControlSettings>();
 
         public void UpdateDS4CSetting(string buttonName, bool shift, object action, string exts, DS4KeyType kt, int trigger = 0)
         {
@@ -890,28 +831,9 @@ namespace DS4Windows
                 dc = (DS4Controls)Enum.Parse(typeof(DS4Controls), buttonName, true);
 
             int temp = (int)dc;
-            if (temp > 0)
-            {
+            if (temp > 0) {
                 int index = temp - 1;
-                DS4ControlSettings dcs = DS4Settings[index];
-                dcs.UpdateSettings(shift, action, exts, kt, trigger);
-            }
-            hasCustomActions = hasCustomExtras = null;
-        }
-
-        public void UpdateDS4CExtra(int deviceNum, string buttonName, bool shift, string exts)
-        {
-            DS4Controls dc;
-            if (buttonName.StartsWith("bn"))
-                dc = BackingStore.getDS4ControlsByName(buttonName);
-            else
-                dc = (DS4Controls)Enum.Parse(typeof(DS4Controls), buttonName, true);
-
-            int temp = (int)dc;
-            if (temp > 0)
-            {
-                int index = temp - 1;
-                DS4ControlSettings dcs = DS4Settings[index];
+                DS4ControlSettings dcs = DS4CSettings[index];
                 if (shift)
                     dcs.shiftExtras = exts;
                 else
@@ -934,7 +856,7 @@ namespace DS4Windows
         {
             if (hasCustomActions != null && hasCustomExtras != null) return true;
             bool actions = false, extras = false;
-            foreach (var dcs in DS4Settings) {
+            foreach (var dcs in DS4CSettings) {
                 actions = actions || dcs.action != null || dcs.shiftAction != null;
                 extras = extras || dcs.extras != null || dcs.shiftExtras != null;
                 if (actions && extras) break;
@@ -3285,8 +3207,6 @@ namespace DS4Windows
 
             return null;
         }
-
-
 
 
         private void ResetProfile(int device)

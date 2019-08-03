@@ -43,15 +43,19 @@ namespace DS4Windows
         private static double kSampleStepSize = 1.0 / (kSplineTableSize - 1.0);
         private double[] arraySampleValues;
 
-        // These values are established by empiricism with tests (tradeoff: performance VS precision) (comment by GRE)
+        // These values are established by empiricism with tests (tradeoff:
+        // performance VS precision)
         private static int    NEWTON_ITERATIONS = 4;
         private static double NEWTON_MIN_SLOPE = 0.001;
         private static double SUBDIVISION_PRECISION = 0.0000001;
         private static int    SUBDIVISION_MAX_ITERATIONS = 10;
 
-        private double mX1 = 0, mY1 = 0, mX2 = 0, mY2 = 0;  // Bezier curve definition (0, 0, 0, 0 = Linear. 99, 99, 0, 0 = Pre-defined hard-coded EnhancedPrecision curve)
+        private double mX1 = 0, mY1 = 0, mX2 = 0, mY2 = 0; 
+        // Bezier curve definition (0, 0, 0, 0 = Linear. 99, 99, 0, 0 = Pre-defined hard-coded EnhancedPrecision curve)
 
-        // Set or Get string representation of the bezier curve definition value (Note! Set doesn't initialize the lookup table. InitBezierCurve needs to be called to actually initalize the calculation)
+        // Set or Get string representation of the bezier curve definition value
+        // (Note! Set doesn't initialize the lookup table. InitBezierCurve needs to be
+        // called to actually initalize the calculation)
         public string AsString
         {
             get { return ($"{mX1}, {mY1}, {mX2}, {mY2}"); }
@@ -64,7 +68,9 @@ namespace DS4Windows
             }
         }
 
-        // Custom definition set by DS4Windows options screens. This string is not validated (ie. the value is as user entered it and could be an invalid curve definition). This value is saved in a profile XML file.
+        // Custom definition set by DS4Windows options screens. This string is not validated
+        // (ie. the value is as user entered it and could be an invalid curve definition).
+        // This value is saved in a profile XML file.
         public string CustomDefinition { get; set; }
         public string ToString() { return this.CustomDefinition; }
 
@@ -72,12 +78,44 @@ namespace DS4Windows
         private double axisMaxDouble;           // Max range of axis (range of positive values)
         private double axisCenterPosDouble;     // Center pos of axis (LS/RS has 128 as "stick center", other axies has 0 as zero center point)
 
-        // Lookup result table is always either in 0..128 or 0..255 range depending on the DS4 analog axis range. LUT table set as public to let DS4Win reading thread to access it directly (every CPU cycle matters)
+        // Lookup result table is always either in 0..128 or 0..255 range depending on the DS4
+        // analog axis range. LUT table set as public to let DS4Win reading thread to access it
+        // directly (every CPU cycle matters)
         public byte[] arrayBezierLUT = null;  
 
         public BezierCurve()
         {
             CustomDefinition = "";
+        }
+
+        public enum PresetMode { Default = 0, EnhancedPrecision = 1, Quadric = 2, Cubic = 3, EaseOutQuad = 4, EaseOutCubic = 5, Custom = 6 }
+
+        public PresetMode Preset { get; private set; } = PresetMode.Default;
+
+        public void SetPreset(PresetMode preset, AxisType axisType)
+        {
+            // Set bezier curve obj of axis. 0=Linear (no curve mapping), 1-5=Pre-defined curves, 6=User supplied custom curve string value of a profile (comma separated list of 4 decimal numbers)
+            switch (preset)
+            {
+                case PresetMode.EnhancedPrecision:
+                    InitBezierCurve(99.0, 99.0, 0.00, 0.00, axisType);
+                    break; // Same curve as bezier 0.70, 0.28, 1.00, 1.00)
+                case PresetMode.Quadric:
+                    InitBezierCurve(0.55, 0.09, 0.68, 0.53, axisType);
+                    break;
+                case PresetMode.Cubic:
+                    InitBezierCurve(0.74, 0.12, 0.64, 0.29, axisType);
+                    break; // Cubic
+                case PresetMode.EaseOutQuad:
+                    InitBezierCurve(0.00, 0.00, 0.41, 0.96, axisType);
+                    break; // Easeout Quad
+                case PresetMode.EaseOutCubic:
+                    InitBezierCurve(0.08, 0.22, 0.22, 0.91, axisType);
+                    break; // Easeout Cubic
+                case PresetMode.Custom:
+                    InitBezierCurve(CustomDefinition, axisType);
+                    break; // Custom output curve
+            }
         }
 
         public bool InitBezierCurve(string bezierCurveDefinition, AxisType gamepadAxisType, bool setCustomDefinitionProperty = false)
