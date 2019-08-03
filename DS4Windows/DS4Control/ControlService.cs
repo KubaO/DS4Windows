@@ -417,7 +417,7 @@ namespace DS4Windows
 
                         touchPad[i] = new Mouse(i, device);
 
-                        if (!aux.useTempProfile)
+                        if (!aux.UseTempProfile)
                         {
                             if (device.isValidSerial() && containsLinkedProfile(device.getMacAddress()))
                             {
@@ -435,7 +435,7 @@ namespace DS4Windows
 
                         if (!getDInputOnly(i) && device.isSynced())
                         {
-                            aux.useDInputOnly = false;
+                            aux.UseDInputOnly = false;
 
                             OutContType contType = Global.OutContType[i];
                             if (contType == OutContType.X360)
@@ -469,7 +469,7 @@ namespace DS4Windows
                         }
                         else
                         {
-                            aux.useDInputOnly = true;
+                            aux.UseDInputOnly = true;
                         }
 
                         int tempIdx = i;
@@ -604,7 +604,7 @@ namespace DS4Windows
                         CurrentState[i].Battery = PreviousState[i].Battery = 0; // Reset for the next connection's initial status change.
                         outputDevices[i]?.Disconnect();
                         outputDevices[i] = null;
-                        aux[i].useDInputOnly = true;
+                        aux[i].UseDInputOnly = true;
                         DS4Controllers[i] = null;
                         touchPad[i] = null;
                         lag[i] = false;
@@ -680,7 +680,7 @@ namespace DS4Windows
 
                             touchPad[Index] = new Mouse(Index, device);
 
-                            if (!aux.useTempProfile)
+                            if (!aux.UseTempProfile)
                             {
                                 if (device.isValidSerial() && containsLinkedProfile(device.getMacAddress()))
                                 {
@@ -717,7 +717,7 @@ namespace DS4Windows
                             
                             if (!getDInputOnly(Index) && device.isSynced())
                             {
-                                aux.useDInputOnly = false;
+                                aux.UseDInputOnly = false;
                                 OutContType contType = Global.OutContType[Index];
                                 if (contType == OutContType.X360)
                                 {
@@ -751,7 +751,7 @@ namespace DS4Windows
                             }
                             else
                             {
-                                aux.useDInputOnly = true;
+                                aux.UseDInputOnly = true;
                             }
 
                             TouchPadOn(Index, device);
@@ -1107,12 +1107,12 @@ namespace DS4Windows
 
                 if (!synced)
                 {
-                    if (!aux[ind].useDInputOnly)
+                    if (!aux[ind].UseDInputOnly)
                     {
                         string tempType = outputDevices[ind].GetDeviceType();
                         outputDevices[ind].Disconnect();
                         outputDevices[ind] = null;
-                        aux[ind].useDInputOnly = true;
+                        aux[ind].UseDInputOnly = true;
                         LogDebug(tempType + " Controller #" + (ind + 1) + " unplugged");
                     }
                 }
@@ -1149,7 +1149,7 @@ namespace DS4Windows
                             LogDebug("DS4 Controller #" + (ind + 1) + " connected");
                         }
 
-                        aux[ind].useDInputOnly = false;
+                        aux[ind].UseDInputOnly = false;
                     }
                 }
             }
@@ -1181,7 +1181,7 @@ namespace DS4Windows
                 if (removingStatus)
                 {
                     CurrentState[ind].Battery = PreviousState[ind].Battery = 0; // Reset for the next connection's initial status change.
-                    if (!aux[ind].useDInputOnly)
+                    if (!aux[ind].UseDInputOnly)
                     {
                         string tempType = outputDevices[ind].GetDeviceType();
                         outputDevices[ind].Disconnect();
@@ -1223,7 +1223,7 @@ namespace DS4Windows
                     touchPad[ind] = null;
                     lag[ind] = false;
                     inWarnMonitor[ind] = false;
-                    aux[ind].useDInputOnly = true;
+                    aux[ind].UseDInputOnly = true;
                     uiContext?.Post(new SendOrPostCallback((state) =>
                     {
                         OnControllerRemoved(this, ind);
@@ -1316,7 +1316,7 @@ namespace DS4Windows
 
                 cState = Mapping.SetCurveAndDeadzone(ind, cState, TempState[ind]);
 
-                if (!recordingMacro && (aux[ind].useTempProfile ||
+                if (!recordingMacro && (aux[ind].UseTempProfile ||
                     containsCustomAction(ind) || containsCustomExtras(ind) ||
                     getProfileActionCount(ind) > 0 ||
                     GetSASteeringWheelEmulationAxis(ind) >= SASteeringWheelEmulationAxisType.VJoy1X))
@@ -1325,7 +1325,7 @@ namespace DS4Windows
                     cState = MappedState[ind];
                 }
 
-                if (!aux[ind].useDInputOnly)
+                if (!aux[ind].UseDInputOnly)
                 {
                     outputDevices[ind]?.ConvertandSendReport(cState, ind);
                     //testNewReport(ref x360reports[ind], cState, ind);
@@ -1484,16 +1484,16 @@ namespace DS4Windows
             var aux = Global.aux[deviceID];
             if (!getUseTPforControls(deviceID) && cState.Touch1 && pState.PS)
             {
-                if (aux.touchpadActive && touchreleased[deviceID])
+                if (aux.TouchpadActive && touchreleased[deviceID])
                 {
-                    aux.touchpadActive = false;
+                    aux.TouchpadActive = false;
                     LogDebug(Properties.Resources.TouchpadMovementOff);
                     AppLogger.LogToTray(Properties.Resources.TouchpadMovementOff);
                     touchreleased[deviceID] = false;
                 }
                 else if (touchreleased[deviceID])
                 {
-                    aux.touchpadActive = true;
+                    aux.TouchpadActive = true;
                     LogDebug(Properties.Resources.TouchpadMovementOn);
                     AppLogger.LogToTray(Properties.Resources.TouchpadMovementOn);
                     touchreleased[deviceID] = false;
@@ -1507,7 +1507,7 @@ namespace DS4Windows
         {
             if (deviceID < 4)
             {
-                aux[deviceID].touchpadActive = false;
+                aux[deviceID].TouchpadActive = false;
             }
         }
 

@@ -2694,7 +2694,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             CheckBox linkCb = (CheckBox)sender;
             int i = Convert.ToInt32(linkCb.Tag);
             bool check = linkCb.Checked;
-            aux[i].linkedProfileCheck = check;
+            aux[i].LinkedProfileCheck = check;
             DS4Device device = Program.rootHub.DS4Controllers[i];
             if (device != null && device.isSynced())
             {

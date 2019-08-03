@@ -23,10 +23,30 @@ using System.Collections.Generic;
 
 namespace DS4Windows
 {
-	// These are the public configuration APIs that interface between modules.
+    // These are the public configuration APIs that interface between modules.
+
+    public class API
+    {
+        // That's our interface to the outside world
+        protected static Global global = new Global();
+        public static IGlobalConfig Config = global;
+        public static IDeviceConfig Cfg(int index) => Config.Cfg(index);
+        public static IDeviceAuxiliaryConfig Aux(int index) => Config.Aux(index);
+
+        public static bool IsAdministrator { get => global.IsAdministrator; }
+
+        public static bool IsViGEmBusInstalled() => DeviceDetection.IsViGEmBusInstalled();
+        public string VigemBusVersion { get; } = DeviceDetection.ViGEmBusVersion();
+
+        public static void FindConfigLocation() => global.FindConfigLocation();
+        public static void SetCulture(string culture) => global.SetCulture(culture);
+    }
 
     public interface IGlobalConfig
     {
+        IDeviceConfig Cfg(int index);
+        IDeviceAuxiliaryConfig Aux(int index);
+
         bool UseExclusiveMode { get; set; }
         DateTime LastChecked { get; set; }
         int CheckWhen { get; set; }
@@ -57,11 +77,27 @@ namespace DS4Windows
 		string ActionsPath { get; set; }
 		string LinkedProfilesPath { get; set; }
 		string ControllerConfigsPath { get; set; }
+		Dictionary<string, string> LinkedProfiles { get; set; }
 
-		List<SpecialAction> Actions { get; }
+		string ExePath { get; }
+        bool ExePathNeedsAdmin { get; }
+		string AppDataPath { get; }
+		bool AppDataPathNeedsAdmin { get; }
+		string AppDataPPath { get; set; }
+		bool IsFirstRun { get; }
+		bool MultiSaveSpots { get; set; }
+		bool RunHotPLug { get; set; }
+
+        bool VigemInstalled { get; }
+		string VigemBusVersion { get; }
+
+        List<SpecialAction> Actions { get; }
         SpecialAction ActionByName(string name);
         SpecialAction ActionByIndex(int index);
         int LookupActionIndex(string name);
+
+        X360Controls[] DefaultButtonMapping { get;  }
+        DS4Controls[] ReverseX360ButtonMapping { get; }
     }
 
     public interface IDeviceAuxiliaryConfig
@@ -76,89 +112,58 @@ namespace DS4Windows
 
     public interface IDeviceConfig
     {
-        int ButtonMouseSensitivity { get; set; }
-        byte RumbleBoost { get; set; }
-        double Rainbow { get; set; } 
+        int BTPollRate { get; set; }
         bool FlushHIDQueue { get; set; }
-        bool EnableTouchToggle { get; set; }
         int IdleDisconnectTimeout { get; set; }
+        byte RumbleBoost { get; set; }
+        bool LowerRCOn { get; set; }
+        int ChargingType { get; set; }
+        bool DInputOnly { get; set; }
+
+        byte FlashType { get; set; }
+        int FlashAt { get; set; }
+        double Rainbow { get; set; }
+        bool LedAsBatteryIndicator { get; set; }
+        DS4Color MainColor { get; set; }
+        DS4Color LowColor { get; set; }
+        DS4Color ChargingColor { get; set; }
+        DS4Color CustomColor { get; set; }
+        bool UseCustomColor { get; set; }
+        DS4Color FlashColor { get; set; }
+
+        bool EnableTouchToggle { get; set; }
         byte TouchSensitivity { get; set; }
         bool TouchActive { get; set; }
-        byte FlashType { get; set; }
-        int FlashAt { get; set; } 
-        bool LedAsBatteryIndicator { get; set; }
-        int ChargingType { get; set; }
-        bool DinputOnly { get; set; }
-
-#if false
-        public Dictionary<string, string> linkedProfiles = new Dictionary<string, string>();
-
-        public int[] gyroMouseDZ = new int[5] { MouseCursor.GYRO_MOUSE_DEADZONE, MouseCursor.GYRO_MOUSE_DEADZONE,
-            MouseCursor.GYRO_MOUSE_DEADZONE, MouseCursor.GYRO_MOUSE_DEADZONE,
-            MouseCursor.GYRO_MOUSE_DEADZONE };
-        public bool[] gyroMouseToggle = new bool[5] { false, false, false,
-            false, false };
-
-        private void setOutBezierCurveObjArrayItem(BezierCurve[] bezierCurveArray, int device, int curveOptionValue, BezierCurve.AxisType axisType)
-
-        public List<DS4ControlSettings>[] ds4settings = new List<DS4ControlSettings>[5]
-
-        public int[] profileActionCount = new int[5] { 0, 0, 0, 0, 0 };
-        public Dictionary<string, SpecialAction>[] profileActionDict = new Dictionary<string, SpecialAction>[5]
-
-        public Dictionary<string, int>[] profileActionIndexDict = new Dictionary<string, int>[5]
-
-        public string useLang = "";
-        public bool downloadLang = true;
-        public bool flashWhenLate = true;
-        public int flashWhenLateAt = 20;
-        public bool useUDPServ = false;
-        public int udpServPort = 26760;
-        public string udpServListenAddress = "127.0.0.1"; // 127.0.0.1=IPAddress.Loopback (default), 0.0.0.0=IPAddress.Any as all interfaces, x.x.x.x = Specific ipv4 interface address or hostname
-        public bool useCustomSteamFolder;
-        public string customSteamFolder;
-        // Cache whether profile has custom action
-        public bool[] containsCustomAction = new bool[5] { false, false, false, false, false };
-
-        // Cache whether profile has custom extras
-        public bool[] containsCustomExtras = new bool[5] { false, false, false, false, false };
-#endif
-
+        bool TouchpadJitterCompensation { get; set; }
+        int TouchpadInvert { get; set; }
         bool StartTouchpadOff { get; set; } 
         bool UseTPforControls { get; set; }
-        
-        bool UseSAforMouse { get; set; }
+        int[] TouchDisInvertTriggers { get; set; }
+        byte TapSensitivity { get; set; }
+        bool DoubleTap { get; set; }
+        int ScrollSensitivity { get; set; }
 
+        int GyroSensitivity { get; set; }
+        int GyroSensVerticalScale { get; set; }
+        int GyroInvert { get; set; }
+        bool GyroTriggerTurns { get; set; }
+        bool GyroSmoothing { get; set; }
+        double GyroSmoothingWeight { get; set; }
+        int GyroMouseHorizontalAxis { get; set; }
+        int GyroMouseDeadZone { get; set; }
+        bool GyroMouseToggle { get; set; }
+
+        int ButtonMouseSensitivity { get; set; }
+        bool MouseAccel { get; set; }
+
+        bool TrackballMode { get; set; }
+        double TrackballFriction { get; set; }
+
+        bool UseSAforMouse { get; set; }
         string SATriggers { get; set; }
         bool SATriggerCond { get; set; }
         SASteeringWheelEmulationAxisType SASteeringWheelEmulationAxis { get; set; } 
         int SASteeringWheelEmulationRange { get; set; }
-
-        int TouchDisInvertTriggers { get; set; }
-        int GyroSensitivity { get; set; } 
-        int GyroSensVerticalScale { get; set; } 
-        int GyroInvert { get; set; } 
-        bool GyroTriggerTurns { get; set; }
-        bool GyroSmoothing { get; set; }
-        double GyroSmoothingWeight { get; set; }
-        int GyroMouseHorizontalAxis { get; set; } 
-        int GyroMouseDeadZone { get; set; } 
-        bool GyroMouseToggle { get; set; }
-
-        DS4Color MainColor { get; set; } 
-		DS4Color LowColor { get; set; } 
-        DS4Color ChargingColor { get; set; }
-        DS4Color CustomColor { get; set; }
-		bool UseCustomColor { get; set; } 
-        DS4Color FlashColor { get; set; }
-
-        byte TapSensitivity { get; set; } 
-        bool DoubleTap { get; set; } 
-        int ScrollSensitivity { get; set; }
-
-        bool LowerRCOn { get; set; }
-        bool TouchpadJitterCompensation { get; set; }
-        int TouchpadInvert { get; set; }
 
         TriggerDeadZoneZInfo L2ModInfo { get; set; }
         byte L2Deadzone { get; set; }        
@@ -207,10 +212,6 @@ namespace DS4Windows
         double LSSens { get; set; }
         double RSSens { get; set; }
 
-        bool MouseAccel { get; set; } 
-
-        int BTPollRate { get; set; }
-        
         SquareStickInfo SquStickInfo { get; set; }
 
         int LsOutCurveMode { get; set; }
@@ -228,8 +229,7 @@ namespace DS4Windows
         int SZOutCurveMode { get; set; }
         BezierCurve[] SZOutBezierCurveObj { get; set; }
 
-        bool TrackballMode { get; set; }
-        double TrackballFriction { get; set; }
+        void SetOutBezierCurveObjects(BezierCurve[] bezierCurves, int curveOptionValue, BezierCurve.AxisType axisType);
 
         OutContType OutContType { get; set; }
         string LaunchProgram { get; set; }
@@ -242,8 +242,9 @@ namespace DS4Windows
         SpecialAction ProfileActionByIndex(int index);
         int LookupProfileActionIndex(string name);
 
+        List<DS4ControlSettings> DS4Settings { get; }
         void UpdateDS4CSetting(string buttonName, bool shift, object action, string exts, DS4KeyType kt, int trigger = 0);
-        void UpdateDS4Extra(string buttonName, bool shift, string exts);
+        void UpdateDS4CExtra(string buttonName, bool shift, string exts);
 
         object GetDS4Action(string buttonName, bool shift);
         object GetDS4Action(DS4Controls control, bool shift);
@@ -254,11 +255,8 @@ namespace DS4Windows
         List<DS4ControlSettings> GetDS4CSettings();
         DS4ControlSettings getDS4CSetting(string control);
         DS4ControlSettings getDS4CSetting(DS4Controls control);
-        bool HasCustomActions { get; set; }
-        bool HasCustomExtras { get; set; }
-        
-        bool ContainsCustomAction { get; set; }
-        bool ContainsCustomExtras { get; set; }
+        bool HasCustomActions { get; }
+        bool HasCustomExtras { get; }
     }
 
 }

@@ -371,7 +371,7 @@ namespace DS4Windows.Forms
                 LoadProfile(device, false, Program.rootHub);
 
                 //devOutContType = Global.OutContType[device];
-                aux.outDevTypeTemp = dev.outputDevType;
+                aux.OutDevTypeTemp = dev.outputDevType;
 
                 if (dev.rainbow == 0)
                 {

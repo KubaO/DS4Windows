@@ -32,7 +32,7 @@ namespace DS4Windows
             //mouse wheel 120 == 1 wheel click according to Windows API
             double lastMidX = (lastT0.hwX + lastT1.hwX) / 2d, lastMidY = (lastT0.hwY + lastT1.hwY) / 2d,
                currentMidX = (T0.hwX + T1.hwX) / 2d, currentMidY = (T0.hwY + T1.hwY) / 2d;
-            double coefficient = Global.ScrollSensitivity[deviceNumber];
+            double coefficient = Global.cfg[deviceNumber].scrollSensitivity;
             // Adjust for touch distance: "standard" distance is 960 pixels, i.e. half the width.  Scroll farther if fingers are farther apart, and vice versa, in linear proportion.
             double touchXDistance = T1.hwX - T0.hwX, touchYDistance = T1.hwY - T0.hwY, touchDistance = Math.Sqrt(touchXDistance * touchXDistance + touchYDistance * touchYDistance);
             coefficient *= touchDistance / 960.0;

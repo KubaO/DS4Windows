@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Globalization;
 using System.Windows.Forms.VisualStyles;
 using System.Xml.Serialization;
+using System.Collections;
 
 namespace DS4Windows
 {
@@ -155,35 +156,81 @@ namespace DS4Windows
         public string serial { get; private set; }
     }
 
-    public class Global
+    struct Lazy<T> where T:struct
     {
-        protected static BackingStore m_Config = new BackingStore();
-        protected static Int32 m_IdleTimeout = 600000;
-        public static readonly string exepath = Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName;
-        public static string appdatapath;
-        public static bool firstRun = false;
-        public static bool multisavespots = false;
-        public static string appDataPpath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\DS4Windows";
-        public static bool runHotPlug = false;
-
-        public class DeviceAuxiliaryConfig : IDeviceAuxiliaryConfig
+        private T? value;
+        private Func<T> init;
+        public static implicit operator T(Lazy<T> o) => o.get();
+        public static implicit operator Lazy<T>(Func<T> init) => new Lazy<T>(init);
+        T get() => value ?? (T)(value = init());
+        public Lazy(Func<T> init)
         {
-            public string TempProfileName { get; set; } = string.Empty;
-            public bool UseTempProfile { get; set; } = false;
-            public bool TempProfileDistance { get; set; } = false;
-            public bool UseDInputOnly { get; set; } = true;
-            public bool LinkedProfileCheck { get; set; } = true; // applies between this and successor profile
-            public bool TouchpadActive { get; set; } = true;
-            public OutContType OutDevTypeTemp { get; set; } = DS4Windows.OutContType.X360;
+            value = null;
+            this.init = init;
         }
+    }
 
-        public static DeviceAuxiliaryConfig[] aux = new DeviceAuxiliaryConfig[5];
-        public static readonly DeviceBackingStore[] cfg = m_Config.dev;
+    struct LazyObj<T> where T : class
+    {
+        private T value;
+        private Func<T> init;
+        public static implicit operator T(LazyObj<T> o) => o.get();
+        public static implicit operator LazyObj<T>(Func<T> init) => new LazyObj<T>(init);
+        T get() => value ?? (value = init());
+        public LazyObj(Func<T> init)
+        {
+            value = null;
+            this.init = init;
+        }
+    }
 
-        public static bool vigemInstalled = IsViGEmBusInstalled();
-        public static string vigembusVersion = ViGEmBusVersion();
+    class DeviceAuxiliaryConfig : IDeviceAuxiliaryConfig
+    {
+        public string TempProfileName { get; set; } = string.Empty;
+        public bool UseTempProfile { get; set; } = false;
+        public bool TempProfileDistance { get; set; } = false;
+        public bool UseDInputOnly { get; set; } = true;
+        public bool LinkedProfileCheck { get; set; } = true; // applies between this and successor profile
+        public bool TouchpadActive { get; set; } = true;
+        public OutContType OutDevTypeTemp { get; set; } = DS4Windows.OutContType.X360;
+    }
 
-        public static X360Controls[] defaultButtonMapping = { X360Controls.None, X360Controls.LXNeg, X360Controls.LXPos,
+    public class Global : IGlobalConfig
+    {
+        private BackingStore m_Config = new BackingStore();
+        //private static IGlobalConfig This { get => Config; }
+
+        Int32 idleTimeout = 600000;
+
+        public string ExePath { get; } = Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName;
+        private string appDataPath; 
+        public string AppDataPath
+        {
+            get => appDataPath ?? (AppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\DS4Windows");
+            set
+            {
+                appDataPath = value;
+                ProfilePath = $"{appDataPath}\\Profiles.xml";
+                ActionsPath = $"{appDataPath}\\Actions.xml";
+                LinkedProfilesPath = $"{appDataPath}\\LinkedProfiles.xml";
+                ControllerConfigsPath = $"{appDataPath}\\ControllerConfigs.xml";
+            }
+        }
+        public string ProfilePath { get; set;  }
+        public string ActionsPath { get; set; }
+        public string LinkedProfilesPath { get; set; }
+        public string ControllerConfigsPath { get; set; }
+
+        public bool IsFirstRun { get; private set; } = false;
+        public bool MultiSaveSpots { get; set; } = false;
+        public bool RunHotPlug { get; set; } = false;
+
+        DeviceAuxiliaryConfig[] aux = new DeviceAuxiliaryConfig[5];
+        DeviceBackingStore[] cfg = new DeviceBackingStore[5];
+        public IDeviceAuxiliaryConfig Aux(int index) => aux[index];
+        public IDeviceConfig Cfg(int index) => cfg[index];
+
+        public X360Controls[] DefaultButtonMapping { get; } = { X360Controls.None, X360Controls.LXNeg, X360Controls.LXPos,
             X360Controls.LYNeg, X360Controls.LYPos, X360Controls.RXNeg, X360Controls.RXPos, X360Controls.RYNeg, X360Controls.RYPos,
             X360Controls.LB, X360Controls.LT, X360Controls.LS, X360Controls.RB, X360Controls.RT, X360Controls.RS, X360Controls.X,
             X360Controls.Y, X360Controls.B, X360Controls.A, X360Controls.DpadUp, X360Controls.DpadRight, X360Controls.DpadDown,
@@ -192,206 +239,68 @@ namespace DS4Windows
             X360Controls.None, X360Controls.None, X360Controls.None, X360Controls.None
         };
 
-        // Create mapping array at runtime
-        public static DS4Controls[] reverseX360ButtonMapping = new Func<DS4Controls[]>(() =>
-        {
-            DS4Controls[] temp = new DS4Controls[defaultButtonMapping.Length];
-            for (int i = 0, arlen = defaultButtonMapping.Length; i < arlen; i++)
-            {
-                X360Controls mapping = defaultButtonMapping[i];
-                if (mapping != X360Controls.None)
+        private DS4Controls[] revButtonMapping;
+        public DS4Controls[] RevButtonMapping {
+            get {
+                if (revButtonMapping is DS4Controls[] result) return result;
+                revButtonMapping = new DS4Controls[DefaultButtonMapping.Length];
+                int i = 0;
+                foreach (var mapping in DefaultButtonMapping.Where(m => m != X360Controls.None))
                 {
-                    temp[(int)mapping] = (DS4Controls)i;
+                    revButtonMapping[(int)mapping] = (DS4Controls)i;
+                    i++;
+                }
+                return revButtonMapping;
+            }
+        }
+
+        private bool? exePathNeedsAdmin;
+        public bool ExePathNeedsAdmin {
+            get {
+                if (exePathNeedsAdmin is bool result) return result;
+                try
+                {
+                    File.WriteAllText($"{ExePath}\\test.txt", "test");
+                    File.Delete($"{ExePath}\\test.txt");
+                    return (bool)(exePathNeedsAdmin = false);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return (bool)(exePathNeedsAdmin = true);
                 }
             }
-
-            return temp;
-        })();
-
-        public static void SaveWhere(string path)
-        {
-            appdatapath = path;
-            m_Config.m_Profile = appdatapath + "\\Profiles.xml";
-            m_Config.m_Actions = appdatapath + "\\Actions.xml";
-            m_Config.m_linkedProfiles = Global.appdatapath + "\\LinkedProfiles.xml";
-            m_Config.m_controllerConfigs = Global.appdatapath + "\\ControllerConfigs.xml";
         }
 
-        /// <summary>
-        /// Check if Admin Rights are needed to write in Appliplation Directory
-        /// </summary>
-        /// <returns></returns>
-        public static bool AdminNeeded()
-        {
-            try
-            {
-                File.WriteAllText(exepath + "\\test.txt", "test");
-                File.Delete(exepath + "\\test.txt");
-                return false;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return true;
+        private bool? isAdministrator;
+        public bool IsAdministrator {
+            get {
+                if (isAdministrator is bool result) return result;
+                var identity = WindowsIdentity.GetCurrent();
+                var principal = new WindowsPrincipal(identity);
+                return (bool) (isAdministrator = principal.IsInRole(WindowsBuiltInRole.Administrator));
             }
         }
 
-        public static bool IsAdministrator()
+        public void FindConfigLocation()
         {
-            var identity = WindowsIdentity.GetCurrent();
-            var principal = new WindowsPrincipal(identity);
-            return principal.IsInRole(WindowsBuiltInRole.Administrator);
-        }
-
-        public static bool CheckForDevice(string guid)
-        {
-            bool result = false;
-            Guid deviceGuid = Guid.Parse(guid);
-            NativeMethods.SP_DEVINFO_DATA deviceInfoData =
-                new NativeMethods.SP_DEVINFO_DATA();
-            deviceInfoData.cbSize =
-                System.Runtime.InteropServices.Marshal.SizeOf(deviceInfoData);
-
-            IntPtr deviceInfoSet = NativeMethods.SetupDiGetClassDevs(ref deviceGuid, null, 0,
-                NativeMethods.DIGCF_DEVICEINTERFACE);
-            result = NativeMethods.SetupDiEnumDeviceInfo(deviceInfoSet, 0, ref deviceInfoData);
-
-            if (deviceInfoSet.ToInt64() != NativeMethods.INVALID_HANDLE_VALUE)
+            if (File.Exists($"{ExePath}\\Auto Profiles.xml")
+                && File.Exists($"{AppDataPath}\\Auto Profiles.xml"))
             {
-                NativeMethods.SetupDiDestroyDeviceInfoList(deviceInfoSet);
+                IsFirstRun = true;
+                MultiSaveSpots = true;
             }
-
-            return result;
-        }
-
-        private static bool CheckForSysDevice(string searchHardwareId)
-        {
-            bool result = false;
-            Guid sysGuid = Guid.Parse("{4d36e97d-e325-11ce-bfc1-08002be10318}");
-            NativeMethods.SP_DEVINFO_DATA deviceInfoData =
-                new NativeMethods.SP_DEVINFO_DATA();
-            deviceInfoData.cbSize =
-                System.Runtime.InteropServices.Marshal.SizeOf(deviceInfoData);
-            var dataBuffer = new byte[4096];
-            ulong propertyType = 0;
-            var requiredSize = 0;
-            IntPtr deviceInfoSet = NativeMethods.SetupDiGetClassDevs(ref sysGuid, null, 0, 0);
-            for (int i = 0; !result && NativeMethods.SetupDiEnumDeviceInfo(deviceInfoSet, i, ref deviceInfoData); i++)
+            else if (File.Exists($"{ExePath}\\Auto Profiles.xml"))
+                AppDataPath = ExePath;
+            else if (File.Exists($"{AppDataPath}\\Auto Profiles.xml")) { }
+            else if (!File.Exists("${ExePath}\\Auto Profiles.xml")
+                && !File.Exists("${AppDataPath}\\Auto Profiles.xml"))
             {
-                if (NativeMethods.SetupDiGetDeviceProperty(deviceInfoSet, ref deviceInfoData,
-                    ref NativeMethods.DEVPKEY_Device_HardwareIds, ref propertyType,
-                    dataBuffer, dataBuffer.Length, ref requiredSize, 0))
-                {
-                    string hardwareId = dataBuffer.ToUTF16String();
-                    //if (hardwareIds.Contains("Virtual Gamepad Emulation Bus"))
-                    //    result = true;
-                    if (hardwareId.Equals(searchHardwareId))
-                        result = true;
-                }
-            }
-
-            if (deviceInfoSet.ToInt64() != NativeMethods.INVALID_HANDLE_VALUE)
-            {
-                NativeMethods.SetupDiDestroyDeviceInfoList(deviceInfoSet);
-            }
-
-            return result;
-        }
-
-        internal static string GetDeviceProperty(string deviceInstanceId,
-            NativeMethods.DEVPROPKEY prop)
-        {
-            string result = string.Empty;
-            NativeMethods.SP_DEVINFO_DATA deviceInfoData = new NativeMethods.SP_DEVINFO_DATA();
-            deviceInfoData.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(deviceInfoData);
-            var dataBuffer = new byte[4096];
-            ulong propertyType = 0;
-            var requiredSize = 0;
-
-            Guid hidGuid = new Guid();
-            NativeMethods.HidD_GetHidGuid(ref hidGuid);
-            IntPtr deviceInfoSet = NativeMethods.SetupDiGetClassDevs(ref hidGuid, deviceInstanceId, 0, NativeMethods.DIGCF_PRESENT | NativeMethods.DIGCF_DEVICEINTERFACE);
-            NativeMethods.SetupDiEnumDeviceInfo(deviceInfoSet, 0, ref deviceInfoData);
-            if (NativeMethods.SetupDiGetDeviceProperty(deviceInfoSet, ref deviceInfoData, ref prop, ref propertyType,
-                    dataBuffer, dataBuffer.Length, ref requiredSize, 0))
-            {
-                result = dataBuffer.ToUTF16String();
-            }
-
-            if (deviceInfoSet.ToInt64() != NativeMethods.INVALID_HANDLE_VALUE)
-            {
-                NativeMethods.SetupDiDestroyDeviceInfoList(deviceInfoSet);
-            }
-
-            return result;
-        }
-
-        private static string GetViGEmDriverProperty(NativeMethods.DEVPROPKEY prop)
-        {
-            string result = string.Empty;
-            Guid deviceGuid = Guid.Parse(VIGEMBUS_GUID);
-            NativeMethods.SP_DEVINFO_DATA deviceInfoData =
-                new NativeMethods.SP_DEVINFO_DATA();
-            deviceInfoData.cbSize =
-                System.Runtime.InteropServices.Marshal.SizeOf(deviceInfoData);
-
-            var dataBuffer = new byte[4096];
-            ulong propertyType = 0;
-            var requiredSize = 0;
-
-            IntPtr deviceInfoSet = NativeMethods.SetupDiGetClassDevs(ref deviceGuid, null, 0,
-                NativeMethods.DIGCF_DEVICEINTERFACE);
-            NativeMethods.SetupDiEnumDeviceInfo(deviceInfoSet, 0, ref deviceInfoData);
-            if (NativeMethods.SetupDiGetDeviceProperty(deviceInfoSet, ref deviceInfoData, ref prop, ref propertyType,
-                    dataBuffer, dataBuffer.Length, ref requiredSize, 0))
-            {
-                result = dataBuffer.ToUTF16String();
-            }
-
-            if (deviceInfoSet.ToInt64() != NativeMethods.INVALID_HANDLE_VALUE)
-            {
-                NativeMethods.SetupDiDestroyDeviceInfoList(deviceInfoSet);
-            }
-
-            return result;
-        }
-
-        public static bool IsHidGuardianInstalled()
-        {
-            return CheckForSysDevice(@"Root\HidGuardian");
-        }
-
-        const string VIGEMBUS_GUID = "{96E42B22-F5E9-42F8-B043-ED0F932F014F}";
-        public static bool IsViGEmBusInstalled()
-        {
-            return CheckForDevice(VIGEMBUS_GUID);
-        }
-
-        public static string ViGEmBusVersion()
-        {
-            return GetViGEmDriverProperty(NativeMethods.DEVPKEY_Device_DriverVersion);
-        }
-
-        public static void FindConfigLocation()
-        {
-            if (File.Exists(exepath + "\\Auto Profiles.xml")
-                && File.Exists(appDataPpath + "\\Auto Profiles.xml"))
-            {
-                Global.firstRun = true;
-                Global.multisavespots = true;
-            }
-            else if (File.Exists(exepath + "\\Auto Profiles.xml"))
-                SaveWhere(exepath);
-            else if (File.Exists(appDataPpath + "\\Auto Profiles.xml"))
-                SaveWhere(appDataPpath);
-            else if (!File.Exists(exepath + "\\Auto Profiles.xml")
-                && !File.Exists(appDataPpath + "\\Auto Profiles.xml"))
-            {
-                Global.firstRun = true;
-                Global.multisavespots = false;
+                IsFirstRun = true;
+                MultiSaveSpots = false;
             }
         }
 
-        public static void SetCulture(string culture)
+        public void SetCulture(string culture)
         {
             try
             {
@@ -401,39 +310,39 @@ namespace DS4Windows
             catch { /* Skip setting culture that we cannot set */ }
         }
 
-        public static void CreateStdActions()
+        public class ProfileActions : IEnumerable<string>
+        {
+            public IEnumerator<string> GetEnumerator() => ((IEnumerable<string>)actions).GetEnumerator();
+            IEnumerator IEnumerable.GetEnumerator() => actions.GetEnumerator();
+            [XmlIgnore]
+            private string[] actions = { "Disconnect Controller" };
+
+            [XmlText]
+            public string Actions {
+                get => String.Join("/", actions);
+                set => actions = value.Split('/').ToArray();
+            }
+        }
+
+        private void CreateStdActions()
         {
             XmlDocument xDoc = new XmlDocument();
-            try
-            {
-                string[] profiles = Directory.GetFiles(appdatapath + @"\Profiles\");
-                string s = string.Empty;
-                //foreach (string s in profiles)
-                for (int i = 0, proflen = profiles.Length; i < proflen; i++)
-                {
-                    s = profiles[i];
-                    if (Path.GetExtension(s) == ".xml")
-                    {
-                        xDoc.Load(s);
-                        XmlNode el = xDoc.SelectSingleNode("DS4Windows/ProfileActions");
-                        if (el != null)
-                        {
-                            if (string.IsNullOrEmpty(el.InnerText))
-                                el.InnerText = "Disconnect Controller";
-                            else
-                                el.InnerText += "/Disconnect Controller";
-                        }
-                        else
-                        {
-                            XmlNode Node = xDoc.SelectSingleNode("DS4Windows");
-                            el = xDoc.CreateElement("ProfileActions");
-                            el.InnerText = "Disconnect Controller";
-                            Node.AppendChild(el);
-                        }
+            try {
+                string[] profiles = Directory.GetFiles($"{AppDataPath}\\Profiles\\");
+                foreach (var s in profiles.Where(s => Path.GetExtension(s) == ".xml")) {
+                    const string kProfileActions = "ProfileActions";
+                    const string kDisconnectController = "Disconnect Controller";
 
-                        xDoc.Save(s);
-                        LoadActions();
-                    }
+                    xDoc.Load(s);
+                    XmlNode root = xDoc.SelectSingleNode("DS4Windows");
+                    XmlNode el = root.SelectSingleNode(kProfileActions) ?? xDoc.CreateElement(kProfileActions);
+                    if (string.IsNullOrEmpty(el.InnerText))
+                        el.InnerText = kDisconnectController;
+                    else if (!el.InnerText.Contains("Disconnect Controller"))
+                        el.InnerText += $"/{kDisconnectController}";
+                    if (el.ParentNode == null) root.AppendChild(el);
+                    xDoc.Save(s);
+                    LoadActions();
                 }
             }
             catch { }
@@ -466,8 +375,8 @@ namespace DS4Windows
             }
         }
 
-        public static event EventHandler<DeviceStatusChangeEventArgs> DeviceStatusChange;
-        public static void OnDeviceStatusChanged(object sender, int index)
+        public event EventHandler<DeviceStatusChangeEventArgs> DeviceStatusChange;
+        public void OnDeviceStatusChanged(object sender, int index)
         {
             if (DeviceStatusChange != null)
             {
@@ -476,8 +385,8 @@ namespace DS4Windows
             }
         }
 
-        public static event EventHandler<SerialChangeArgs> DeviceSerialChange;
-        public static void OnDeviceSerialChange(object sender, int index, string serial)
+        public event EventHandler<SerialChangeArgs> DeviceSerialChange;
+        public void OnDeviceSerialChange(object sender, int index, string serial)
         {
             if (DeviceSerialChange != null)
             {
@@ -485,339 +394,6 @@ namespace DS4Windows
                 DeviceSerialChange(sender, args);
             }
         }
-
-        // general values
-#if false
-        public static bool UseExclusiveMode
-        {
-            set => m_Config.useExclusiveMode = value;
-            get => m_Config.useExclusiveMode;
-        }
-
-        public static DateTime LastChecked
-        {
-            set => m_Config.lastChecked = value;
-            get => m_Config.lastChecked;
-        }
-
-        public static int CheckWhen
-        {
-            set => m_Config.CheckWhen = value;
-            get => m_Config.CheckWhen;
-        }
-
-        public static int Notifications
-        {
-            set => m_Config.Notifications = value;
-            get => m_Config.Notifications;
-        }
-
-        public static bool DCBTatStop
-        {
-            set => m_Config.disconnectBTAtStop = value;
-            get => m_Config.disconnectBTAtStop;
-        }
-
-        public static bool SwipeProfiles
-        {
-            set => m_Config.swipeProfiles = value;
-            get => m_Config.swipeProfiles;
-        }
-
-        public static bool DS4Mapping
-        {
-            set => m_Config.ds4Mapping = value;
-            get => m_Config.ds4Mapping;
-        }
-
-        public static bool QuickCharge
-        {
-            set => m_Config.quickCharge = value;
-            get => m_Config.quickCharge;
-        }
-
-        public static bool CloseMini
-        {
-            set => m_Config.closeMini = value;
-            get => m_Config.closeMini;
-        }
-
-        public static bool StartMinimized
-        {
-            set => m_Config.startMinimized = value;
-            get => m_Config.startMinimized;
-        }
-
-        public static bool MinToTaskbar
-        {
-            set => m_Config.minToTaskbar = value;
-            get => m_Config.minToTaskbar;
-        }
-
-        public static int FormWidth
-        {
-            set => m_Config.formWidth = value;
-            get => m_Config.formWidth;
-        }
-
-        public static int FormHeight
-        {
-            set => m_Config.formHeight = value;
-            get => m_Config.formHeight;
-        }
-
-        public static int FormLocationX
-        {
-            set => m_Config.formLocationX = value;
-            get => m_Config.formLocationX;
-        }
-
-        public static int FormLocationY
-        {
-            set => m_Config.formLocationY = value;
-            get => m_Config.formLocationY;
-        }
-
-        public static string UseLang
-        {
-            set => m_Config.useLang = value;
-            get => m_Config.useLang;
-        }
-
-        public static bool DownloadLang
-        {
-            set => m_Config.downloadLang = value;
-            get => m_Config.downloadLang;
-        }
-
-        public static bool FlashWhenLate
-        {
-            set => m_Config.flashWhenLate = value;
-            get => m_Config.flashWhenLate;
-        }
-
-        public static int FlashWhenLateAt
-        {
-            set => m_Config.flashWhenLateAt = value;
-            get => m_Config.flashWhenLateAt;
-        }
-
-        public static bool UsingUDPServer
-        {
-            get => m_Config.useUDPServ;
-            set => m_Config.useUDPServ = value;
-        }
-
-        public static int UDPServerPortNum
-        {
-            get => m_Config.udpServPort;
-            set => m_Config.udpServPort = value;
-        }
-
-        public static string UDPServerListenAddress
-        {
-            get => m_Config.udpServListenAddress;
-            set => m_Config.udpServListenAddress = value.Trim();
-        }
-
-        public static bool UseWhiteIcon
-        {
-            set => m_Config.useWhiteIcon = value;
-            get => m_Config.useWhiteIcon;
-        }
-
-        public static bool UseCustomSteamFolder
-        {
-            set => m_Config.useCustomSteamFolder = value;
-            get => m_Config.useCustomSteamFolder;
-        }
-
-        public static string CustomSteamFolder
-        {
-            set => m_Config.customSteamFolder = value;
-            get => m_Config.customSteamFolder;
-        }
-#endif
-
-        public static void SetSaTriggerCond(int index, string text)
-        {
-            m_Config.SetSaTriggerCond(index, text);
-        }
-
-#if false
-        public static SASteeringWheelEmulationAxisType GetSASteeringWheelEmulationAxis(int index)
-            => cfg[index].sASteeringWheelEmulationAxis;
-
-        public static int GetSASteeringWheelEmulationRange(int index)
-            => cfg[index].sASteeringWheelEmulationRange;
-
-        public static int[] getTouchDisInvertTriggers(int index) => cfg[index].touchDisInvertTriggers;
-
-        public static int getGyroSensitivity(int index) => cfg[index].gyroSensitivity;
-        public static int getGyroSensVerticalScale(int index) => cfg[index].gyroSensVerticalScale;
-        public static int getGyroInvert(int index) => cfg[index].gyroInvert;
-        public static bool getGyroTriggerTurns(int index) => cfg[index].gyroTriggerTurns;
-        public static bool getGyroSmoothing(int index) => cfg[index].gyroSmoothing;
-        public static double getGyroSmoothingWeight(int index) => cfg[index].gyroSmoothingWeight;
-        public static int getGyroMouseHorizontalAxis(int index) => cfg[index].gyroMouseHorizontalAxis;
-        public static int GetGyroMouseDeadZone(int index) => cfg[index].gyroMouseDeadZone;
-
-        public static void SetGyroMouseDeadZone(int index, int value, ControlService control)
-        {
-            m_Config.SetGyroMouseDZ(index, value, control);
-        }
-
-//        public static bool GetGyroMouseToggle(int index) => cfg[index].gyroMouseToggle;
-        public static void SetGyroMouseToggle(int index, bool value, ControlService control) 
-            => m_Config.SetGyroMouseToggle(index, value, control);
-#endif
-
-#if false
-        public static ref DS4Color getMainColor(int index) => ref cfg[index].mainColor;
-        public static ref DS4Color getLowColor(int index) => ref cfg[index].lowColor;
-        public static ref DS4Color getChargingColor(int index) => ref cfg[index].chargingColor; 
-        public static ref DS4Color getCustomColor(int index) => ref cfg[index].customColor;
-        public static bool getUseCustomColor(int index) => cfg[index].useCustomColor;
-        public static ref DS4Color getFlashColor(int index) => ref cfg[index].flashColor;
-
-        public static byte getTapSensitivity(int index) => cfg[index].tapSensitivity;
-        public static bool getDoubleTap(int index) => cfg[index].doubleTap;
-
-        public static int getScrollSensitivity(int index) => cfg[index].scrollSensitivity;
-
-        public static bool getLowerRCOn(int index) => cfg[index].lowerRCOn;
-
-        public static bool getTouchpadJitterCompensation(int index) => cfg[index].touchpadJitterCompensation;
-        public static int getTouchpadInvert(int index) => cfg[index].touchpadInvert;
-
-        public static TriggerDeadZoneZInfo GetL2ModInfo(int index) => cfg[index].l2ModInfo;
-        public static byte getL2Deadzone(int index) => cfg[index].l2ModInfo.deadZone;
-
-        public static TriggerDeadZoneZInfo GetR2ModInfo(int index) => cfg[index].r2ModInfo;
-        public static byte getR2Deadzone(int index) => cfg[index].r2ModInfo.deadZone;
-
-        public static double getSXDeadzone(int index) => cfg[index].SXDeadzone;
-        public static double getSZDeadzone(int index) => cfg[index].SZDeadzone;
-
-        public static int getLSDeadzone(int index) => cfg[index].lsModInfo.deadZone;
-        public static int getRSDeadzone(int index) => cfg[index].rsModInfo.deadZone;
-
-        public static int getLSAntiDeadzone(int index) => cfg[index].lsModInfo.antiDeadZone;
-        public static int getRSAntiDeadzone(int index) => cfg[index].rsModInfo.antiDeadZone;
-
-        public static StickDeadZoneInfo GetLSDeadInfo(int index) => cfg[index].lsModInfo;
-        public static StickDeadZoneInfo GetRSDeadInfo(int index) => cfg[index].rsModInfo;
-
-        public static double getSXAntiDeadzone(int index) => cfg[index].SXAntiDeadzone;
-        public static double getSZAntiDeadzone(int index) => cfg[index].SZAntiDeadzone;
-
-        public static int getLSMaxzone(int index) => cfg[index].lsModInfo.maxZone;
-        public static int getRSMaxzone(int index) => cfg[index].rsModInfo.maxZone;
-
-        public static double getSXMaxzone(int index) => cfg[index].SXMaxzone;
-        public static double getSZMaxzone(int index) => cfg[index].SZMaxzone;
-
-        public static int getL2AntiDeadzone(int index) => cfg[index].l2ModInfo.antiDeadZone;
-        public static int getR2AntiDeadzone(int index) => cfg[index].r2ModInfo.antiDeadZone;
-
-        public static int getL2Maxzone(int index) => cfg[index].l2ModInfo.maxZone;
-        public static int getR2Maxzone(int index) => cfg[index].r2ModInfo.maxZone;
-
-        public static int getLSCurve(int index) => cfg[index].lsCurve;
-        public static int getRSCurve(int index) => cfg[index].rsCurve;
-
-        public static double getLSRotation(int index) => cfg[index].LSRotation;
-        public static double getRSRotation(int index) => cfg[index].RSRotation;
-
-        public static double getL2Sens(int index) => cfg[index].l2Sens;
-        public static double getR2Sens(int index) => cfg[index].r2Sens;
-
-        public static double getSXSens(int index) => cfg[index].SXSens;
-        public static double getSZSens(int index) => cfg[index].SZSens;
-
-        public static double getLSSens(int index) => cfg[index].LSSens;
-        public static double getRSSens(int index) => cfg[index].RSSens;
-
-        public static bool getMouseAccel(int index) => cfg[index].mouseAccel;
-
-        public static int getBTPollRate(int index) => cfg[index].btPollRate;
-
-        public static SquareStickInfo GetSquareStickInfo(int index) => cfg[index].squStickInfo;
-
-        public static void setLsOutCurveMode(int index, int value) => cfg[index].lsOutCurveMode = value;
-        public static int getLsOutCurveMode(int index) => cfg[index].lsOutCurveMode;
-        public static BezierCurve getLSOutBezierCurveObj(int index) => cfg[index].lsOutBezierCurveObj;
-
-        public static void setRsOutCurveMode(int index, int value) => cfg[index].rsOutCurveMode = value;
-        public static int getRsOutCurveMode(int index) => cfg[index].rsOutCurveMode;
-        public static BezierCurve getRSOutBezierCurveObj(int index) => cfg[index].rsOutBezierCurveObj;
-
-        public static void setL2OutCurveMode(int index, int value) => cfg[index].l2OutCurveMode = value;
-        public static int getL2OutCurveMode(int index) => cfg[index].l2OutCurveMode;
-        public static BezierCurve getL2OutBezierCurveObj(int index) => cfg[index].l2OutBezierCurveObj;
-
-        public static void setR2OutCurveMode(int index, int value) => cfg[index].r2OutCurveMode = value;
-        public static int getR2OutCurveMode(int index) => cfg[index].r2OutCurveMode;
-        public static BezierCurve getR2OutBezierCurveObj(int index) => cfg[index].r2OutBezierCurveObj;
-
-        public static void setSXOutCurveMode(int index, int value) => cfg[index].sxOutCurveMode = value;
-        public static int getSXOutCurveMode(int index) => cfg[index].sxOutCurveMode;
-        public static BezierCurve getSXOutBezierCurveObj(int index) => cfg[index].sxOutBezierCurveObj;
-
-        public static void setSZOutCurveMode(int index, int value) => cfg[index].szOutCurveMode = value;
-        public static int getSZOutCurveMode(int index) => cfg[index].szOutCurveMode;
-        public static BezierCurve getSZOutBezierCurveObj(int index) => cfg[index].szOutBezierCurveObj;
-
-        public static bool getTrackballMode(int index) => cfg[index].trackballMode;
-
-        public static double getTrackballFriction(int index) => cfg[index].trackballFriction;
-
-        public static OutContType getOutContType(int index) => cfg[index].outputDevType;
-#endif
-
-#if false
-        public static string[] LaunchProgram => m_Config.launchProgram;
-        public static string[] ProfilePath => m_Config.profilePath;
-        public static string[] OlderProfilePath => m_Config.olderProfilePath;
-        public static bool[] DistanceProfiles = m_Config.distanceProfiles;
-#endif
-
-#if false
-        public static int getProfileActionCount(int index) => cfg[index].profileActions.Count;
-        public static List<string> getProfileActions(int index) => cfg[index].profileActions;
-#endif
-
-        public static void UpdateDS4CSetting (int deviceNum, string buttonName, bool shift, object action, string exts, DS4KeyType kt, int trigger = 0)
-        {
-            m_Config.UpdateDS4CSetting(deviceNum, buttonName, shift, action, exts, kt, trigger);
-            cfg[deviceNum].containsCustomAction = m_Config.HasCustomActions(deviceNum);
-            cfg[deviceNum].containsCustomExtras = m_Config.HasCustomExtras(deviceNum);
-        }
-
-        public static void UpdateDS4Extra(int deviceNum, string buttonName, bool shift, string exts)
-        {
-            m_Config.UpdateDS4CExtra(deviceNum, buttonName, shift, exts);
-            cfg[deviceNum].containsCustomAction = m_Config.HasCustomActions(deviceNum);
-            cfg[deviceNum].containsCustomExtras = m_Config.HasCustomExtras(deviceNum);
-        }
-
-#if false
-        public static object GetDS4Action(int deviceNum, string buttonName, bool shift) => m_Config.GetDS4Action(deviceNum, buttonName, shift);
-        public static object GetDS4Action(int deviceNum, DS4Controls control, bool shift) => m_Config.GetDS4Action(deviceNum, control, shift);
-        public static DS4KeyType GetDS4KeyType(int deviceNum, string buttonName, bool shift) => m_Config.GetDS4KeyType(deviceNum, buttonName, shift);
-        public static string GetDS4Extra(int deviceNum, string buttonName, bool shift) => m_Config.GetDS4Extra(deviceNum, buttonName, shift);
-        public static int GetDS4STrigger(int deviceNum, string buttonName) => m_Config.GetDS4STrigger(deviceNum, buttonName);
-        public static int GetDS4STrigger(int deviceNum, DS4Controls control) => m_Config.GetDS4STrigger(deviceNum, control);
-        public static List<DS4ControlSettings> getDS4CSettings(int device) => cfg[device].ds4settings;
-        public static DS4ControlSettings getDS4CSetting(int deviceNum, string control) => m_Config.getDS4CSetting(deviceNum, control);
-        public static DS4ControlSettings getDS4CSetting(int deviceNum, DS4Controls control) => m_Config.getDS4CSetting(deviceNum, control);
-        public static bool HasCustomActions(int deviceNum) => m_Config.HasCustomActions(deviceNum);
-        public static bool HasCustomExtras(int deviceNum) => m_Config.HasCustomExtras(deviceNum);
-
-        public static bool getContainsCustomAction(int deviceNum) => cfg[deviceNum].containsCustomAction;
-
-        public static bool getContainsCustomExtras(int deviceNum) => cfg[deviceNum].containsCustomExtras;
-#endif
 
         public static void SaveAction(string name, string controls, int mode,
             string details, bool edit, string extras = "")
@@ -831,7 +407,7 @@ namespace DS4Windows
             m_Config.RemoveAction(name);
         }
 
-        public static bool LoadActions() => m_Config.LoadActions();
+        public static bool LoadActions() => config.LoadActions();
 
         public static List<SpecialAction> GetActions() => m_Config.actions;
 
@@ -1103,7 +679,7 @@ namespace DS4Windows
         }
     }
 
-    public class DeviceBackingStore {
+    public class DeviceBackingStore : IDeviceConfig {
     
         public DeviceBackingStore(int device) {
             lsOutCurveMode = 0;
@@ -1123,29 +699,61 @@ namespace DS4Windows
                 case 4: tempColor = Color.White; break;
                 default: tempColor = Color.Blue; break;
             }
-            mainColor = new DS4Color(tempColor);
+            MainColor = new DS4Color(tempColor);
         }
 
-        public int buttonMouseSensitivity = 25;
+        public int BtPollRate { get; set; } = 4;
+        public bool FlushHIDQueue { get; set; } = false;
+        public int IdleDisconnectTimeout { get; set; } = 0;
+        public byte RumbleBoost { get; set; } 100;
+        public bool LowerRCOn { get; set; } = false;
+        public string profilePath { get; set; } = string.Empty;
+        public string olderProfilePath { get; set; } = string.Empty;
 
-        public bool flushHIDQueue = false;
-        public bool enableTouchToggle = true; // FIXME: resetProfile had it set to false
-        public int idleDisconnectTimeout = 0;
-        public bool touchpadJitterCompensation = true;
-        public bool lowerRCOn = false;
-        public bool ledAsBatteryIndicator = false;
-        public byte flashType = 0;
-        public string profilePath = string.Empty;
-        public string olderProfilePath = string.Empty;
+        public byte FlashType { get; set; } = 0;
+        public int FlashAt { get; set; } = 0;
+        public double Rainbow { get; set; } = 0.0;
+        public bool LedAsBatteryIndicator { get; set; } = false;
 
-        // Cache properties instead of performing a string comparison every frame
-        public bool distanceProfiles = false;
-        public byte rumbleBoost = 100;
-        public byte touchSensitivity = 100;
-        public StickDeadZoneInfo lsModInfo = new StickDeadZoneInfo();
-        public StickDeadZoneInfo rsModInfo = new StickDeadZoneInfo();
-        public TriggerDeadZoneZInfo l2ModInfo = new TriggerDeadZoneZInfo();
-        public TriggerDeadZoneZInfo r2ModInfo = new TriggerDeadZoneZInfo();
+        public DS4Color MainColor { get; set; }
+        public DS4Color LowColor { get; set; } = new DS4Color(Color.Black);
+        public DS4Color ChargingColor { get; set; } = new DS4Color(Color.Black);
+        public DS4Color FlashColor { get; set; } = new DS4Color(Color.Black);
+        public bool UseCustomColor { get; set; } = false;
+        public DS4Color CustomColor { get; set; } = new DS4Color(Color.Blue);
+
+        public bool EnableTouchToggle { get; set; } = true; // FIXME: resetProfile had it set to false
+        public byte TouchSensitivity { get; set; } = 100;
+        public bool TouchpadJitterCompensation { get; set; } = true;
+        public int TouchpadInvert { get; set; } = 0;
+        public bool StartTouchpadOff { get; set; } = false;
+        public bool UseTPforControls { get; set; } = false;
+        public int[] TouchDisInvertTriggers { get; set; } = { -1 };
+        public byte TapSensitivity { get; set; } = 0;
+        public bool DoubleTap { get; set; } = false;
+        public int ScrollSensitivity { get; set; } = 0;
+
+        public int GyroSensitivity { get; set; } = 100;
+        public int GyroSensVerticalScale { get; set; } = 100;
+        public int GyroInvert { get; set; } = 0;
+        public bool GyroTriggerTurns { get; set; } = true;
+        public bool GyroSmoothing { get; set; } = false;
+        public double GyroSmoothingWeight { get; set; } = 0.5;
+        public int GyroMouseHorizontalAxis { get; set; } = 0;
+        public int GyroMouseDeadZone { get; set; } = MouseCursor.GYRO_MOUSE_DEADZONE;
+        public bool GyroMouseToggle { get; set; } = false;
+
+        public int ButtonMouseSensitivity { get; set; } = 25;
+        public bool MouseAccel { get; set; } = false;
+
+        public bool TrackballMode = false;
+        public double TrackballFriction = 10.0;
+
+        public bool DistanceProfiles { get; set; } = false;
+        public StickDeadZoneInfo lsModInfo { get; set; } = new StickDeadZoneInfo();
+        public StickDeadZoneInfo rsModInfo { get; set; } = new StickDeadZoneInfo();
+        public TriggerDeadZoneZInfo l2ModInfo { get; set; } = new TriggerDeadZoneZInfo();
+        public TriggerDeadZoneZInfo r2ModInfo { get; set; } = new TriggerDeadZoneZInfo();
 
         // The private ones are unused/legacy/dead/whatever. They were commented out.
         private byte l2Deadzone = 0, r2Deadzone = 0;
@@ -1159,18 +767,9 @@ namespace DS4Windows
         public double l2Sens = 1.0, r2Sens = 1.0;
         public double LSSens = 1.0, RSSens = 1.0;
         public double SXSens = 1.0, SZSens = 1.0;
-        public byte tapSensitivity = 0;
-        public bool doubleTap = false;
-        public int scrollSensitivity = 0;
-        public int touchpadInvert = 0;
-        public double rainbow = 0.0;
-        public int flashAt = 0;
-        public bool mouseAccel = false;
-        public int btPollRate = 4;
-        public int gyroMouseDeadZone = MouseCursor.GYRO_MOUSE_DEADZONE;
-        public bool gyroMouseToggle = false;
 
         public SquareStickInfo squStickInfo = new SquareStickInfo();
+
 
         private void setOutBezierCurveObj(BezierCurve bezierCurve, int curveOptionValue, BezierCurve.AxisType axisType)
         {
@@ -1253,19 +852,10 @@ namespace DS4Windows
             set => _szOutCurveMode = setNewOutCurveMode(lsOutBezierCurveObj, value, BezierCurve.AxisType.SA);
         }
 
-        public DS4Color lowColor = new DS4Color(Color.Black);
-        public DS4Color mainColor = new DS4Color(Color.Blue); // TODO: different for each device
-        public DS4Color chargingColor = new DS4Color(Color.Black);
-        public DS4Color flashColor = new DS4Color(Color.Black);
-
-        public bool useCustomColor = false;
-        public DS4Color customColor = new DS4Color(Color.Blue);
 
         public int chargingType = 0;
         public string launchProgram = string.Empty;
         public bool dinputOnly = false;
-        public bool startTouchpadOff = false;
-        public bool useTPforControls = false;
         public bool useSAforMouse = false;
         public string sATriggers = string.Empty;
         public bool sATriggerCond = true;
@@ -1274,12 +864,11 @@ namespace DS4Windows
             SASteeringWheelEmulationAxisType.None;
         public int sASteeringWheelEmulationRange = 360;
             
-        public int[] touchDisInvertTriggers = new int[1] {-1};
 
         public int lsCurve = 0;
         public int rsCurve = 0;
 
-        public List<DS4ControlSettings> ds4settings = new List<DS4ControlSettings>();
+        public List<DS4ControlSettings> DS4Settings { get; } = new List<DS4ControlSettings>();
 
         public List<string> profileActions = null;
         public Dictionary<string, SpecialAction> profileActionDict = new Dictionary<string, SpecialAction>();
@@ -1290,16 +879,72 @@ namespace DS4Windows
         // Cache whether profile has custom extras
         public bool containsCustomExtras = false;
 
-        public int gyroSensitivity = 100;
-        public int gyroSensVerticalScale = 100;
-        public int gyroInvert = 0;
-        public bool gyroTriggerTurns = true;
-        public bool gyroSmoothing = false;
-        public double gyroSmoothingWeight = 0.5;
-        public int gyroMouseHorizontalAxis = 0;
-        public bool trackballMode = false;
-        public double trackballFriction = 10.0;
         public OutContType outputDevType = OutContType.X360;
+
+        public void UpdateDS4CSetting(string buttonName, bool shift, object action, string exts, DS4KeyType kt, int trigger = 0)
+        {
+            DS4Controls dc;
+            if (buttonName.StartsWith("bn"))
+                dc = BackingStore.getDS4ControlsByName(buttonName);
+            else
+                dc = (DS4Controls)Enum.Parse(typeof(DS4Controls), buttonName, true);
+
+            int temp = (int)dc;
+            if (temp > 0)
+            {
+                int index = temp - 1;
+                DS4ControlSettings dcs = DS4Settings[index];
+                dcs.UpdateSettings(shift, action, exts, kt, trigger);
+            }
+            hasCustomActions = hasCustomExtras = null;
+        }
+
+        public void UpdateDS4CExtra(int deviceNum, string buttonName, bool shift, string exts)
+        {
+            DS4Controls dc;
+            if (buttonName.StartsWith("bn"))
+                dc = BackingStore.getDS4ControlsByName(buttonName);
+            else
+                dc = (DS4Controls)Enum.Parse(typeof(DS4Controls), buttonName, true);
+
+            int temp = (int)dc;
+            if (temp > 0)
+            {
+                int index = temp - 1;
+                DS4ControlSettings dcs = DS4Settings[index];
+                if (shift)
+                    dcs.shiftExtras = exts;
+                else
+                    dcs.extras = exts;
+            }
+            hasCustomActions = hasCustomExtras = null;
+        }
+
+        private bool? hasCustomActions;
+        private bool? hasCustomExtras;
+        public bool HasCustomActions {
+            get => checkCustomActionsExtras() && (bool)hasCustomActions;
+        }
+        public bool HasCustomExtras
+        {
+            get => checkCustomActionsExtras() && (bool)hasCustomExtras;
+        }
+ 
+        private bool checkCustomActionsExtras()
+        {
+            if (hasCustomActions != null && hasCustomExtras != null) return true;
+            bool actions = false, extras = false;
+            foreach (var dcs in DS4Settings) {
+                actions = actions || dcs.action != null || dcs.shiftAction != null;
+                extras = extras || dcs.extras != null || dcs.shiftExtras != null;
+                if (actions && extras) break;
+            }
+            hasCustomActions = actions;
+            hasCustomExtras = extras;
+            return true;
+        }
+
+
     }
 
 
@@ -1356,7 +1001,7 @@ namespace DS4Windows
                 foreach (DS4Controls dc in Enum.GetValues(typeof(DS4Controls)))
                 {
                     if (dc != DS4Controls.None)
-                        dev.ds4settings.Add(new DS4ControlSettings(dc));
+                        dev.DS4Settings.Add(new DS4ControlSettings(dc));
                 }
 
                 dev.profileActions = new List<string>();
@@ -1631,7 +1276,7 @@ namespace DS4Windows
                 XmlNode ShiftButton = m_Xdoc.CreateNode(XmlNodeType.Element, "Button", null);
                 XmlNode ShiftExtras = m_Xdoc.CreateNode(XmlNodeType.Element, "Extras", null);
 
-                foreach (DS4ControlSettings dcs in dev.ds4settings)
+                foreach (DS4ControlSettings dcs in dev.DS4Settings)
                 {
                     if (dcs.action != null)
                     {
@@ -1806,7 +1451,7 @@ namespace DS4Windows
             return Saved;
         }
 
-        public DS4Controls getDS4ControlsByName(string key)
+        public static DS4Controls getDS4ControlsByName(string key)
         {
             if (!key.StartsWith("bn"))
                 return (DS4Controls)Enum.Parse(typeof(DS4Controls), key, true);
@@ -2562,7 +2207,7 @@ namespace DS4Windows
                 }
                 catch { missingSetting = true; }
 
-                foreach (DS4ControlSettings dcs in dev.ds4settings)
+                foreach (DS4ControlSettings dcs in dev.DS4Settings)
                     dcs.Reset();
 
                 dev.containsCustomAction = false;
@@ -3461,30 +3106,11 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 dcs.UpdateSettings(shift, action, exts, kt, trigger);
             }
         }
 
-        public void UpdateDS4CExtra(int deviceNum, string buttonName, bool shift, string exts)
-        {
-            DS4Controls dc;
-            if (buttonName.StartsWith("bn"))
-                dc = getDS4ControlsByName(buttonName);
-            else
-                dc = (DS4Controls)Enum.Parse(typeof(DS4Controls), buttonName, true);
-
-            int temp = (int)dc;
-            if (temp > 0)
-            {
-                int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
-                if (shift)
-                    dcs.shiftExtras = exts;
-                else
-                    dcs.extras = exts;
-            }
-        }
 
         private void UpdateDS4CKeyType(int deviceNum, string buttonName, bool shift, DS4KeyType keyType)
         {
@@ -3498,7 +3124,7 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 if (shift)
                     dcs.shiftKeyType = keyType;
                 else
@@ -3518,7 +3144,7 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 if (shift)
                 {
                     return dcs.shiftAction;
@@ -3538,7 +3164,7 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 if (shift)
                 {
                     return dcs.shiftAction;
@@ -3564,7 +3190,7 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 if (shift)
                     return dcs.shiftExtras;
                 else
@@ -3586,7 +3212,7 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 if (shift)
                     return dcs.shiftKeyType;
                 else
@@ -3608,7 +3234,7 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 return dcs.shiftTrigger;
             }
 
@@ -3621,7 +3247,7 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 return dcs.shiftTrigger;
             }
 
@@ -3640,7 +3266,7 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 return dcs;
             }
 
@@ -3653,39 +3279,15 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].ds4settings[index];
+                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
                 return dcs;
             }
 
             return null;
         }
 
-        public bool HasCustomActions(int deviceNum)
-        {
-            List<DS4ControlSettings> ds4settingsList = dev[deviceNum].ds4settings;
-            for (int i = 0, settingsLen = ds4settingsList.Count; i < settingsLen; i++)
-            {
-                DS4ControlSettings dcs = ds4settingsList[i];
-                if (dcs.action != null || dcs.shiftAction != null)
-                    return true;
-            }
-
-            return false;
-        }
 
 
-        public bool HasCustomExtras(int deviceNum)
-        {
-            List<DS4ControlSettings> ds4settingsList = dev[deviceNum].ds4settings;
-            for (int i = 0, settingsLen = ds4settingsList.Count; i < settingsLen; i++)
-            {
-                DS4ControlSettings dcs = ds4settingsList[i];
-                if (dcs.extras != null || dcs.shiftExtras != null)
-                    return true;
-            }
-
-            return false;
-        }
 
         private void ResetProfile(int device)
         {

@@ -139,7 +139,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BezierCurveEditor\BezierCurve.cs" />
+    <Compile Include="DS4Control\Config.cs" />
     <Compile Include="DS4Control\ControlService.cs" />
+    <Compile Include="DS4Control\DeviceDetection.cs" />
     <Compile Include="DS4Control\DS4LightBar.cs" />
     <Compile Include="DS4Control\DS4OutDevice.cs" />
     <Compile Include="DS4Control\DS4StateFieldMapping.cs" />
