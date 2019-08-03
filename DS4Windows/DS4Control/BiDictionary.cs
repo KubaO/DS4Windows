@@ -153,6 +153,18 @@ namespace Alba.Framework.Collections
             return _firstToSecond.TryGetValue(key, out value);
         }
 
+        public TSecond ValueOr(TFirst key, TSecond defValue)
+        {
+            TSecond result;
+            return TryGetValue(key, out result) ? result : defValue;
+        }
+
+        public TFirst RevValueOr(TSecond key, TFirst defValue)
+        {
+            TFirst result;
+            return Reverse.TryGetValue(key, out result) ? result : defValue;
+        }
+
         public bool Remove(TFirst key)
         {
             TSecond value;
