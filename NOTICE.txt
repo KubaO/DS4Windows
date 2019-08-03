@@ -3,5 +3,9 @@ will attempt to document some third party source code that is used in the
 DS4Windows source code and state the original source.
 
 Crc32:
-
 https://github.com/dariogriffo/Crc32
+
+BiDictionary:
+DictionaryDebugView:
+KeyValuePairExts:
+https://github.com/Athari/Alba.Framework/blob/master/Alba.Framework/Collections/

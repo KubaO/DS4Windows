@@ -139,21 +139,23 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BezierCurveEditor\BezierCurve.cs" />
+    <Compile Include="DS4Control\BiDictionary.cs" />
     <Compile Include="DS4Control\Config.cs" />
     <Compile Include="DS4Control\ControlService.cs" />
     <Compile Include="DS4Control\DeviceDetection.cs" />
+    <Compile Include="DS4Control\DictionaryDebugView.cs" />
     <Compile Include="DS4Control\DS4LightBar.cs" />
     <Compile Include="DS4Control\DS4OutDevice.cs" />
     <Compile Include="DS4Control\DS4StateFieldMapping.cs" />
     <Compile Include="DS4Control\InputMethods.cs" />
     <Compile Include="DS4Control\ITouchpadBehaviour.cs" />
+    <Compile Include="DS4Control\KeyValuePairExts.cs" />
     <Compile Include="DS4Control\Log.cs" />
     <Compile Include="DS4Control\Mapping.cs" />
     <Compile Include="DS4Control\Mouse.cs" />
     <Compile Include="DS4Control\MouseCursor.cs" />
     <Compile Include="DS4Control\MouseWheel.cs" />
     <Compile Include="DS4Control\OutputDevice.cs" />
-    <Compile Include="DS4Control\ProfilePropGroups.cs" />
     <Compile Include="DS4Control\ScpUtil.cs" />
     <Compile Include="DS4Control\UdpServer.cs" />
     <Compile Include="DS4Control\Util.cs" />
