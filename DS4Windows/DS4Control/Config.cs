@@ -20,6 +20,8 @@
 using DS4Windows;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Xml;
 
 namespace DS4Windows
 {
@@ -110,12 +112,16 @@ namespace DS4Windows
 
     public interface IDeviceAuxiliaryConfig
     {
+        // These are implementation details that we most likely
+        // shouldn't expose here.
         string TempProfileName { get; set; }
         bool UseTempProfile { get; set; }
         bool TempProfileDistance { get; set; }
         bool UseDInputOnly { get; set; }
         bool LinkedProfileCheck { get; set; } // applies between this and successor profile
         bool TouchpadActive { get; set; }
+
+        OutContType PreviousOutputDevType { get; set; }
     }
 
     public enum SATriggerCondType { Or = 0, And = 1 };
@@ -125,6 +131,13 @@ namespace DS4Windows
         string ProfilePath { get; set; }
         string OlderProfilePath { get; set; }
         string LaunchProgram { get; set; }
+
+        void Load(XmlDocument doc);
+
+        void PostLoad(bool launchProgram, ControlService control,
+            bool xinputChange = true /*, bool postLoad = true*/);
+        // A hack that doesn't belong here - it's the leftover old code
+        // that must be moved somewhere else.
 
         int BTPollRate { get; set; }
         bool FlushHIDQueue { get; set; }
@@ -193,11 +206,10 @@ namespace DS4Windows
         OutContType OutputDevType { get; set; }
         bool DistanceProfiles { get; set; }
 
-        // FIXME: This needs an actually usable interface
-        List<string> ProfileActions { get; set; }
-        SpecialAction ProfileActionByName(string name);
-        SpecialAction ProfileActionByIndex(int index);
-        int LookupProfileActionIndexOf(string name);
+        ReadOnlyCollection<string> ProfileActions { get; set; }
+        void SetProfileActions(List<string> actions);
+        SpecialAction GetProfileAction(string name);
+        int GetProfileActionIndexOf(string name);
 
         List<DS4ControlSettings> DS4CSettings { get; }
         void UpdateDS4CSetting(string buttonName, bool shift, object action, string exts, DS4KeyType kt, int trigger = 0);

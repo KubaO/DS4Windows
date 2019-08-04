@@ -104,31 +104,32 @@ namespace DS4Windows
 
         private readonly BezierRange range;
 
+        private BezierPreset preset = BezierPreset.Linear;
 
-        public BezierPreset Preset { get; private set; } = BezierPreset.Linear;
-
-        public void SetPreset(BezierPreset preset)
-        {
-            switch (preset)
-            {
-                case BezierPreset.EnhancedPrecision:
-                    Init(99.0, 99.0, 0.00, 0.00);
-                    break; // Same curve as bezier 0.70, 0.28, 1.00, 1.00)
-                case BezierPreset.Quadric:
-                    Init(0.55, 0.09, 0.68, 0.53);
-                    break;
-                case BezierPreset.Cubic:
-                    Init(0.74, 0.12, 0.64, 0.29);
-                    break; // Cubic
-                case BezierPreset.EaseOutQuad:
-                    Init(0.00, 0.00, 0.41, 0.96);
-                    break; // Easeout Quad
-                case BezierPreset.EaseOutCubic:
-                    Init(0.08, 0.22, 0.22, 0.91);
-                    break; // Easeout Cubic
-                case BezierPreset.Custom:
-                    Init(CustomDefinition);
-                    break; // Custom output curve
+        public BezierPreset Preset {
+            get => preset;
+            set {
+                switch (value)
+                {
+                    case BezierPreset.EnhancedPrecision:
+                        Init(99.0, 99.0, 0.00, 0.00);
+                        break; // Same curve as bezier 0.70, 0.28, 1.00, 1.00)
+                    case BezierPreset.Quadric:
+                        Init(0.55, 0.09, 0.68, 0.53);
+                        break;
+                    case BezierPreset.Cubic:
+                        Init(0.74, 0.12, 0.64, 0.29);
+                        break; // Cubic
+                    case BezierPreset.EaseOutQuad:
+                        Init(0.00, 0.00, 0.41, 0.96);
+                        break; // Easeout Quad
+                    case BezierPreset.EaseOutCubic:
+                        Init(0.08, 0.22, 0.22, 0.91);
+                        break; // Easeout Cubic
+                    case BezierPreset.Custom:
+                        Init(CustomDefinition);
+                        break; // Custom output curve
+                }
             }
         }
 
