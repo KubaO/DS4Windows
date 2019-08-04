@@ -95,7 +95,7 @@ namespace DS4Windows
         // (ie. the value is as user entered it and could be an invalid curve definition).
         // This value is saved in a profile XML file.
         public string CustomDefinition { get; set; } = string.Empty;
-        public string ToString() { return this.CustomDefinition; }
+        public override string ToString() { return this.CustomDefinition; }
 
         // Lookup result table is always either in 0..128 or 0..255 range depending on the DS4
         // analog axis range. LUT table set as public to let DS4Win reading thread to access it
