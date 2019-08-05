@@ -41,6 +41,7 @@ namespace DS4Windows
         public static bool IsViGEmBusInstalled() => DeviceDetection.IsViGEmBusInstalled();
         public string VigemBusVersion { get; } = DeviceDetection.ViGEmBusVersion();
 
+        public static string AppDataPath { get => app.AppDataPath;  }
         public static string ExePath { get => AppState.ExePath; }
         static bool ExePathNeedsAdmin { get => app.ExePathNeedsAdmin; }
 
@@ -68,7 +69,7 @@ namespace DS4Windows
         DateTime LastChecked { get; set; }
         int CheckWhen { get; set; }
         int Notifications { get; set; }
-        bool DisconnectBTatStop { get; set; }
+        bool DisconnectBTAtStop { get; set; }
         bool SwipeProfiles { get; set; }
         bool DS4Mapping { get; set; }
         bool QuickCharge { get; set; }
@@ -83,8 +84,8 @@ namespace DS4Windows
         bool DownloadLang { get; set; }
         bool FlashWhenLate { get; set; }
         int FlashWhenLateAt { get; set; }
-        bool isUsingUDPServer { get; set; }
-        int UDPServerPortNum { get; set; }
+        bool UseUDPServer { get; set; }
+        int UDPServerPort { get; set; }
         string UDPServerListenAddress { get; set; }
         bool UseWhiteIcon { get; set; }
         bool UseCustomSteamFolder { get; set; }
@@ -132,12 +133,17 @@ namespace DS4Windows
         string OlderProfilePath { get; set; }
         string LaunchProgram { get; set; }
 
-        void Load(XmlDocument doc);
+        bool LoadProfile(bool launchProgram, ControlService control, bool xinputChange = true, bool postLoad = true);
+        bool LoadTempProfile(string name, bool launchProgram, ControlService control, bool xinputChange = true);
+        bool SaveProfile(string profilePath);
 
+        bool Load(XmlDocument doc);
+        void Save(XmlDocument doc);
+        
         void PostLoad(bool launchProgram, ControlService control,
-            bool xinputChange = true /*, bool postLoad = true*/);
-        // A hack that doesn't belong here - it's the leftover old code
-        // that must be moved somewhere else.
+            bool xinputChange = true, bool postLoadTransfer = true);
+        // TODO: A hack that doesn't belong here - it's the leftover old code
+        // that should be moved somewhere else.
 
         int BTPollRate { get; set; }
         bool FlushHIDQueue { get; set; }
@@ -148,7 +154,7 @@ namespace DS4Windows
         bool DInputOnly { get; set; }
 
         byte FlashType { get; set; }
-        int FlashAt { get; set; }
+        int FlashBatteryAt { get; set; }
         double Rainbow { get; set; }
         bool LedAsBatteryIndicator { get; set; }
         DS4Color MainColor { get; set; }
@@ -187,7 +193,7 @@ namespace DS4Windows
         bool TrackballMode { get; set; }
         double TrackballFriction { get; set; }
 
-        bool UseSAForMouse { get; set; }
+        bool UseSAforMouse { get; set; }
         string SATriggers { get; set; }
 
         SATriggerCondType SATriggerCond { get; set; }
@@ -245,7 +251,7 @@ namespace DS4Windows
         int MaxZone { get; set; }
         double Rotation { get; set; }
         int Curve { get; set; }
-        int OutCurvePreset { get; set; }
+        BezierPreset OutCurvePreset { get; set; }
         BezierCurve OutBezierCurve { get; }
     }
 
