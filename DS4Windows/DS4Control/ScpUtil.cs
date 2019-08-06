@@ -34,69 +34,56 @@ namespace DS4Windows
 
     public class DS4ControlSettings
     {
-        public DS4Controls control;
-        public string extras = null;
-        public DS4KeyType keyType = DS4KeyType.None;
         public enum ActionType : byte { Default, Key, Button, Macro };
-        public ActionType actionType = ActionType.Default;
-        public object action = null;
-        public ActionType shiftActionType = ActionType.Default;
-        public object shiftAction = null;
-        public int shiftTrigger = 0;
-        public string shiftExtras = null;
-        public DS4KeyType shiftKeyType = DS4KeyType.None;
+
+        public struct Sub
+        {
+            public DS4KeyType KeyType; // default settings are OK
+            public ActionType ActionType { get; private set; }
+            public object Action {
+                get => action;
+                set {
+                    if (value is int || value is ushort)
+                        ActionType = ActionType.Key;
+                    else if (value is string || value is X360Controls)
+                        ActionType = ActionType.Button;
+                    else if (value is int[])
+                        ActionType = ActionType.Macro;
+                    else
+                        ActionType = ActionType.Default;
+                }
+            }
+            public string Extras;
+            public int ShiftTrigger; // for shift subsettings only
+
+            private object action;
+        }
+
+        public DS4Controls Control;
+        public Sub Norm, Shift;
 
         public DS4ControlSettings(DS4Controls ctrl)
         {
-            control = ctrl;
+            Control = ctrl;
         }
 
         public void Reset()
         {
-            extras = null;
-            keyType = DS4KeyType.None;
-            actionType = ActionType.Default;
-            action = null;
-            shiftActionType = ActionType.Default;
-            shiftAction = null;
-            shiftTrigger = 0;
-            shiftExtras = null;
-            shiftKeyType = DS4KeyType.None;
+            Norm = default(Sub);
+            Shift = default(Sub);
+        }
+
+        public ref Sub GetSub(bool shift)
+        {
+            if (shift) return ref Shift;
+            return ref Norm;
         }
 
         internal void UpdateSettings(bool shift, object act, string exts, DS4KeyType kt, int trigger = 0)
         {
-            if (!shift)
-            {
-                if (act is int || act is ushort)
-                    actionType = ActionType.Key;
-                else if (act is string || act is X360Controls)
-                    actionType = ActionType.Button;
-                else if (act is int[])
-                    actionType = ActionType.Macro;
-                else
-                    actionType = ActionType.Default;
-
-                action = act;
-                extras = exts;
-                keyType = kt;
-            }
-            else
-            {
-                if (act is int || act is ushort)
-                    shiftActionType = ActionType.Key;
-                else if (act is string || act is X360Controls)
-                    shiftActionType = ActionType.Button;
-                else if (act is int[])
-                    shiftActionType = ActionType.Macro;
-                else
-                    shiftActionType = ActionType.Default;
-
-                shiftAction = act;
-                shiftExtras = exts;
-                shiftKeyType = kt;
-                shiftTrigger = trigger;
-            }
+            ref Sub sub = ref Norm;
+            if (shift) sub = ref Shift;
+            sub = new Sub{Action = act, Extras = exts, KeyType = kt, ShiftTrigger = trigger};
         }
     }
 
@@ -699,12 +686,8 @@ namespace DS4Windows
         public int DeadZone { get; set; } = 0;  // Trigger deadzone is expressed in axis units
         public int AntiDeadZone { get; set; } = 0;
         public int MaxZone { get; set; } = 100;
-        public int OutCurvePreset
-        {
-            get => (int)OutBezierCurve.Preset;
-            set => OutBezierCurve.Preset = (BezierPreset)value;
-        }
-        public BezierCurve OutBezierCurve { get; set; } = new BezierCurve(BezierCurve.L2R2Range);
+        public BezierPreset OutCurvePreset { get; set; } = default(BezierPreset);
+        public BezierCurve OutBezierCurve { get; } = new BezierCurve(BezierCurve.L2R2Range);
     }
 
     public class StickConfig : IStickConfig
@@ -715,10 +698,7 @@ namespace DS4Windows
         public int MaxZone { get; set; } = 0;
         public double Rotation { get; set; } = 0.0;
         public int Curve { get; set; } = 0;
-        public int OutCurvePreset {
-            get => (int) OutBezierCurve.Preset;
-            set => OutBezierCurve.Preset = (BezierPreset)value;
-        }
+        public BezierPreset OutCurvePreset { get; set; } = default(BezierPreset);
         public BezierCurve OutBezierCurve { get; } = new BezierCurve(BezierCurve.LSRSRange);
     }
 
@@ -728,11 +708,7 @@ namespace DS4Windows
         public double DeadZone { get; set; } = 0.25;
         public double MaxZone { get; set; } = 1.0;
         public double AntiDeadZone { get; set; } = 0.0;
-        public int OutCurvePreset
-        {
-            get => (int)OutBezierCurve.Preset;
-            set => OutBezierCurve.Preset = (BezierPreset)value;
-        }
+        public BezierPreset OutCurvePreset { get; set; } = default(BezierPreset);
         public BezierCurve OutBezierCurve { get; } = new BezierCurve(BezierCurve.SARange);
     }
 
@@ -896,28 +872,24 @@ namespace DS4Windows
 
         public void UpdateDS4CSetting(string buttonName, bool shift, object action, string exts, DS4KeyType kt, int trigger = 0)
         {
-            DS4ControlSettings dcs = GetDS4CSetting(buttonName);
-            dcs.UpdateSettings(shift, action, exts, kt, trigger);
+            if (GetDS4CSetting(buttonName) is DS4ControlSettings dsc)
+                dsc.GetSub(shift) = new DS4ControlSettings.Sub {
+                    Action = action, Extras = exts, KeyType = kt, ShiftTrigger = trigger
+                };
             hasCustomActions = hasCustomExtras = null;
         }
 
         public void UpdateDS4CExtra(string buttonName, bool shift, string exts)
         {
-            DS4ControlSettings dcs = GetDS4CSetting(buttonName);
-            if (shift)
-                dcs.shiftExtras = exts;
-            else
-                dcs.extras = exts;            
+            if (GetDS4CSetting(buttonName) is DS4ControlSettings dsc)
+                dsc.GetSub(shift).Extras = exts;
             hasCustomActions = hasCustomExtras = null;
         }
 
         private void UpdateDS4CKeyType(string buttonName, bool shift, DS4KeyType keyType)
         {
-            DS4ControlSettings dcs = GetDS4CSetting(buttonName);
-            if (shift)
-                dcs.shiftKeyType = keyType;
-            else
-                dcs.keyType = keyType;
+            if (GetDS4CSetting(buttonName) is DS4ControlSettings dsc)
+                dsc.GetSub(shift).KeyType = keyType;
         }
 
         private bool? hasCustomActions;
@@ -935,8 +907,8 @@ namespace DS4Windows
             if (hasCustomActions != null && hasCustomExtras != null) return true;
             bool actions = false, extras = false;
             foreach (var dcs in DS4CSettings) {
-                actions = actions || dcs.action != null || dcs.shiftAction != null;
-                extras = extras || dcs.extras != null || dcs.shiftExtras != null;
+                actions = actions || dcs.Norm.Action != null || dcs.Shift.Action != null;
+                extras = extras || dcs.Norm.Extras != null || dcs.Shift.Extras != null;
                 if (actions && extras) break;
             }
             hasCustomActions = actions;
@@ -961,41 +933,22 @@ namespace DS4Windows
         }
 
         public object GetDS4Action(string buttonName, bool shift)
-        {
-            var dcs = GetDS4CSetting(buttonName);
-            return shift ? dcs?.shiftAction : dcs?.action;
-        }
+            => GetDS4CSetting(buttonName)?.GetSub(shift).Action;
 
         public object GetDS4Action(DS4Controls dc, bool shift)
-        {
-            var dcs = GetDS4CSetting(dc);
-            return shift ? dcs?.shiftAction : dcs?.action;
-        }
+            => GetDS4CSetting(dc)?.GetSub(shift).Action;
 
         public string GetDS4Extra(string buttonName, bool shift)
-        {
-            var dcs = GetDS4CSetting(buttonName);
-            return shift ? dcs?.shiftExtras : dcs?.extras;
-        }
+            => GetDS4CSetting(buttonName)?.GetSub(shift).Extras;
 
         public DS4KeyType GetDS4KeyType(string buttonName, bool shift)
-        {
-            var dcs = GetDS4CSetting(buttonName);
-            if (dcs != null) return shift ? dcs.shiftKeyType : dcs.keyType;
-            return DS4KeyType.None;
-        }
+            => GetDS4CSetting(buttonName)?.GetSub(shift).KeyType ?? default(DS4KeyType);
 
         public int GetDS4STrigger(string buttonName)
-        {
-            var dcs = GetDS4CSetting(buttonName);
-            return dcs?.shiftTrigger ?? 0;
-        }
+            => GetDS4CSetting(buttonName)?.Shift.ShiftTrigger ?? 0;
 
         public int GetDS4STrigger(DS4Controls dc)
-        {
-            var dcs = GetDS4CSetting(dc);
-            return dcs?.shiftTrigger ?? 0;
-        }
+            => GetDS4CSetting(dc)?.Shift.ShiftTrigger ?? 0;
 
         // TODO: These dictionaries are way too heavy and too spread out. We have
         // so few items that lookup can be done via linear search in an array.
@@ -1057,7 +1010,7 @@ namespace DS4Windows
         public class Loader
         {
             public XmlDocument Xdoc;
-            public bool missingSetting;
+            public bool missingSetting = false;
             public string rootname;
 
             public void Open(XmlDocument doc)
@@ -1122,6 +1075,18 @@ namespace DS4Windows
                 }
                 return result;
             }
+
+            public DateTime? LoadDateTime(string path)
+            {
+                XmlNode Item = Xdoc.SelectSingleNode($"/{rootname}/{path}");
+                DateTime result;
+                if (Item == null || !DateTime.TryParse(Item.InnerText, out result))
+                {
+                    missingSetting = true;
+                    return null;
+                }
+                return result;
+            }
             public DS4Color? LoadDS4Color(string path)
             {
                 XmlNode Item = Xdoc.SelectSingleNode($"/{rootname}/{path}");
@@ -1179,12 +1144,42 @@ namespace DS4Windows
                 }
                 return result;
             }
-            public double ParseSensitivity(string[] text, int index, double min)
+            public double ParseSensitivity(string[] texts, int index, double min)
             {
                 double result;
-                if (text.Length <= index || !double.TryParse(text[index], out result) || result < min) {
+                if (texts.Length <= index || !double.TryParse(texts[index], out result) || result < min) {
                     missingSetting = true;
                     return 1.0;
+                }
+                return result;
+            }
+            public bool? ParseBool(string[] texts, int index)
+            {
+                bool result;
+                if (texts.Length <= index || !bool.TryParse(texts[index], out result))
+                {
+                    missingSetting = true;
+                    return null;
+                }
+                return result;
+            }
+            public int? ParseInt(string[] texts, int index)
+            {
+                int result;
+                if (texts.Length <= index || !int.TryParse(texts[index], out result))
+                {
+                    missingSetting = true;
+                    return null;
+                }
+                return result;
+            }
+            public DS4Color? ParseDS4Color(string[] texts, int index)
+            {
+                DS4Color result = new DS4Color();
+                if (texts.Length <= index || !DS4Color.TryParse(texts[index], ref result))
+                {
+                    missingSetting = true;
+                    return null;
                 }
                 return result;
             }
@@ -1206,6 +1201,7 @@ namespace DS4Windows
                 }
                 return result.Take(i).ToArray();
             }
+
         }
 
         public bool LoadProfile(bool launchProgram, ControlService control,
@@ -1423,7 +1419,6 @@ namespace DS4Windows
             containsCustomAction = false;
             containsCustomExtras = false;
 #endif
-            DS4KeyType keyType;
 
             Dictionary<DS4Controls, X360Controls> customMapButtons = new Dictionary<DS4Controls, X360Controls>();
             Dictionary<DS4Controls, String> customMapMacros = new Dictionary<DS4Controls, String>();
@@ -1465,7 +1460,7 @@ namespace DS4Windows
                 }
 
                 foreach (XmlNode item in ldr.ChildNodes("Control/KeyType")) {
-                    keyType = DS4KeyType.None;
+                    var keyType = DS4KeyType.None;
                     if (item.InnerText.Contains(DS4KeyType.ScanCode.ToString()))
                         keyType |= DS4KeyType.ScanCode;
                     if (item.InnerText.Contains(DS4KeyType.Toggle.ToString()))
@@ -1520,7 +1515,7 @@ namespace DS4Windows
                 }
 
                 foreach (XmlElement item in ldr.ChildNodes("ShiftControl/KeyType")) {
-                    keyType = DS4KeyType.None;
+                    var keyType = DS4KeyType.None;
                     if (item.InnerText.Contains(DS4KeyType.ScanCode.ToString()))
                         keyType |= DS4KeyType.ScanCode;
                     if (item.InnerText.Contains(DS4KeyType.Toggle.ToString()))
@@ -1687,17 +1682,46 @@ namespace DS4Windows
         {
             public XmlDocument doc = new XmlDocument();
             public XmlNode node;
+            public Dictionary<string, string> attributes;
 
-            public void Append(string name, string value)
+            public void Append(XmlNode node, string name, string value)
             {
-                var child = doc.CreateNode(XmlNodeType.Element, name, null);
+                this.node = node;
+                var child = doc.CreateElement(name);
+                // was: var child = doc.CreateNode(XmlNodeType.Element, name, null);
+                foreach (var attr in attributes)
+                    child.SetAttribute(attr.Key, attr.Value);
+                attributes.Clear();
                 child.InnerText = value;
                 node.AppendChild(child);
             }
-            public void Append(string name, bool value) => Append(name, value.ToString());
-            public void Append(string name, int value) => Append(name, value.ToString());
-            public void Append(string name, double value) => Append(name, value.ToString());
-            public void Append(string name, DS4Color color) => Append(name, color.toXMLText());
+            public void Append(string name, string value) => Append(node, name, value);
+            public void Append(string name, bool value) => Append(node, name, value.ToString());
+            public void Append(string name, int value) => Append(node, name, value.ToString());
+            public void Append(string name, double value) => Append(node, name, value.ToString());
+            public void Append(string name, DateTime value) => Append(node, name, value.ToString());
+            public void Append(string name, DS4Color color) => Append(node, name, color.toXMLText());
+            public void DemandAttribute(string name, string value) => attributes.Add(name, value);
+        }
+
+        private class XmlNodeControl
+        {
+            public XmlElement Key, Macro, KeyType, Button, Extras;
+            XmlElement[] Elements;
+            public XmlNodeControl(XmlDocument doc)
+            {
+                var obj = this;
+                var fields = GetType().GetFields().Where(f => f.FieldType == typeof(XmlElement));
+                Elements = fields.Select(f => {
+                    var elem = doc.CreateElement(f.Name);
+                    f.SetValue(obj, elem);
+                    return elem;
+                }).ToArray();
+            }
+            public void AppendElementsTo(XmlNode node)
+            {
+                foreach (var elem in Elements.Where(f => f.HasChildNodes)) node.AppendChild(elem);
+            }
         }
 
         public bool SaveProfile(string profilePath)
@@ -1820,198 +1844,67 @@ namespace DS4Windows
                 svr.Append("SZOutputCurveMode", outputCurve(R2.OutCurvePreset));
                 svr.Append("SZOutputCurveCustom", R2.OutBezierCurve.ToString());
 
+                svr.Append("TrackballMode", TrackballMode);
+                svr.Append("TrackballFriction", TrackballFriction);
 
-                XmlNode xmlSZOutputCurveMode = Xdoc.CreateNode(XmlNodeType.Element, "SZOutputCurveMode", null); xmlSZOutputCurveMode.InnerText = axisOutputCurveString(dev.szOutCurveMode); Node.AppendChild(xmlSZOutputCurveMode);
-                XmlNode xmlSZOutputCurveCustom = Xdoc.CreateNode(XmlNodeType.Element, "SZOutputCurveCustom", null); xmlSZOutputCurveCustom.InnerText = dev.szOutBezierCurveObj.ToString(); Node.AppendChild(xmlSZOutputCurveCustom);
+                svr.Append("OutputContDevice", outContDevice(OutputDevType));
 
-                XmlNode xmlTrackBallMode = Xdoc.CreateNode(XmlNodeType.Element, "TrackballMode", null); xmlTrackBallMode.InnerText = dev.trackballMode.ToString(); Node.AppendChild(xmlTrackBallMode);
-                XmlNode xmlTrackBallFriction = Xdoc.CreateNode(XmlNodeType.Element, "TrackballFriction", null); xmlTrackBallFriction.InnerText = dev.trackballFriction.ToString(); Node.AppendChild(xmlTrackBallFriction);
+                  XmlNode NodeControl = Xdoc.CreateElement("Control");
+                  var N = new XmlNodeControl(Xdoc);
 
-                XmlNode xmlOutContDevice = Xdoc.CreateNode(XmlNodeType.Element, "OutputContDevice", null); xmlOutContDevice.InnerText = OutContDeviceString(dev.outputDevType); Node.AppendChild(xmlOutContDevice);
+                XmlNode NodeShiftControl = Xdoc.CreateElement( "ShiftControl");
+                var NS = new XmlNodeControl(Xdoc);
 
-                XmlNode NodeControl = Xdoc.CreateNode(XmlNodeType.Element, "Control", null);
-                XmlNode Key = Xdoc.CreateNode(XmlNodeType.Element, "Key", null);
-                XmlNode Macro = Xdoc.CreateNode(XmlNodeType.Element, "Macro", null);
-                XmlNode KeyType = Xdoc.CreateNode(XmlNodeType.Element, "KeyType", null);
-                XmlNode Button = Xdoc.CreateNode(XmlNodeType.Element, "Button", null);
-                XmlNode Extras = Xdoc.CreateNode(XmlNodeType.Element, "Extras", null);
+                DS4KeyType[] keyTypes = {DS4KeyType.HoldMacro, DS4KeyType.Macro, DS4KeyType.Toggle, DS4KeyType.ScanCode};
 
-                XmlNode NodeShiftControl = Xdoc.CreateNode(XmlNodeType.Element, "ShiftControl", null);
+                foreach (DS4ControlSettings dcs in DS4CSettings) {
+                    string control = dcs.Control.ToString();
 
-                XmlNode ShiftKey = Xdoc.CreateNode(XmlNodeType.Element, "Key", null);
-                XmlNode ShiftMacro = Xdoc.CreateNode(XmlNodeType.Element, "Macro", null);
-                XmlNode ShiftKeyType = Xdoc.CreateNode(XmlNodeType.Element, "KeyType", null);
-                XmlNode ShiftButton = Xdoc.CreateNode(XmlNodeType.Element, "Button", null);
-                XmlNode ShiftExtras = Xdoc.CreateNode(XmlNodeType.Element, "Extras", null);
-
-                foreach (DS4ControlSettings dcs in dev.DS4Settings)
-                {
-                    if (dcs.action != null)
+                    void save(bool isShift, bool actionOK, ref DS4ControlSettings.Sub sub, XmlNodeControl NC)
                     {
-                        XmlNode buttonNode;
-                        string keyType = string.Empty;
+                        if (sub.Action != null && actionOK) {
+                            string keyType = string.Empty;
 
-                        if (dcs.action is string)
-                        {
-                            if (dcs.action.ToString() == "Unbound")
+                            if (sub.Action is string str && str == "Unbound")
                                 keyType += DS4KeyType.Unbound;
-                        }
 
-                        if (dcs.keyType.HasFlag(DS4KeyType.HoldMacro))
-                            keyType += DS4KeyType.HoldMacro;
-                        else if (dcs.keyType.HasFlag(DS4KeyType.Macro))
-                            keyType += DS4KeyType.Macro;
+                            foreach (var kt in keyTypes.Where(kt => sub.KeyType.HasFlag(kt)))
+                                keyType += kt;
 
-                        if (dcs.keyType.HasFlag(DS4KeyType.Toggle))
-                            keyType += DS4KeyType.Toggle;
-                        if (dcs.keyType.HasFlag(DS4KeyType.ScanCode))
-                            keyType += DS4KeyType.ScanCode;
+                            if (keyType != string.Empty) svr.Append(NC.KeyType, control, keyType);
 
-                        if (keyType != string.Empty)
-                        {
-                            buttonNode = Xdoc.CreateNode(XmlNodeType.Element, dcs.control.ToString(), null);
-                            buttonNode.InnerText = keyType;
-                            KeyType.AppendChild(buttonNode);
-                        }
+                            if (isShift)
+                                svr.DemandAttribute("Trigger", dcs.Shift.ShiftTrigger.ToString());
 
-                        buttonNode = Xdoc.CreateNode(XmlNodeType.Element, dcs.control.ToString(), null);
-                        if (dcs.action is IEnumerable<int> || dcs.action is int[] || dcs.action is ushort[])
-                        {
-                            int[] ii = (int[])dcs.action;
-                            buttonNode.InnerText = string.Join("/", ii);
-                            Macro.AppendChild(buttonNode);
-                        }
-                        else if (dcs.action is int || dcs.action is ushort || dcs.action is byte)
-                        {
-                            buttonNode.InnerText = dcs.action.ToString();
-                            Key.AppendChild(buttonNode);
-                        }
-                        else if (dcs.action is string)
-                        {
-                            buttonNode.InnerText = dcs.action.ToString();
-                            Button.AppendChild(buttonNode);
-                        }
-                        else if (dcs.action is X360Controls)
-                        {
-                            buttonNode.InnerText = getX360ControlString((X360Controls)dcs.action);
-                            Button.AppendChild(buttonNode);
-                        }
-                    }
-
-                    bool hasvalue = false;
-                    if (!string.IsNullOrEmpty(dcs.extras))
-                    {
-                        foreach (string s in dcs.extras.Split(','))
-                        {
-                            if (s != "0")
-                            {
-                                hasvalue = true;
-                                break;
+                            if (sub.Action is IEnumerable<int> || sub.Action is int[] || sub.Action is ushort[]) {
+                                svr.Append(NC.Macro, control, string.Join("/", (int[]) sub.Action));
+                            }
+                            else if (sub.Action is int || sub.Action is ushort || sub.Action is byte) {
+                                svr.Append(NC.Key, control, sub.Action.ToString());
+                            }
+                            else if (sub.Action is string sa) {
+                                svr.Append(NC.Button, control, sa);
+                            }
+                            else if (sub.Action is X360Controls xc) {
+                                var value = isShift ? xc.ToString() : GlobalConfig.getX360ControlString(xc);
+                                svr.Append(NC.Button, control, value);
                             }
                         }
+
+                        if (sub.Extras?.Split(',')?.Any(s => s != "0") ?? false)
+                            svr.Append(NC.Extras, control, sub.Extras);
                     }
 
-                    if (hasvalue)
-                    {
-                        XmlNode extraNode = Xdoc.CreateNode(XmlNodeType.Element, dcs.control.ToString(), null);
-                        extraNode.InnerText = dcs.extras;
-                        Extras.AppendChild(extraNode);
-                    }
-
-                    if (dcs.shiftAction != null && dcs.shiftTrigger > 0)
-                    {
-                        XmlElement buttonNode;
-                        string keyType = string.Empty;
-
-                        if (dcs.shiftAction is string)
-                        {
-                            if (dcs.shiftAction.ToString() == "Unbound")
-                                keyType += DS4KeyType.Unbound;
-                        }
-
-                        if (dcs.shiftKeyType.HasFlag(DS4KeyType.HoldMacro))
-                            keyType += DS4KeyType.HoldMacro;
-                        if (dcs.shiftKeyType.HasFlag(DS4KeyType.Macro))
-                            keyType += DS4KeyType.Macro;
-                        if (dcs.shiftKeyType.HasFlag(DS4KeyType.Toggle))
-                            keyType += DS4KeyType.Toggle;
-                        if (dcs.shiftKeyType.HasFlag(DS4KeyType.ScanCode))
-                            keyType += DS4KeyType.ScanCode;
-
-                        if (keyType != string.Empty)
-                        {
-                            buttonNode = Xdoc.CreateElement(dcs.control.ToString());
-                            buttonNode.InnerText = keyType;
-                            ShiftKeyType.AppendChild(buttonNode);
-                        }
-
-                        buttonNode = Xdoc.CreateElement(dcs.control.ToString());
-                        buttonNode.SetAttribute("Trigger", dcs.shiftTrigger.ToString());
-                        if (dcs.shiftAction is IEnumerable<int> || dcs.shiftAction is int[] || dcs.shiftAction is ushort[])
-                        {
-                            int[] ii = (int[])dcs.shiftAction;
-                            buttonNode.InnerText = string.Join("/", ii);
-                            ShiftMacro.AppendChild(buttonNode);
-                        }
-                        else if (dcs.shiftAction is int || dcs.shiftAction is ushort || dcs.shiftAction is byte)
-                        {
-                            buttonNode.InnerText = dcs.shiftAction.ToString();
-                            ShiftKey.AppendChild(buttonNode);
-                        }
-                        else if (dcs.shiftAction is string || dcs.shiftAction is X360Controls)
-                        {
-                            buttonNode.InnerText = dcs.shiftAction.ToString();
-                            ShiftButton.AppendChild(buttonNode);
-                        }
-                    }
-
-                    hasvalue = false;
-                    if (!string.IsNullOrEmpty(dcs.shiftExtras))
-                    {
-                        foreach (string s in dcs.shiftExtras.Split(','))
-                        {
-                            if (s != "0")
-                            {
-                                hasvalue = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (hasvalue)
-                    {
-                        XmlNode extraNode = Xdoc.CreateNode(XmlNodeType.Element, dcs.control.ToString(), null);
-                        extraNode.InnerText = dcs.shiftExtras;
-                        ShiftExtras.AppendChild(extraNode);
-                    }
+                    save(false, true, ref dcs.Norm, N);
+                    save(true, dcs.Shift.ShiftTrigger > 0, ref dcs.Shift, NS);
                 }
 
                 Node.AppendChild(NodeControl);
-                if (Button.HasChildNodes)
-                    NodeControl.AppendChild(Button);
-                if (Macro.HasChildNodes)
-                    NodeControl.AppendChild(Macro);
-                if (Key.HasChildNodes)
-                    NodeControl.AppendChild(Key);
-                if (Extras.HasChildNodes)
-                    NodeControl.AppendChild(Extras);
-                if (KeyType.HasChildNodes)
-                    NodeControl.AppendChild(KeyType);
-                if (NodeControl.HasChildNodes)
-                    Node.AppendChild(NodeControl);
+                N.AppendElementsTo(NodeControl);
 
                 Node.AppendChild(NodeShiftControl);
-                if (ShiftButton.HasChildNodes)
-                    NodeShiftControl.AppendChild(ShiftButton);
-                if (ShiftMacro.HasChildNodes)
-                    NodeShiftControl.AppendChild(ShiftMacro);
-                if (ShiftKey.HasChildNodes)
-                    NodeShiftControl.AppendChild(ShiftKey);
-                if (ShiftKeyType.HasChildNodes)
-                    NodeShiftControl.AppendChild(ShiftKeyType);
-                if (ShiftExtras.HasChildNodes)
-                    NodeShiftControl.AppendChild(ShiftExtras);
-
+                NS.AppendElementsTo(NodeShiftControl);
+                
                 Xdoc.AppendChild(Node);
                 Xdoc.Save(path);
             }
@@ -2046,7 +1939,7 @@ namespace DS4Windows
         public bool SwipeProfiles { get; set; } = true;
         public bool DS4Mapping { get; set; } = false;
         public bool QuickCharge { get; set; } = false;
-        public bool CloseMini { get; set; } = false;
+        public bool CloseMinimizes { get; set; } = false;
 
         public string UseLang { get; set; } = string.Empty;
         public bool DownloadLang { get; set; } = true;
@@ -2113,7 +2006,7 @@ namespace DS4Windows
             return -1;
         }
 
-        public string getX360ControlString(X360Controls key)
+        public static string getX360ControlString(X360Controls key)
         {
             switch (key)
             {
@@ -2166,116 +2059,64 @@ namespace DS4Windows
         public bool Load()
         {
             bool Loaded = true;
-            bool missingSetting = false;
+            var ldr = new DeviceConfig.Loader();
 
-            try
-            {
-                if (File.Exists(m_Profile))
-                {
-                    XmlNode Item;
+            if (File.Exists(API.ProfilePath)) {
+                var Xdoc = new XmlDocument();
+                ldr.Xdoc = Xdoc;
+                ldr.rootname = "Profile";
+                XmlNode Item;
+                Xdoc.Load(API.ProfilePath);
+                var def = new GlobalConfig();
 
-                    Xdoc.Load(m_Profile);
+                UseExclusiveMode = ldr.LoadBool("useExclusiveMode") ?? def.UseExclusiveMode;
+                StartMinimized = ldr.LoadBool("startMinimized") ?? def.StartMinimized;
+                MinToTaskbar = ldr.LoadBool("minimizeToTaskbar") ?? def.MinToTaskbar;
+                FormWidth = ldr.LoadInt("formWidth") ?? def.FormWidth;
+                FormHeight = ldr.LoadInt("formHeight") ?? def.FormHeight;
+                FormLocationX = Math.Max(ldr.LoadInt("formLocationX") ?? def.FormLocationX, 0);
+                FormLocationY = Math.Max(ldr.LoadInt("formLocationY") ?? def.FormLocationY, 0);
 
-                    try { Item = Xdoc.SelectSingleNode("/Profile/useExclusiveMode"); Boolean.TryParse(Item.InnerText, out useExclusiveMode); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/startMinimized"); Boolean.TryParse(Item.InnerText, out startMinimized); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/minimizeToTaskbar"); Boolean.TryParse(Item.InnerText, out minToTaskbar); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/formWidth"); Int32.TryParse(Item.InnerText, out formWidth); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/formHeight"); Int32.TryParse(Item.InnerText, out formHeight); }
-                    catch { missingSetting = true; }
-                    try {
-                        int temp = 0;
-                        Item = Xdoc.SelectSingleNode("/Profile/formLocationX"); Int32.TryParse(Item.InnerText, out temp);
-                        formLocationX = Math.Max(temp, 0);
-                    }
-                    catch { missingSetting = true; }
+                for (int i = 0; i < 4; i++) {
+                    var cfg = Cfg(i);
+                    var path = ldr.LoadText($"Controller{i + 1}") ?? string.Empty;
+                    cfg.ProfilePath = path;
+                    cfg.DistanceProfiles = path.ToLower().Contains("distance");
+                    cfg.OlderProfilePath = path;
+                }
 
-                    try {
-                        int temp = 0;
-                        Item = Xdoc.SelectSingleNode("/Profile/formLocationY"); Int32.TryParse(Item.InnerText, out temp);
-                        formLocationY = Math.Max(temp, 0);
-                    }
-                    catch { missingSetting = true; }
+                LastChecked = ldr.LoadDateTime("LastChecked") ?? def.LastChecked;
+                CheckWhen = ldr.LoadInt("CheckWhen") ?? def.CheckWhen;
 
-                    for (int i = 0; i < 4; i++) {
-                        try {
-                            Item = Xdoc.SelectSingleNode($"/Profile/Controller{i + 1}");
-                            dev[i].profilePath = Item.InnerText;
-                            if (dev[i].profilePath.ToLower().Contains("distance")) {
-                                dev[i].distanceProfiles = true;
-                            }
+                Notifications = (ldr.LoadBool("Notifications") is bool n)
+                    ? (n ? 2 : 0) : def.Notifications;
+                DisconnectBTAtStop = ldr.LoadBool("DisconnectBTAtStop") ?? def.DisconnectBTAtStop;
+                SwipeProfiles = ldr.LoadBool("SwipeProfiles") ?? def.SwipeProfiles;
+                DS4Mapping = ldr.LoadBool("UseDS4ForMapping") ?? def.DS4Mapping;
+                QuickCharge = ldr.LoadBool("QuickCharge") ?? def.QuickCharge;
+                CloseMinimizes = ldr.LoadBool("CloseMinimizes") ?? def.CloseMinimizes;
+                UseLang = ldr.LoadText("UseLang") ?? def.UseLang;
+                DownloadLang = ldr.LoadBool("DownloadLang") ?? def.DownloadLang;
+                FlashWhenLate = ldr.LoadBool("FlashWhenLate") ?? def.FlashWhenLate;
+                FlashWhenLateAt = ldr.LoadInt("FlashWhenLateAt") ?? def.FlashWhenLateAt;
+                UseWhiteIcon = ldr.LoadBool("WhiteIcon") ?? def.UseWhiteIcon;
+                UseUDPServer = ldr.LoadBool("UseUDPServer") ?? def.UseUDPServer;
+                UDPServerPort = ldr.LoadInt("UDPServerPort") ?? def.UDPServerPort;
+                UDPServerListenAddress = ldr.LoadText("UDPServerListenAddress") ?? def.UDPServerListenAddress;
+                UseCustomSteamFolder = ldr.LoadBool("UseCustomSteamFolder") ?? def.UseCustomSteamFolder;
+                CustomSteamFolder = ldr.LoadText("CustomSteamFolder") ?? def.CustomSteamFolder;
 
-                            dev[i].olderProfilePath = dev[i].profilePath;
-                        }
-                        catch {
-                            dev[i].profilePath = dev[i].olderProfilePath = string.Empty; dev[i].distanceProfiles = false; missingSetting = true;
-                        }
-                    }
-               
-                    try { Item = Xdoc.SelectSingleNode("/Profile/LastChecked"); DateTime.TryParse(Item.InnerText, out lastChecked); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/CheckWhen"); Int32.TryParse(Item.InnerText, out CheckWhen); }
-                    catch { missingSetting = true; }
-
-                    try
-                    {
-                        Item = Xdoc.SelectSingleNode("/Profile/Notifications");
-                        if (!int.TryParse(Item.InnerText, out Notifications))
-                            Notifications = (Boolean.Parse(Item.InnerText) ? 2 : 0);
-                    }
-                    catch { missingSetting = true; }
-
-                    try { Item = Xdoc.SelectSingleNode("/Profile/DisconnectBTAtStop"); Boolean.TryParse(Item.InnerText, out disconnectBTAtStop); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/SwipeProfiles"); Boolean.TryParse(Item.InnerText, out swipeProfiles); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/UseDS4ForMapping"); Boolean.TryParse(Item.InnerText, out ds4Mapping); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/QuickCharge"); Boolean.TryParse(Item.InnerText, out quickCharge); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/CloseMinimizes"); Boolean.TryParse(Item.InnerText, out closeMini); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/UseLang"); useLang = Item.InnerText; }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/DownloadLang"); Boolean.TryParse(Item.InnerText, out downloadLang); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/FlashWhenLate"); Boolean.TryParse(Item.InnerText, out flashWhenLate); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/FlashWhenLateAt"); int.TryParse(Item.InnerText, out flashWhenLateAt); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/WhiteIcon"); Boolean.TryParse(Item.InnerText, out useWhiteIcon); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/UseUDPServer"); Boolean.TryParse(Item.InnerText, out useUDPServ); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/UDPServerPort"); int temp; int.TryParse(Item.InnerText, out temp); udpServPort = Math.Min(Math.Max(temp, 1024), 65535); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/UDPServerListenAddress"); udpServListenAddress = Item.InnerText; }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/UseCustomSteamFolder"); Boolean.TryParse(Item.InnerText, out useCustomSteamFolder); }
-                    catch { missingSetting = true; }
-                    try { Item = Xdoc.SelectSingleNode("/Profile/CustomSteamFolder"); customSteamFolder = Item.InnerText; }
-                    catch { missingSetting = true; }
-
-                    for (int i = 0; i < 4; i++)
-                    {
-                        var dev = this.dev[i];
-                        try
-                        {
-                            Item = Xdoc.SelectSingleNode("/Profile/CustomLed" + (i + 1));
-                            string[] ss = Item.InnerText.Split(':');
-                            bool.TryParse(ss[0], out dev.useCustomColor);
-                            DS4Color.TryParse(ss[1], ref dev.customColor);
-                        }
-                        catch { dev.useCustomColor = false; dev.customColor = new DS4Color(Color.Blue); missingSetting = true; }
-                    }
+                for (int i = 0; i < 4; i++) {
+                    var cdef = new DeviceConfig(i);
+                    var cfg = Cfg(i);
+                    string[] fields = ldr.LoadStrings($"CustomLed{i + 1}", ':');
+                    cfg.UseCustomColor = ldr.ParseBool(fields, 0) ?? cdef.UseCustomColor;
+                    cfg.CustomColor = ldr.ParseDS4Color(fields, 1) ?? cdef.CustomColor;
+                    cdef = null;
                 }
             }
-            catch { }
 
-            if (missingSetting)
+            if (ldr.missingSetting)
                 Save();
 
             return Loaded;
@@ -2284,65 +2125,61 @@ namespace DS4Windows
         public bool Save()
         {
             bool Saved = true;
+            var svr = new DeviceConfig.Saver();
+            var Xdoc = svr.doc;
 
             XmlNode Node;
-
-            Xdoc.RemoveAll();
 
             Node = Xdoc.CreateXmlDeclaration("1.0", "utf-8", String.Empty);
             Xdoc.AppendChild(Node);
 
-            Node = Xdoc.CreateComment(String.Format(" Profile Configuration Data. {0} ", DateTime.Now));
+            Node = Xdoc.CreateComment($" Profile Configuration Data. {DateTime.Now} ");
             Xdoc.AppendChild(Node);
 
             Node = Xdoc.CreateWhitespace("\r\n");
             Xdoc.AppendChild(Node);
 
-            Node = Xdoc.CreateNode(XmlNodeType.Element, "Profile", null);
+            svr.node = Node = Xdoc.CreateNode(XmlNodeType.Element, "Profile", null);
 
-            XmlNode xmlUseExclNode = Xdoc.CreateNode(XmlNodeType.Element, "useExclusiveMode", null); xmlUseExclNode.InnerText = useExclusiveMode.ToString(); Node.AppendChild(xmlUseExclNode);
-            XmlNode xmlStartMinimized = Xdoc.CreateNode(XmlNodeType.Element, "startMinimized", null); xmlStartMinimized.InnerText = startMinimized.ToString(); Node.AppendChild(xmlStartMinimized);
-            XmlNode xmlminToTaskbar = Xdoc.CreateNode(XmlNodeType.Element, "minimizeToTaskbar", null); xmlminToTaskbar.InnerText = minToTaskbar.ToString(); Node.AppendChild(xmlminToTaskbar);
-            XmlNode xmlFormWidth = Xdoc.CreateNode(XmlNodeType.Element, "formWidth", null); xmlFormWidth.InnerText = formWidth.ToString(); Node.AppendChild(xmlFormWidth);
-            XmlNode xmlFormHeight = Xdoc.CreateNode(XmlNodeType.Element, "formHeight", null); xmlFormHeight.InnerText = formHeight.ToString(); Node.AppendChild(xmlFormHeight);
-            XmlNode xmlFormLocationX = Xdoc.CreateNode(XmlNodeType.Element, "formLocationX", null); xmlFormLocationX.InnerText = formLocationX.ToString(); Node.AppendChild(xmlFormLocationX);
-            XmlNode xmlFormLocationY = Xdoc.CreateNode(XmlNodeType.Element, "formLocationY", null); xmlFormLocationY.InnerText = formLocationY.ToString(); Node.AppendChild(xmlFormLocationY);
-
-            XmlNode xmlController1 = Xdoc.CreateNode(XmlNodeType.Element, "Controller1", null); xmlController1.InnerText = !Global.aux[0].LinkedProfileCheck ? dev[0].profilePath : dev[0].olderProfilePath; Node.AppendChild(xmlController1);
-            XmlNode xmlController2 = Xdoc.CreateNode(XmlNodeType.Element, "Controller2", null); xmlController2.InnerText = !Global.aux[1].LinkedProfileCheck ? dev[1].profilePath : dev[1].olderProfilePath; Node.AppendChild(xmlController2);
-            XmlNode xmlController3 = Xdoc.CreateNode(XmlNodeType.Element, "Controller3", null); xmlController3.InnerText = !Global.aux[2].LinkedProfileCheck ? dev[2].profilePath : dev[2].olderProfilePath; Node.AppendChild(xmlController3);
-            XmlNode xmlController4 = Xdoc.CreateNode(XmlNodeType.Element, "Controller4", null); xmlController4.InnerText = !Global.aux[3].LinkedProfileCheck ? dev[3].profilePath : dev[3].olderProfilePath; Node.AppendChild(xmlController4);
-
-            XmlNode xmlLastChecked = Xdoc.CreateNode(XmlNodeType.Element, "LastChecked", null); xmlLastChecked.InnerText = lastChecked.ToString(); Node.AppendChild(xmlLastChecked);
-            XmlNode xmlCheckWhen = Xdoc.CreateNode(XmlNodeType.Element, "CheckWhen", null); xmlCheckWhen.InnerText = CheckWhen.ToString(); Node.AppendChild(xmlCheckWhen);
-            XmlNode xmlNotifications = Xdoc.CreateNode(XmlNodeType.Element, "Notifications", null); xmlNotifications.InnerText = Notifications.ToString(); Node.AppendChild(xmlNotifications);
-            XmlNode xmlDisconnectBT = Xdoc.CreateNode(XmlNodeType.Element, "DisconnectBTAtStop", null); xmlDisconnectBT.InnerText = disconnectBTAtStop.ToString(); Node.AppendChild(xmlDisconnectBT);
-            XmlNode xmlSwipeProfiles = Xdoc.CreateNode(XmlNodeType.Element, "SwipeProfiles", null); xmlSwipeProfiles.InnerText = swipeProfiles.ToString(); Node.AppendChild(xmlSwipeProfiles);
-            XmlNode xmlDS4Mapping = Xdoc.CreateNode(XmlNodeType.Element, "UseDS4ForMapping", null); xmlDS4Mapping.InnerText = ds4Mapping.ToString(); Node.AppendChild(xmlDS4Mapping);
-            XmlNode xmlQuickCharge = Xdoc.CreateNode(XmlNodeType.Element, "QuickCharge", null); xmlQuickCharge.InnerText = quickCharge.ToString(); Node.AppendChild(xmlQuickCharge);
-            XmlNode xmlCloseMini = Xdoc.CreateNode(XmlNodeType.Element, "CloseMinimizes", null); xmlCloseMini.InnerText = closeMini.ToString(); Node.AppendChild(xmlCloseMini);
-            XmlNode xmlUseLang = Xdoc.CreateNode(XmlNodeType.Element, "UseLang", null); xmlUseLang.InnerText = useLang.ToString(); Node.AppendChild(xmlUseLang);
-            XmlNode xmlDownloadLang = Xdoc.CreateNode(XmlNodeType.Element, "DownloadLang", null); xmlDownloadLang.InnerText = downloadLang.ToString(); Node.AppendChild(xmlDownloadLang);
-            XmlNode xmlFlashWhenLate = Xdoc.CreateNode(XmlNodeType.Element, "FlashWhenLate", null); xmlFlashWhenLate.InnerText = flashWhenLate.ToString(); Node.AppendChild(xmlFlashWhenLate);
-            XmlNode xmlFlashWhenLateAt = Xdoc.CreateNode(XmlNodeType.Element, "FlashWhenLateAt", null); xmlFlashWhenLateAt.InnerText = flashWhenLateAt.ToString(); Node.AppendChild(xmlFlashWhenLateAt);
-            XmlNode xmlWhiteIcon = Xdoc.CreateNode(XmlNodeType.Element, "WhiteIcon", null); xmlWhiteIcon.InnerText = useWhiteIcon.ToString(); Node.AppendChild(xmlWhiteIcon);
-            XmlNode xmlUseUDPServ = Xdoc.CreateNode(XmlNodeType.Element, "UseUDPServer", null); xmlUseUDPServ.InnerText = useUDPServ.ToString(); Node.AppendChild(xmlUseUDPServ);
-            XmlNode xmlUDPServPort = Xdoc.CreateNode(XmlNodeType.Element, "UDPServerPort", null); xmlUDPServPort.InnerText = udpServPort.ToString(); Node.AppendChild(xmlUDPServPort);
-            XmlNode xmlUDPServListenAddress = Xdoc.CreateNode(XmlNodeType.Element, "UDPServerListenAddress", null); xmlUDPServListenAddress.InnerText = udpServListenAddress; Node.AppendChild(xmlUDPServListenAddress);
-            XmlNode xmlUseCustomSteamFolder = Xdoc.CreateNode(XmlNodeType.Element, "UseCustomSteamFolder", null); xmlUseCustomSteamFolder.InnerText = useCustomSteamFolder.ToString(); Node.AppendChild(xmlUseCustomSteamFolder);
-            XmlNode xmlCustomSteamFolder = Xdoc.CreateNode(XmlNodeType.Element, "CustomSteamFolder", null); xmlCustomSteamFolder.InnerText = customSteamFolder; Node.AppendChild(xmlCustomSteamFolder);
+            svr.Append("useExclusiveMode", UseExclusiveMode);
+            svr.Append("startMinimized", StartMinimized);
+            svr.Append("minimizeToTaskbar", MinToTaskbar);
+            svr.Append("formWidth", FormWidth);
+            svr.Append("formHeight", FormHeight);
+            svr.Append("formLocationX", FormLocationX);
+            svr.Append("formLocationY", FormLocationY);
 
             for (int i = 0; i < 4; i++)
-            {
-                var dev = this.dev[i];
-                XmlNode xmlCustomLed = Xdoc.CreateNode(XmlNodeType.Element, "CustomLed" + (1 + i), null);
-                xmlCustomLed.InnerText = dev.useCustomColor.ToString() + ":" + dev.customColor.toXMLText();
-                Node.AppendChild(xmlCustomLed);
+                svr.Append($"Controller{i+1}", !Aux(i).LinkedProfileCheck ? Cfg(i).ProfilePath : Cfg(i).OlderProfilePath);
+
+            svr.Append("LastChecked", LastChecked);
+            svr.Append("CheckWhen", CheckWhen);
+            svr.Append("Notifications", Notifications);
+            
+            svr.Append("DisconnectBTAtStop", DisconnectBTAtStop);
+            svr.Append("SwipeProfiles", SwipeProfiles);
+            svr.Append("UseDS4ForMapping", DS4Mapping);
+            svr.Append("QuickCharge", QuickCharge);
+            svr.Append("CloseMinimizes", CloseMinimizes);
+            svr.Append("UseLang", UseLang);
+            svr.Append("DownloadLang", DownloadLang);
+            svr.Append("FlashWhenLate", FlashWhenLate);
+            svr.Append("FlashWhenLateAt", FlashWhenLateAt);
+            svr.Append("WhiteIcon", UseWhiteIcon);
+            svr.Append("UseUDPServer", UseUDPServer);
+            svr.Append("UDPServerPort", UDPServerPort);
+            svr.Append("UDPServerListenAddress", UDPServerListenAddress);
+            svr.Append("UseCustomSteamFolder", UseCustomSteamFolder);
+            svr.Append("CustomSteamFolder", CustomSteamFolder);
+
+            for (int i = 0; i < 4; i++) {
+                var cfg = Cfg(i);
+                svr.Append($"CustomLed{i + 1}", $"{cfg.UseCustomColor.ToString()}:{cfg.CustomColor.toXMLText()}");
             }
 
             Xdoc.AppendChild(Node);
 
-            try { Xdoc.Save(m_Profile); }
+            try { Xdoc.Save(ProfilePath); }
             catch (UnauthorizedAccessException) { Saved = false; }
             return Saved;
         }

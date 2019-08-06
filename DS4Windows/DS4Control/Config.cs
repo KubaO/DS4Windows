@@ -49,7 +49,7 @@ namespace DS4Windows
         public static void SetCulture(string culture) => AppState.SetCulture(culture);
 
         // TODO: These are private since we don't want to expose them if not needed
-        static string ProfilePath { get => app.ProfilePath; }
+        public static string ProfilePath { get => app.ProfilePath; }
         static string ActionsPath { get => app.ActionsPath; }
         static string LinkedProfilesPath { get => app.LinkedProfilesPath; }
         static string ControllerConfigsPath { get => app.ControllerConfigsPath; }
@@ -73,7 +73,7 @@ namespace DS4Windows
         bool SwipeProfiles { get; set; }
         bool DS4Mapping { get; set; }
         bool QuickCharge { get; set; }
-        bool CloseMini { get; set; }
+        bool CloseMinimizes { get; set; }
         bool StartMinimized { get; set; }
         bool MinToTaskbar { get; set; }
         int FormWidth { get; set; }
@@ -239,7 +239,7 @@ namespace DS4Windows
         int DeadZone { get; set; }
         int AntiDeadZone { get; set; }
         int MaxZone { get; set; }
-        int OutCurvePreset { get; set; }
+        BezierPreset OutCurvePreset { get; set; }
         BezierCurve OutBezierCurve { get; }
     }
 
@@ -261,7 +261,7 @@ namespace DS4Windows
         double DeadZone { get; set; }
         double AntiDeadZone { get; set; }
         double MaxZone { get; set; }
-        int OutCurvePreset { get; set; }
+        BezierPreset OutCurvePreset { get; set; }
         BezierCurve OutBezierCurve { get; }
     }
 
