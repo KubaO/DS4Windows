@@ -1,4 +1,4 @@
-﻿using System;""
+﻿using System;
 using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
@@ -440,45 +440,6 @@ namespace DS4Windows
             }
         }   
 
-        public static void calculateProfileActionDicts(int device)
-        {
-            cfg[device].profileActionDict.Clear();
-            cfg[device].profileActionIndexDict.Clear();
-
-            foreach (string actionname in cfg[device].profileActions)
-            {
-                cfg[device].profileActionDict[actionname] = GetAction(actionname);
-                cfg[device].profileActionIndexDict[actionname] = GetActionIndexOf(actionname);
-            }
-        }
-
-#if true
-        public static void cacheProfileCustomsFlags(int device)
-        {
-            cfg[device].containsCustomAction = m_Config.HasCustomActions(device);
-            cfg[device].containsCustomExtras = m_Config.HasCustomExtras(device);
-        }
-#endif
-
-        public static X360Controls getX360ControlsByName(string key)
-        {
-            return m_Config.getX360ControlsByName(key);
-        }
-
-        public static string getX360ControlString(X360Controls key)
-        {
-            return m_Config.getX360ControlString(key);
-        }
-
-        public static DS4Controls getDS4ControlsByName(string key)
-        {
-            return m_Config.getDS4ControlsByName(key);
-        }
-
-        public static X360Controls getDefaultX360ControlBinding(DS4Controls dc)
-        {
-            return defaultButtonMapping[(int)dc];
-        }
 
         public static bool containsLinkedProfile(string serial)
         {
@@ -513,8 +474,6 @@ namespace DS4Windows
             }
         }
 
-        public static bool Load() => m_Config.Load();
-        
         public static void LoadProfile(int device, bool launchprogram, ControlService control,
             bool xinputChange = true, bool postLoad = true)
         {
@@ -531,27 +490,6 @@ namespace DS4Windows
             aux[device].TempProfileName = name;
             aux[device].UseTempProfile = true;
             aux[device].TempProfileDistance = name.ToLower().Contains("distance");
-        }
-
-        public static void SaveProfile(int device, string propath)
-        {
-            m_Config.SaveProfile(device, propath);
-        }
-
-        public static bool Save()
-        {
-            return m_Config.Save();
-        }
-
-
-        public static bool SaveLinkedProfiles()
-        {
-            return m_Config.SaveLinkedProfiles();
-        }
-
-        public static bool LoadLinkedProfiles()
-        {
-            return m_Config.LoadLinkedProfiles();
         }
 
         public static bool SaveControllerConfigs(DS4Device device = null)
@@ -576,100 +514,6 @@ namespace DS4Windows
                     m_Config.LoadControllerConfigsForDevice(Program.rootHub.DS4Controllers[idx]);
 
             return true;
-        }
-
-        private static byte applyRatio(byte b1, byte b2, double r)
-        {
-            if (r > 100.0)
-                r = 100.0;
-            else if (r < 0.0)
-                r = 0.0;
-
-            r *= 0.01;
-            return (byte)Math.Round((b1 * (1 - r)) + b2 * r, 0);
-        }
-
-        public static DS4Color getTransitionedColor(ref DS4Color c1, ref DS4Color c2, double ratio)
-        {
-            //Color cs = Color.FromArgb(c1.red, c1.green, c1.blue);
-            DS4Color cs = new DS4Color
-            {
-                red = applyRatio(c1.red, c2.red, ratio),
-                green = applyRatio(c1.green, c2.green, ratio),
-                blue = applyRatio(c1.blue, c2.blue, ratio)
-            };
-            return cs;
-        }
-
-        private static Color applyRatio(Color c1, Color c2, uint r)
-        {
-            float ratio = r / 100f;
-            float hue1 = c1.GetHue();
-            float hue2 = c2.GetHue();
-            float bri1 = c1.GetBrightness();
-            float bri2 = c2.GetBrightness();
-            float sat1 = c1.GetSaturation();
-            float sat2 = c2.GetSaturation();
-            float hr = hue2 - hue1;
-            float br = bri2 - bri1;
-            float sr = sat2 - sat1;
-            Color csR;
-            if (bri1 == 0)
-                csR = HuetoRGB(hue2,sat2,bri2 - br*ratio);
-            else
-                csR = HuetoRGB(hue2 - hr * ratio, sat2 - sr * ratio, bri2 - br * ratio);
-
-            return csR;
-        }
-
-        public static Color HuetoRGB(float hue, float sat, float bri)
-        {
-            float C = (1-Math.Abs(2*bri)-1)* sat;
-            float X = C * (1 - Math.Abs((hue / 60) % 2 - 1));
-            float m = bri - C / 2;
-            float R, G, B;
-            if (0 <= hue && hue < 60)
-            {
-                R = C; G = X; B = 0;
-            }
-            else if (60 <= hue && hue < 120)
-            {
-                R = X; G = C; B = 0;
-            }
-            else if (120 <= hue && hue < 180)
-            {
-                R = 0; G = C; B = X;
-            }
-            else if (180 <= hue && hue < 240)
-            {
-                R = 0; G = X; B = C;
-            }
-            else if (240 <= hue && hue < 300)
-            {
-                R = X; G = 0; B = C;
-            }
-            else if (300 <= hue && hue < 360)
-            {
-                R = C; G = 0; B = X;
-            }
-            else
-            {
-                R = 255; G = 0; B = 0;
-            }
-
-            R += m; G += m; B += m;
-            R *= 255.0f; G *= 255.0f; B *= 255.0f;
-            return Color.FromArgb((int)R, (int)G, (int)B);
-        }
-
-        public static double Clamp(double min, double value, double max)
-        {
-            return (value < min) ? min : (value > max) ? max : value;
-        }
-
-        private static int ClampInt(int min, int value, int max)
-        {
-            return (value < min) ? min : (value > max) ? max : value;
         }
     }
 
@@ -1726,192 +1570,205 @@ namespace DS4Windows
 
         public bool SaveProfile(string profilePath)
         {
-            IDeviceAuxiliaryConfig aux = API.Aux(devIndex);
             bool Saved = true;
-            string path = $"{API.Config.AppDataPath}\\Profiles\\{Path.GetFileNameWithoutExtension(profilePath)}.xml";
-
+            string path = $"{API.AppDataPath}\\Profiles\\{Path.GetFileNameWithoutExtension(profilePath)}.xml";
             try {
-                Saver svr = new Saver();
-                var Xdoc = svr.doc;
-                XmlNode Node;
-                XmlNode xmlControls = Xdoc.SelectSingleNode("/DS4Windows/Control");
-                XmlNode xmlShiftControls = Xdoc.SelectSingleNode("/DS4Windows/ShiftControl");
-
-                Node = Xdoc.CreateXmlDeclaration("1.0", "utf-8", string.Empty);
-                Xdoc.AppendChild(Node);
-
-                Node = Xdoc.CreateComment($" DS4Windows Configuration Data. {DateTime.Now} ");
-                Xdoc.AppendChild(Node);
-
-                Node = Xdoc.CreateWhitespace("\r\n");
-                Xdoc.AppendChild(Node);
-
-                Node = Xdoc.CreateNode(XmlNodeType.Element, "DS4Windows", null);
-                svr.node = Node;
-
-                svr.Append("flushHIDQueue", FlushHIDQueue);
-                svr.Append("touchToggle", EnableTouchToggle);
-                svr.Append("idleDisconnectTimeout", IdleDisconnectTimeout);
-                svr.Append("Color", MainColor);
-                svr.Append("RumbleBoost", RumbleBoost);
-                svr.Append("ledAsBatteryIndicator", LedAsBatteryIndicator);
-                svr.Append("FlashType", FlashType);
-                svr.Append("flashBatteryAt", FlashBatteryAt);
-                svr.Append("touchSensitivity", TouchSensitivity);
-                svr.Append("LowColor", LowColor);
-                svr.Append("ChargingColor", ChargingColor);
-                svr.Append("FlashColor", FlashColor);
-
-                svr.Append("touchpadJitterCompensation", TouchpadJitterCompensation);
-                svr.Append("lowerRCOn", LowerRCOn);
-                svr.Append("tapSensitivity", TapSensitivity);
-                svr.Append("doubleTap", DoubleTap);
-                svr.Append("scrollSensitivity", ScrollSensitivity);
-
-                svr.Append("LeftTriggerMiddle", L2.DeadZone);
-                svr.Append("RightTriggerMiddle", R2.DeadZone);
-                svr.Append("TouchpadInvert", TouchpadInvert);
-                svr.Append("L2AntiDeadZone", L2.AntiDeadZone);
-                svr.Append("R2AntiDeadZone", R2.AntiDeadZone);
-                svr.Append("L2MaxZone", L2.MaxZone);
-                svr.Append("R2MaxZone", R2.MaxZone);
-                svr.Append("buttonMouseSensitivity", ButtonMouseSensitivity);
-                svr.Append("Rainbow", Rainbow);
-
-                svr.Append("LSDeadZone", LS.DeadZone);
-                svr.Append("RSDeadZone", RS.DeadZone);
-                svr.Append("LSAntiDeadZone", LS.AntiDeadZone);
-                svr.Append("RSAntiDeadZone", RS.AntiDeadZone);
-                svr.Append("LSMaxZone", LS.MaxZone);
-                svr.Append("RSMaxZone", RS.MaxZone);
-                svr.Append("LSRotation", (int)(LS.Rotation * 180.0 / Math.PI));
-                svr.Append("RSRotation", (int)(RS.Rotation * 180.0 / Math.PI));
-                
-                svr.Append("SXDeadZone", SX.DeadZone);
-                svr.Append("SZDeadZone", SZ.DeadZone);
-                svr.Append("SXMaxZone", (int)(SX.MaxZone * 100.0));
-                svr.Append("SZMaxZone", (int)(SZ.MaxZone * 100.0));
-
-                svr.Append("SXAntiDeadZone", (int)(SX.AntiDeadZone * 100.0));
-                svr.Append("SZAntiDeadZone", (int)(SZ.AntiDeadZone * 100.0));
-
-                svr.Append("Sensitivity", $"{LS.Sensitivity}|{RS.Sensitivity}|{L2.Sensitivity}|{R2.Sensitivity}|{SX.Sensitivity}|{SZ.Sensitivity}";
-
-                svr.Append("ChargingType", ChargingType);
-                svr.Append("MouseAcceleration", MouseAccel);
-                //svr.Append("ShiftModifier", ShiftModifier);
-                svr.Append("LaunchProgram", LaunchProgram);
-                svr.Append("DinputOnly", DInputOnly);
-                svr.Append("StartTouchpadOff", StartTouchpadOff);
-                svr.Append("UseTPforControls", UseTPforControls);
-                svr.Append("UseSAforMouse", UseSAforMouse);
-                svr.Append("SATriggers", SATriggers);
-                svr.Append("SATriggerCond", saTriggerCond(SATriggerCond));
-                svr.Append("SASteeringWheelEmulationAxis", SASteeringWheelEmulationAxis.ToString("G"));
-                svr.Append("SASteeringWheelEmulationRange", SASteeringWheelEmulationRange);
-                svr.Append("TouchDisInvTriggers", string.Join(",", TouchDisInvertTriggers));
-
-                svr.Append("GyroSensitivity", GyroSensitivity);
-                svr.Append("GyroSensVerticalScale", GyroSensVerticalScale);
-                svr.Append("GyroInvert", GyroInvert);
-                svr.Append("GyroTriggerTurns", GyroTriggerTurns);
-                svr.Append("GyroSmoothingWeight", (int)(GyroSmoothingWeight * 100.0));
-                svr.Append("GyroSmoothing", GyroSmoothingWeight);
-                svr.Append("GyroMouseHAxis", GyroMouseHorizontalAxis);
-                svr.Append("GyroMouseDeadZone", GyroMouseDeadZone);
-                svr.Append("GyroMouseToggle", GyroMouseToggle);
-                svr.Append("LSCurve", LS.Curve);
-                svr.Append("RSCurve", RS.Curve);
-                svr.Append("ProfileActions", string.Join("/", ProfileActions));
-                svr.Append("BTPollRate", BTPollRate);
-
-                svr.Append("LSOutputCurveMode", outputCurve(LS.OutCurvePreset));
-                svr.Append("LSOutputCurveCustom", LS.OutBezierCurve.ToString());
-                svr.Append("RSOutputCurveMode", outputCurve(RS.OutCurvePreset));
-                svr.Append("RSOutputCurveCustom", RS.OutBezierCurve.ToString());
-
-                svr.Append("LSSquareStick", SquStick.LSMode);
-                svr.Append("RSSquareStick", SquStick.RSMode);
-                svr.Append("SquareStickRoundness", SquStick.Roundness);
-
-                svr.Append("L2OutputCurveMode", outputCurve(L2.OutCurvePreset));
-                svr.Append("L2OutputCurveCustom", L2.OutBezierCurve.ToString());
-                svr.Append("R2OutputCurveMode", outputCurve(R2.OutCurvePreset));
-                svr.Append("R2OutputCurveCustom", R2.OutBezierCurve.ToString());
-
-                svr.Append("SXOutputCurveMode", outputCurve(L2.OutCurvePreset));
-                svr.Append("SXOutputCurveCustom", L2.OutBezierCurve.ToString());
-                svr.Append("SZOutputCurveMode", outputCurve(R2.OutCurvePreset));
-                svr.Append("SZOutputCurveCustom", R2.OutBezierCurve.ToString());
-
-                svr.Append("TrackballMode", TrackballMode);
-                svr.Append("TrackballFriction", TrackballFriction);
-
-                svr.Append("OutputContDevice", outContDevice(OutputDevType));
-
-                  XmlNode NodeControl = Xdoc.CreateElement("Control");
-                  var N = new XmlNodeControl(Xdoc);
-
-                XmlNode NodeShiftControl = Xdoc.CreateElement( "ShiftControl");
-                var NS = new XmlNodeControl(Xdoc);
-
-                DS4KeyType[] keyTypes = {DS4KeyType.HoldMacro, DS4KeyType.Macro, DS4KeyType.Toggle, DS4KeyType.ScanCode};
-
-                foreach (DS4ControlSettings dcs in DS4CSettings) {
-                    string control = dcs.Control.ToString();
-
-                    void save(bool isShift, bool actionOK, ref DS4ControlSettings.Sub sub, XmlNodeControl NC)
-                    {
-                        if (sub.Action != null && actionOK) {
-                            string keyType = string.Empty;
-
-                            if (sub.Action is string str && str == "Unbound")
-                                keyType += DS4KeyType.Unbound;
-
-                            foreach (var kt in keyTypes.Where(kt => sub.KeyType.HasFlag(kt)))
-                                keyType += kt;
-
-                            if (keyType != string.Empty) svr.Append(NC.KeyType, control, keyType);
-
-                            if (isShift)
-                                svr.DemandAttribute("Trigger", dcs.Shift.ShiftTrigger.ToString());
-
-                            if (sub.Action is IEnumerable<int> || sub.Action is int[] || sub.Action is ushort[]) {
-                                svr.Append(NC.Macro, control, string.Join("/", (int[]) sub.Action));
-                            }
-                            else if (sub.Action is int || sub.Action is ushort || sub.Action is byte) {
-                                svr.Append(NC.Key, control, sub.Action.ToString());
-                            }
-                            else if (sub.Action is string sa) {
-                                svr.Append(NC.Button, control, sa);
-                            }
-                            else if (sub.Action is X360Controls xc) {
-                                var value = isShift ? xc.ToString() : GlobalConfig.getX360ControlString(xc);
-                                svr.Append(NC.Button, control, value);
-                            }
-                        }
-
-                        if (sub.Extras?.Split(',')?.Any(s => s != "0") ?? false)
-                            svr.Append(NC.Extras, control, sub.Extras);
-                    }
-
-                    save(false, true, ref dcs.Norm, N);
-                    save(true, dcs.Shift.ShiftTrigger > 0, ref dcs.Shift, NS);
-                }
-
-                Node.AppendChild(NodeControl);
-                N.AppendElementsTo(NodeControl);
-
-                Node.AppendChild(NodeShiftControl);
-                NS.AppendElementsTo(NodeShiftControl);
-                
-                Xdoc.AppendChild(Node);
+                var Xdoc = new XmlDocument();
+                Save(Xdoc);
                 Xdoc.Save(path);
             }
             catch { Saved = false; }
             return Saved;
+
         }
 
+        public void Save(XmlDocument Xdoc)
+        {
+            //IDeviceAuxiliaryConfig aux = API.Aux(devIndex);
+
+            Saver svr = new Saver();
+            svr.doc = Xdoc;
+
+            XmlNode Node;
+            XmlNode xmlControls = Xdoc.SelectSingleNode("/DS4Windows/Control");
+            XmlNode xmlShiftControls = Xdoc.SelectSingleNode("/DS4Windows/ShiftControl");
+
+            Node = Xdoc.CreateXmlDeclaration("1.0", "utf-8", string.Empty);
+            Xdoc.AppendChild(Node);
+
+            Node = Xdoc.CreateComment($" DS4Windows Configuration Data. {DateTime.Now} ");
+            Xdoc.AppendChild(Node);
+
+            Node = Xdoc.CreateWhitespace("\r\n");
+            Xdoc.AppendChild(Node);
+
+            Node = Xdoc.CreateNode(XmlNodeType.Element, "DS4Windows", null);
+            svr.node = Node;
+
+            svr.Append("flushHIDQueue", FlushHIDQueue);
+            svr.Append("touchToggle", EnableTouchToggle);
+            svr.Append("idleDisconnectTimeout", IdleDisconnectTimeout);
+            svr.Append("Color", MainColor);
+            svr.Append("RumbleBoost", RumbleBoost);
+            svr.Append("ledAsBatteryIndicator", LedAsBatteryIndicator);
+            svr.Append("FlashType", FlashType);
+            svr.Append("flashBatteryAt", FlashBatteryAt);
+            svr.Append("touchSensitivity", TouchSensitivity);
+            svr.Append("LowColor", LowColor);
+            svr.Append("ChargingColor", ChargingColor);
+            svr.Append("FlashColor", FlashColor);
+
+            svr.Append("touchpadJitterCompensation", TouchpadJitterCompensation);
+            svr.Append("lowerRCOn", LowerRCOn);
+            svr.Append("tapSensitivity", TapSensitivity);
+            svr.Append("doubleTap", DoubleTap);
+            svr.Append("scrollSensitivity", ScrollSensitivity);
+
+            svr.Append("LeftTriggerMiddle", L2.DeadZone);
+            svr.Append("RightTriggerMiddle", R2.DeadZone);
+            svr.Append("TouchpadInvert", TouchpadInvert);
+            svr.Append("L2AntiDeadZone", L2.AntiDeadZone);
+            svr.Append("R2AntiDeadZone", R2.AntiDeadZone);
+            svr.Append("L2MaxZone", L2.MaxZone);
+            svr.Append("R2MaxZone", R2.MaxZone);
+            svr.Append("buttonMouseSensitivity", ButtonMouseSensitivity);
+            svr.Append("Rainbow", Rainbow);
+
+            svr.Append("LSDeadZone", LS.DeadZone);
+            svr.Append("RSDeadZone", RS.DeadZone);
+            svr.Append("LSAntiDeadZone", LS.AntiDeadZone);
+            svr.Append("RSAntiDeadZone", RS.AntiDeadZone);
+            svr.Append("LSMaxZone", LS.MaxZone);
+            svr.Append("RSMaxZone", RS.MaxZone);
+            svr.Append("LSRotation", (int)(LS.Rotation * 180.0 / Math.PI));
+            svr.Append("RSRotation", (int)(RS.Rotation * 180.0 / Math.PI));
+            
+            svr.Append("SXDeadZone", SX.DeadZone);
+            svr.Append("SZDeadZone", SZ.DeadZone);
+            svr.Append("SXMaxZone", (int)(SX.MaxZone * 100.0));
+            svr.Append("SZMaxZone", (int)(SZ.MaxZone * 100.0));
+
+            svr.Append("SXAntiDeadZone", (int)(SX.AntiDeadZone * 100.0));
+            svr.Append("SZAntiDeadZone", (int)(SZ.AntiDeadZone * 100.0));
+
+            svr.Append("Sensitivity", $"{LS.Sensitivity}|{RS.Sensitivity}|{L2.Sensitivity}|{R2.Sensitivity}|{SX.Sensitivity}|{SZ.Sensitivity}");
+
+            svr.Append("ChargingType", ChargingType);
+            svr.Append("MouseAcceleration", MouseAccel);
+            //svr.Append("ShiftModifier", ShiftModifier);
+            svr.Append("LaunchProgram", LaunchProgram);
+            svr.Append("DinputOnly", DInputOnly);
+            svr.Append("StartTouchpadOff", StartTouchpadOff);
+            svr.Append("UseTPforControls", UseTPforControls);
+            svr.Append("UseSAforMouse", UseSAforMouse);
+            svr.Append("SATriggers", SATriggers);
+            svr.Append("SATriggerCond", saTriggerCond(SATriggerCond));
+            svr.Append("SASteeringWheelEmulationAxis", SASteeringWheelEmulationAxis.ToString("G"));
+            svr.Append("SASteeringWheelEmulationRange", SASteeringWheelEmulationRange);
+            svr.Append("TouchDisInvTriggers", string.Join(",", TouchDisInvertTriggers));
+
+            svr.Append("GyroSensitivity", GyroSensitivity);
+            svr.Append("GyroSensVerticalScale", GyroSensVerticalScale);
+            svr.Append("GyroInvert", GyroInvert);
+            svr.Append("GyroTriggerTurns", GyroTriggerTurns);
+            svr.Append("GyroSmoothingWeight", (int)(GyroSmoothingWeight * 100.0));
+            svr.Append("GyroSmoothing", GyroSmoothingWeight);
+            svr.Append("GyroMouseHAxis", GyroMouseHorizontalAxis);
+            svr.Append("GyroMouseDeadZone", GyroMouseDeadZone);
+            svr.Append("GyroMouseToggle", GyroMouseToggle);
+            svr.Append("LSCurve", LS.Curve);
+            svr.Append("RSCurve", RS.Curve);
+            svr.Append("ProfileActions", string.Join("/", ProfileActions));
+            svr.Append("BTPollRate", BTPollRate);
+
+            svr.Append("LSOutputCurveMode", outputCurve(LS.OutCurvePreset));
+            svr.Append("LSOutputCurveCustom", LS.OutBezierCurve.ToString());
+            svr.Append("RSOutputCurveMode", outputCurve(RS.OutCurvePreset));
+            svr.Append("RSOutputCurveCustom", RS.OutBezierCurve.ToString());
+
+            svr.Append("LSSquareStick", SquStick.LSMode);
+            svr.Append("RSSquareStick", SquStick.RSMode);
+            svr.Append("SquareStickRoundness", SquStick.Roundness);
+
+            svr.Append("L2OutputCurveMode", outputCurve(L2.OutCurvePreset));
+            svr.Append("L2OutputCurveCustom", L2.OutBezierCurve.ToString());
+            svr.Append("R2OutputCurveMode", outputCurve(R2.OutCurvePreset));
+            svr.Append("R2OutputCurveCustom", R2.OutBezierCurve.ToString());
+
+            svr.Append("SXOutputCurveMode", outputCurve(L2.OutCurvePreset));
+            svr.Append("SXOutputCurveCustom", L2.OutBezierCurve.ToString());
+            svr.Append("SZOutputCurveMode", outputCurve(R2.OutCurvePreset));
+            svr.Append("SZOutputCurveCustom", R2.OutBezierCurve.ToString());
+
+            svr.Append("TrackballMode", TrackballMode);
+            svr.Append("TrackballFriction", TrackballFriction);
+
+            svr.Append("OutputContDevice", outContDevice(OutputDevType));
+
+              XmlNode NodeControl = Xdoc.CreateElement("Control");
+              var N = new XmlNodeControl(Xdoc);
+
+            XmlNode NodeShiftControl = Xdoc.CreateElement( "ShiftControl");
+            var NS = new XmlNodeControl(Xdoc);
+
+            DS4KeyType[] keyTypes = {DS4KeyType.HoldMacro, DS4KeyType.Macro, DS4KeyType.Toggle, DS4KeyType.ScanCode};
+
+            void save(bool isShift, bool actionOK, DS4ControlSettings dcs, XmlNodeControl NC)
+            {
+                string control = dcs.Control.ToString();
+                ref var sub = ref dcs.GetSub(isShift);
+                if (sub.Action != null && actionOK)
+                {
+                    string keyType = string.Empty;
+
+                    if (sub.Action is string str && str == "Unbound")
+                        keyType += DS4KeyType.Unbound;
+
+
+                    foreach (var kt in keyTypes)
+                        if (sub.KeyType.HasFlag(kt)) keyType += kt;
+
+                    if (keyType != string.Empty) svr.Append(NC.KeyType, control, keyType);
+
+                    if (isShift)
+                        svr.DemandAttribute("Trigger", dcs.Shift.ShiftTrigger.ToString());
+
+                    if (sub.Action is IEnumerable<int> || sub.Action is int[] || sub.Action is ushort[])
+                    {
+                        svr.Append(NC.Macro, control, string.Join("/", (int[])sub.Action));
+                    }
+                    else if (sub.Action is int || sub.Action is ushort || sub.Action is byte)
+                    {
+                        svr.Append(NC.Key, control, sub.Action.ToString());
+                    }
+                    else if (sub.Action is string sa)
+                    {
+                        svr.Append(NC.Button, control, sa);
+                    }
+                    else if (sub.Action is X360Controls xc)
+                    {
+                        var value = isShift ? xc.ToString() : GlobalConfig.getX360ControlString(xc);
+                        svr.Append(NC.Button, control, value);
+                    }
+                }
+
+                if (sub.Extras?.Split(',')?.Any(s => s != "0") ?? false)
+                    svr.Append(NC.Extras, control, sub.Extras);
+            }
+
+            foreach (DS4ControlSettings dcs in DS4CSettings) {
+                save(false, true, dcs, N);
+                save(true, dcs.Shift.ShiftTrigger > 0, dcs, NS);
+            }
+
+            Node.AppendChild(NodeControl);
+            N.AppendElementsTo(NodeControl);
+
+            Node.AppendChild(NodeShiftControl);
+            NS.AppendElementsTo(NodeShiftControl);
+            
+            Xdoc.AppendChild(Node);
+        }
     }
 
     public class GlobalConfig : IGlobalConfig
@@ -1922,7 +1779,7 @@ namespace DS4Windows
         public IDeviceConfig Cfg(int index) => cfg[index];
         public IDeviceAuxiliaryConfig Aux(int index) => aux[index];
 
-        public Dictionary<string, string> linkedProfiles = new Dictionary<string, string>();
+        public Dictionary<string, string> LinkedProfiles { get;  } = new Dictionary<string, string>();
 
         // general values
         public bool UseExclusiveMode { get; set; } = false;
@@ -2203,12 +2060,13 @@ namespace DS4Windows
             Xdoc.Save(m_Actions);
         }
 
-        public bool SaveAction(string name, string controls, int mode, string details, bool edit, string extras = "")
+        public bool SaveAction(string name, string controls, int mode, string details, bool edit, string extras)
         {
+            var Xdoc = new XmlDocument();
             bool saved = true;
-            if (!File.Exists(m_Actions))
+            if (!File.Exists(API.ActionsPath))
                 CreateAction();
-            Xdoc.Load(m_Actions);
+            Xdoc.Load(API.ActionsPath);
             XmlNode Node;
 
             Node = Xdoc.CreateComment(String.Format(" Special Actions Configuration Data. {0} ", DateTime.Now));
@@ -2274,7 +2132,7 @@ namespace DS4Windows
             else { Node.AppendChild(el); }
 
             Xdoc.AppendChild(Node);
-            try { Xdoc.Save(m_Actions); }
+            try { Xdoc.Save(API.ActionsPath); }
             catch { saved = false; }
             LoadActions();
 
@@ -2284,21 +2142,22 @@ namespace DS4Windows
 
         public void RemoveAction(string name)
         {
-            Xdoc.Load(m_Actions);
+            var Xdoc = new XmlDocument();
+            Xdoc.Load(API.ActionsPath);
             XmlNode Node = Xdoc.SelectSingleNode("Actions");
             XmlNode Item = Xdoc.SelectSingleNode("/Actions/Action[@Name=\"" + name + "\"]");
             if (Item != null)
                 Node.RemoveChild(Item);
 
             Xdoc.AppendChild(Node);
-            Xdoc.Save(m_Actions);
+            Xdoc.Save(API.ActionsPath);
             LoadActions();
         }
 
         public bool LoadActions()
         {
             bool saved = true;
-            if (!File.Exists(Global.appdatapath + "\\Actions.xml"))
+            if (!File.Exists($"{API.AppDataPath}\\Actions.xml"))
             {
                 SaveAction("Disconnect Controller", "PS/Options", 5, "0", false);
                 saved = false;
@@ -2308,7 +2167,7 @@ namespace DS4Windows
             {
                 actions.Clear();
                 XmlDocument doc = new XmlDocument();
-                doc.Load(Global.appdatapath + "\\Actions.xml");
+                doc.Load($"{API.AppDataPath}\\Actions.xml");
                 XmlNodeList actionslist = doc.SelectNodes("Actions/Action");
                 string name, controls, type, details, extras, extras2;
                 Mapping.actionDone.Clear();
@@ -2417,7 +2276,7 @@ namespace DS4Windows
             Node = Xdoc.CreateNode(XmlNodeType.Element, "LinkedControllers", "");
             Xdoc.AppendChild(Node);
 
-            try { Xdoc.Save(m_linkedProfiles); }
+            try { Xdoc.Save(API.LinkedProfilesPath); }
             catch (UnauthorizedAccessException) { AppLogger.LogToGui("Unauthorized Access - Save failed to path: " + m_linkedProfiles, false); saved = false; }
 
             return saved;
@@ -2426,12 +2285,12 @@ namespace DS4Windows
         public bool LoadLinkedProfiles()
         {
             bool loaded = true;
-            if (File.Exists(m_linkedProfiles))
+            if (File.Exists(API.LinkedProfilesPath))
             {
                 XmlDocument linkedXdoc = new XmlDocument();
                 XmlNode Node;
-                linkedXdoc.Load(m_linkedProfiles);
-                linkedProfiles.Clear();
+                linkedXdoc.Load(API.LinkedProfilesPath);
+                LinkedProfiles.Clear();
 
                 try
                 {
@@ -2442,7 +2301,7 @@ namespace DS4Windows
                         XmlNode current = links[i];
                         string serial = current.Name.Replace("MAC", string.Empty);
                         string profile = current.InnerText;
-                        linkedProfiles[serial] = profile;
+                        LinkedProfiles[serial] = profile;
                     }
                 }
                 catch { loaded = false; }
@@ -2459,7 +2318,7 @@ namespace DS4Windows
         public bool SaveLinkedProfiles()
         {
             bool saved = true;
-            if (File.Exists(m_linkedProfiles))
+            if (File.Exists(API.LinkedProfilesPath))
             {
                 XmlDocument linkedXdoc = new XmlDocument();
                 XmlNode Node;
@@ -2476,19 +2335,19 @@ namespace DS4Windows
                 Node = linkedXdoc.CreateNode(XmlNodeType.Element, "LinkedControllers", "");
                 linkedXdoc.AppendChild(Node);
 
-                Dictionary<string, string>.KeyCollection serials = linkedProfiles.Keys;
+                Dictionary<string, string>.KeyCollection serials = LinkedProfiles.Keys;
                 //for (int i = 0, itemCount = linkedProfiles.Count; i < itemCount; i++)
                 for (var serialEnum = serials.GetEnumerator(); serialEnum.MoveNext();)
                 {
                     //string serial = serials.ElementAt(i);
                     string serial = serialEnum.Current;
-                    string profile = linkedProfiles[serial];
+                    string profile = LinkedProfiles[serial];
                     XmlElement link = linkedXdoc.CreateElement("MAC" + serial);
                     link.InnerText = profile;
                     Node.AppendChild(link);
                 }
 
-                try { linkedXdoc.Save(m_linkedProfiles); }
+                try { linkedXdoc.Save(API.LinkedProfilesPath); }
                 catch (UnauthorizedAccessException) { AppLogger.LogToGui("Unauthorized Access - Save failed to path: " + m_linkedProfiles, false); saved = false; }
             }
             else
@@ -2518,7 +2377,7 @@ namespace DS4Windows
             Node = configXdoc.CreateNode(XmlNodeType.Element, "Controllers", "");
             configXdoc.AppendChild(Node);
 
-            try { configXdoc.Save(m_controllerConfigs); }
+            try { configXdoc.Save(API.ControllerConfigsPath); }
             catch (UnauthorizedAccessException) { AppLogger.LogToGui("Unauthorized Access - Save failed to path: " + m_controllerConfigs, false); saved = false; }
 
             return saved;
@@ -2529,12 +2388,12 @@ namespace DS4Windows
             bool loaded = false;
 
             if (device == null) return false;
-            if (!File.Exists(m_controllerConfigs)) createControllerConfigs();
+            if (!File.Exists(API.ControllerConfigsPath)) createControllerConfigs();
 
             try
             {
                 XmlDocument xmlDoc = new XmlDocument();
-                xmlDoc.Load(m_controllerConfigs);
+                xmlDoc.Load(API.ControllerConfigsPath);
 
                 XmlNode node = xmlDoc.SelectSingleNode("/Controllers/Controller[@Mac=\"" + device.getMacAddress() + "\"]");
                 if (node != null)
@@ -2564,13 +2423,13 @@ namespace DS4Windows
             bool saved = true;
 
             if (device == null) return false;
-            if (!File.Exists(m_controllerConfigs)) createControllerConfigs();
+            if (!File.Exists(API.ControllerConfigsPath)) createControllerConfigs();
 
             try
             {
                 //XmlNode node = null;
                 XmlDocument xmlDoc = new XmlDocument();
-                xmlDoc.Load(m_controllerConfigs);
+                xmlDoc.Load(API.ControllerConfigsPath);
 
                 XmlNode node = xmlDoc.SelectSingleNode("/Controllers/Controller[@Mac=\"" + device.getMacAddress() + "\"]");
                 if (node == null)
@@ -2590,11 +2449,11 @@ namespace DS4Windows
                 node["wheel90DegPointLeft"].InnerText = $"{device.wheel90DegPointLeft.X},{device.wheel90DegPointLeft.Y}";
                 node["wheel90DegPointRight"].InnerText = $"{device.wheel90DegPointRight.X},{device.wheel90DegPointRight.Y}";
 
-                xmlDoc.Save(m_controllerConfigs);
+                xmlDoc.Save(API.ControllerConfigsPath);
             }
             catch (UnauthorizedAccessException)
             {
-                AppLogger.LogToGui("Unauthorized Access - Save failed to path: " + m_controllerConfigs, false);
+                AppLogger.LogToGui("Unauthorized Access - Save failed to path: " + API.ControllerConfigsPath, false);
                 saved = false;
             }
 
@@ -2605,7 +2464,7 @@ namespace DS4Windows
         {
             DS4Controls dc;
             if (buttonName.StartsWith("bn"))
-                dc = getDS4ControlsByName(buttonName);
+                dc = AppState.GetDS4ControlsByName(buttonName);
             else
                 dc = (DS4Controls)Enum.Parse(typeof(DS4Controls), buttonName, true);
 
@@ -2613,13 +2472,10 @@ namespace DS4Windows
             if (temp > 0)
             {
                 int index = temp - 1;
-                DS4ControlSettings dcs = dev[deviceNum].DS4Settings[index];
+                DS4ControlSettings dcs = Cfg(deviceNum).DS4CSettings[index];
                 dcs.UpdateSettings(shift, action, exts, kt, trigger);
             }
         }
-
-
-
 
         public DS4ControlSettings getDS4CSetting(int deviceNum, string buttonName)
         {

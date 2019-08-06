@@ -43,16 +43,16 @@ namespace DS4Windows
 
         public static string AppDataPath { get => app.AppDataPath;  }
         public static string ExePath { get => AppState.ExePath; }
+		static bool AppDataPathNeedsAdmin { get => app.AppDataPathNeedsAdmin; }
         static bool ExePathNeedsAdmin { get => app.ExePathNeedsAdmin; }
 
         public static void FindConfigLocation() => app.FindConfigLocation();
         public static void SetCulture(string culture) => AppState.SetCulture(culture);
 
-        // TODO: These are private since we don't want to expose them if not needed
         public static string ProfilePath { get => app.ProfilePath; }
-        static string ActionsPath { get => app.ActionsPath; }
-        static string LinkedProfilesPath { get => app.LinkedProfilesPath; }
-        static string ControllerConfigsPath { get => app.ControllerConfigsPath; }
+        public static string ActionsPath { get => app.ActionsPath; }
+        public static string LinkedProfilesPath { get => app.LinkedProfilesPath; }
+        public static string ControllerConfigsPath { get => app.ControllerConfigsPath; }
 
         static bool IsFirstRun { get => app.IsFirstRun; }
         static bool MultiSaveSpots { get => app.MultiSaveSpots; }
@@ -91,20 +91,13 @@ namespace DS4Windows
         bool UseCustomSteamFolder { get; set; }
         string CustomSteamFolder { get; set; }
 
-		Dictionary<string, string> LinkedProfiles { get; set; }
-
-		string AppDataPath { get; }
-		bool AppDataPathNeedsAdmin { get; }
-		string AppDataPPath { get; set; }
-
-        bool VigemInstalled { get; }
-		string VigemBusVersion { get; }
+		Dictionary<string, string> LinkedProfiles { get; }
 
         List<SpecialAction> Actions { get; }
         SpecialAction ActionByName(string name);
         SpecialAction ActionByIndex(int index);
         int LookupActionIndexOf(string name);
-        void SaveAction(string name, string controls, int mode, string details, bool edt, string extras = "");
+        bool SaveAction(string name, string controls, int mode, string details, bool edt, string extras = "");
 
         // These are in AppState
         //X360Controls[] DefaultButtonMapping { get;  }
