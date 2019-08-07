@@ -1173,109 +1173,50 @@ namespace DS4Windows
                 SetProfileActions(newActions);
             }
 
-            foreach (DS4ControlSettings dcs in DS4CSettings)
-                dcs.Reset();
-
-#if false
-            containsCustomAction = false;
-            containsCustomExtras = false;
-#endif
-
-            Dictionary<DS4Controls, X360Controls> customMapButtons = new Dictionary<DS4Controls, X360Controls>();
-            Dictionary<DS4Controls, String> customMapMacros = new Dictionary<DS4Controls, String>();
-            Dictionary<DS4Controls, UInt16> customMapKeys = new Dictionary<DS4Controls, UInt16>();
-            Dictionary<DS4Controls, String> customMapExtras = new Dictionary<DS4Controls, String>();
-            Dictionary<DS4Controls, DS4KeyType> customMapKeyTypes = new Dictionary<DS4Controls, DS4KeyType>();
-            Dictionary<DS4Controls, X360Controls> shiftCustomMapButtons = new Dictionary<DS4Controls, X360Controls>();
-            Dictionary<DS4Controls, String> shiftCustomMapMacros = new Dictionary<DS4Controls, String>();
-            Dictionary<DS4Controls, UInt16> shiftCustomMapKeys = new Dictionary<DS4Controls, UInt16>();
-            Dictionary<DS4Controls, String> shiftCustomMapExtras = new Dictionary<DS4Controls, String>();
-            Dictionary<DS4Controls, DS4KeyType> shiftCustomMapKeyTypes = new Dictionary<DS4Controls, DS4KeyType>();
-
+            void load(bool isShift, CustomMap customMap)
             {
-                foreach (XmlNode item in ldr.ChildNodes("Control/Button")) {
-                    UpdateDS4CSetting(item.Name, false, AppState.GetX360ControlsByName(item.InnerText), "", DS4KeyType.None, 0);
-                    customMapButtons.Add(AppState.GetDS4ControlsByName(item.Name), AppState.GetX360ControlsByName(item.InnerText));
+                string pathPrefix = isShift ? "ShiftControl" : "Control";
+
+                foreach (XmlElement item in ldr.ChildNodes($"{pathPrefix}/Button")) {
+                    int shiftT = isShift ? shiftM : 0;
+                    if (isShift && item.HasAttribute("Trigger"))
+                        int.TryParse(item.Attributes["Trigger"].Value, out shiftT);
+                    UpdateDS4CSetting(item.Name, isShift, AppState.GetX360ControlsByName(item.InnerText), "", DS4KeyType.None, shiftT);
+                    customMap.Buttons.Add(AppState.GetDS4ControlsByName(item.Name), AppState.GetX360ControlsByName(item.InnerText));
                 }
 
-                foreach (XmlNode item in ldr.ChildNodes("Control/Macro")) {
-                    customMapMacros.Add(AppState.GetDS4ControlsByName(item.Name), item.InnerText);
+                foreach (XmlElement item in ldr.ChildNodes($"{pathPrefix}/Macro"))
+                {
                     int[] keys = ldr.ParseInts(item.InnerText, '/');
-                    UpdateDS4CSetting(item.Name, false, keys, "", DS4KeyType.None, 0);
+                    int shiftT = isShift ? shiftM : 0;
+                    if (isShift && item.HasAttribute("Trigger"))
+                        int.TryParse(item.Attributes["Trigger"].Value, out shiftT);
+                    UpdateDS4CSetting(item.Name, isShift, keys, "", DS4KeyType.None, shiftT);
+                    customMap.Macros.Add(AppState.GetDS4ControlsByName(item.Name), item.InnerText);
                 }
 
-                foreach (XmlNode item in ldr.ChildNodes("Control/Key")) {
+                foreach (XmlElement item in ldr.ChildNodes($"{pathPrefix}/Key"))
+                {
                     ushort wvk;
                     if (ushort.TryParse(item.InnerText, out wvk)) {
-                        UpdateDS4CSetting(item.Name, false, wvk, "", DS4KeyType.None, 0);
-                        customMapKeys.Add(AppState.GetDS4ControlsByName(item.Name), wvk);
+                        int shiftT = isShift ? shiftM : 0;
+                        if (isShift && item.HasAttribute("Trigger"))
+                            int.TryParse(item.Attributes["Trigger"].Value, out shiftT);
+                        UpdateDS4CSetting(item.Name, isShift, wvk, "", DS4KeyType.None, shiftT);
+                        customMap.Keys.Add(AppState.GetDS4ControlsByName(item.Name), wvk);
                     }
                 }
 
-                foreach (XmlNode item in ldr.ChildNodes("/Control/Extras")) {
-                    if (item.InnerText != string.Empty) {
-                        UpdateDS4CExtra(item.Name, false, item.InnerText);
-                        customMapExtras.Add(AppState.GetDS4ControlsByName(item.Name), item.InnerText);
+                foreach (XmlElement item in ldr.ChildNodes($"{pathPrefix}/Extras"))
+                {
+                    if (item.InnerText != string.Empty) { 
+                        UpdateDS4CExtra(item.Name, isShift, item.InnerText);
+                        customMap.Extras.Add(AppState.GetDS4ControlsByName(item.Name), item.InnerText);
                     }
                     else item.ParentNode.RemoveChild(item);
                 }
 
-                foreach (XmlNode item in ldr.ChildNodes("Control/KeyType")) {
-                    var keyType = DS4KeyType.None;
-                    if (item.InnerText.Contains(DS4KeyType.ScanCode.ToString()))
-                        keyType |= DS4KeyType.ScanCode;
-                    if (item.InnerText.Contains(DS4KeyType.Toggle.ToString()))
-                        keyType |= DS4KeyType.Toggle;
-                    if (item.InnerText.Contains(DS4KeyType.Macro.ToString()))
-                        keyType |= DS4KeyType.Macro;
-                    if (item.InnerText.Contains(DS4KeyType.HoldMacro.ToString()))
-                        keyType |= DS4KeyType.HoldMacro;
-                    if (item.InnerText.Contains(DS4KeyType.Unbound.ToString()))
-                        keyType |= DS4KeyType.Unbound;
-                    if (keyType != DS4KeyType.None) {
-                        UpdateDS4CKeyType(item.Name, false, keyType);
-                        customMapKeyTypes.Add(AppState.GetDS4ControlsByName(item.Name), keyType);
-                    }
-                }
-
-                foreach (XmlElement item in ldr.ChildNodes("ShiftControl/Button")) {
-                    int shiftT = shiftM;
-                    if (item.HasAttribute("Trigger"))
-                        int.TryParse(item.Attributes["Trigger"].Value, out shiftT);
-                    UpdateDS4CSetting(item.Name, true, AppState.GetX360ControlsByName(item.InnerText), "", DS4KeyType.None, shiftT);
-                    shiftCustomMapButtons.Add(AppState.GetDS4ControlsByName(item.Name), AppState.GetX360ControlsByName(item.InnerText));
-                }
-
-                foreach (XmlElement item in ldr.ChildNodes("ShiftControl/Macro")) {
-                    shiftCustomMapMacros.Add(AppState.GetDS4ControlsByName(item.Name), item.InnerText);
-                    int[] keys = ldr.ParseInts(item.InnerText, '/');
-                    int shiftT = shiftM;
-                    if (item.HasAttribute("Trigger"))
-                        int.TryParse(item.Attributes["Trigger"].Value, out shiftT);
-                    UpdateDS4CSetting(item.Name, true, keys, "", DS4KeyType.None, shiftT);
-                }
-
-                foreach (XmlElement item in ldr.ChildNodes("ShiftControl/Key")) {
-                    ushort wvk;
-                    if (ushort.TryParse(item.InnerText, out wvk)) {
-                        int shiftT = shiftM;
-                        if (item.HasAttribute("Trigger"))
-                            int.TryParse(item.Attributes["Trigger"].Value, out shiftT);
-                        UpdateDS4CSetting(item.Name, true, wvk, "", DS4KeyType.None, shiftT);
-                        shiftCustomMapKeys.Add(AppState.GetDS4ControlsByName(item.Name), wvk);
-                    }
-                }
-
-                foreach (XmlElement item in ldr.ChildNodes("ShiftControl/Extras")) {
-                    if (item.InnerText != string.Empty) {
-                        UpdateDS4CExtra(item.Name, true, item.InnerText);
-                        shiftCustomMapExtras.Add(AppState.GetDS4ControlsByName(item.Name), item.InnerText);
-                    }
-                    else
-                        item.ParentNode.RemoveChild(item);
-                }
-
-                foreach (XmlElement item in ldr.ChildNodes("ShiftControl/KeyType")) {
+                foreach (XmlNode item in ldr.ChildNodes($"{pathPrefix}/KeyType")) {
                     var keyType = DS4KeyType.None;
                     if (item.InnerText.Contains(DS4KeyType.ScanCode.ToString()))
                         keyType |= DS4KeyType.ScanCode;
@@ -1289,13 +1230,32 @@ namespace DS4Windows
                         keyType |= DS4KeyType.Unbound;
                     if (keyType != DS4KeyType.None)
                     {
-                        UpdateDS4CKeyType(item.Name, true, keyType);
-                        shiftCustomMapKeyTypes.Add(AppState.GetDS4ControlsByName(item.Name), keyType);
+                        UpdateDS4CKeyType(item.Name, isShift, keyType);
+                        customMap.KeyTypes.Add(AppState.GetDS4ControlsByName(item.Name), keyType);
                     }
                 }
             }
 
+            foreach (DS4ControlSettings dcs in DS4CSettings)
+                dcs.Reset();
+#if false
+            containsCustomAction = containsCustomExtras = false;
+#endif
+            CustomMap normCustomMap = new CustomMap(), shiftCustomMap = new CustomMap();
+
+            load(false, normCustomMap);
+            load(true, shiftCustomMap);
+
             return !ldr.missingSetting;
+        }
+
+        internal class CustomMap
+        {
+            public Dictionary<DS4Controls, X360Controls> Buttons = new Dictionary<DS4Controls, X360Controls>();
+            public Dictionary<DS4Controls, String> Macros = new Dictionary<DS4Controls, String>();
+            public Dictionary<DS4Controls, UInt16> Keys = new Dictionary<DS4Controls, UInt16>();
+            public Dictionary<DS4Controls, String> Extras = new Dictionary<DS4Controls, String>();
+            public Dictionary<DS4Controls, DS4KeyType> KeyTypes = new Dictionary<DS4Controls, DS4KeyType>();
         }
 
         public void PostLoad(bool launchProgram, ControlService control, bool xinputChange, bool postLoadTransfer)
