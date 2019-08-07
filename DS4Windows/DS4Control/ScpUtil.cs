@@ -583,7 +583,7 @@ namespace DS4Windows
         public bool TrackballMode { get; set; } = false;
         public double TrackballFriction { get; set; } = 10.0;
 
-        public bool UseSAforMouse { get; set; } = false;
+        public bool UsingSAforMouse { get; set; } = false;
         public string SATriggers { get; set; } = string.Empty;
         public SATriggerCondType SATriggerCond { get; set; } = SATriggerCondType.And;
         public SASteeringWheelEmulationAxisType SASteeringWheelEmulationAxis { get; set; } =
@@ -1116,7 +1116,7 @@ namespace DS4Windows
             StartTouchpadOff = ldr.LoadBool("StartTouchpadOff") ?? def.StartTouchpadOff;
 
             UseTPforControls = ldr.LoadBool("UseTPforControls") ?? def.UseTPforControls;
-            UseSAforMouse = ldr.LoadBool("UseSAforMouse") ?? def.UseSAforMouse;
+            UsingSAforMouse = ldr.LoadBool("UseSAforMouse") ?? def.UsingSAforMouse;
             SATriggers = ldr.LoadText("SATriggers") ?? def.SATriggers;
             SATriggerCond = (ldr.LoadText("SATriggerCond") is string t1) ? saTriggerCond(t1) : def.SATriggerCond;
             SASteeringWheelEmulationAxis = ldr.LoadSASWEmulationAxis("SASteeringWheelEmulationAxis") ?? def.SASteeringWheelEmulationAxis;
@@ -1537,7 +1537,7 @@ namespace DS4Windows
             svr.Append("DinputOnly", DInputOnly);
             svr.Append("StartTouchpadOff", StartTouchpadOff);
             svr.Append("UseTPforControls", UseTPforControls);
-            svr.Append("UseSAforMouse", UseSAforMouse);
+            svr.Append("UseSAforMouse", UsingSAforMouse);
             svr.Append("SATriggers", SATriggers);
             svr.Append("SATriggerCond", saTriggerCond(SATriggerCond));
             svr.Append("SASteeringWheelEmulationAxis", SASteeringWheelEmulationAxis.ToString("G"));
