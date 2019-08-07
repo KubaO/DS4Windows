@@ -43,8 +43,7 @@ namespace DS4Windows
 
         public static string AppDataPath { get => app.AppDataPath;  }
         public static string ExePath { get => AppState.ExePath; }
-		static bool AppDataPathNeedsAdmin { get => app.AppDataPathNeedsAdmin; }
-        static bool ExePathNeedsAdmin { get => app.ExePathNeedsAdmin; }
+		static bool ExePathNeedsAdmin { get => app.ExePathNeedsAdmin; }
 
         public static void FindConfigLocation() => app.FindConfigLocation();
         public static void SetCulture(string culture) => AppState.SetCulture(culture);
@@ -91,7 +90,13 @@ namespace DS4Windows
         bool UseCustomSteamFolder { get; set; }
         string CustomSteamFolder { get; set; }
 
-		Dictionary<string, string> LinkedProfiles { get; }
+        bool SaveControllerConfigs(DS4Device device = null);
+        bool LoadControllerConfigs(DS4Device device = null);
+
+        bool ContainsLinkedProfile(string serial);
+        string GetLinkedProfile(string serial);
+        void SetLinkedProfile(string serial, string profile);
+        void RemoveLinkedProfile(string serial);
 
         List<SpecialAction> Actions { get; }
         SpecialAction ActionByName(string name);
@@ -109,8 +114,8 @@ namespace DS4Windows
         // These are implementation details that we most likely
         // shouldn't expose here.
         string TempProfileName { get; set; }
-        bool UseTempProfile { get; set; }
-        bool TempProfileDistance { get; set; }
+        bool UseTempProfile { get; }
+        bool TempProfileDistance { get; }
         bool UseDInputOnly { get; set; }
         bool LinkedProfileCheck { get; set; } // applies between this and successor profile
         bool TouchpadActive { get; set; }
