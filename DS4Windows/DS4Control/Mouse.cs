@@ -8,17 +8,10 @@ namespace DS4Windows
         protected DateTime pastTime, firstTap, TimeofEnd;
         protected Touch firstTouch, secondTouch;
         private DS4State s = new DS4State();
-        private DeviceBackingStore cfg;
-        private int deviceNum_;
-        protected int deviceNum
-        {
-            get => deviceNum_;
-            set {
-                cfg = Global.cfg[value];
-                deviceNum_ = value;
-            }
-        }
         private DS4Device dev = null;
+        private readonly IDeviceConfig cfg;
+        private readonly IDeviceAuxiliaryConfig aux;
+        private readonly int deviceNum;
         private readonly MouseCursor cursor;
         private readonly MouseWheel wheel;
         private bool tappedOnce = false, secondtouchbegin = false;
@@ -53,9 +46,11 @@ namespace DS4Windows
         private double trackballDXRemain = 0.0;
         private double trackballDYRemain = 0.0;
 
-        public Mouse(int deviceID, DS4Device d)
+        public Mouse(int deviceNum, DS4Device d)
         {
-            deviceNum = deviceID;
+            cfg = API.Cfg(deviceNum);
+            aux = API.Aux(deviceNum);
+            this.deviceNum = deviceNum;
             dev = d;
             cursor = new MouseCursor(deviceNum);
             wheel = new MouseWheel(deviceNum);
@@ -85,14 +80,14 @@ namespace DS4Windows
 
         public virtual void sixaxisMoved(DS4SixAxis sender, SixAxisEventArgs arg)
         {
-            if (dev.isUsingSAforMouse && Global.getGyroSensitivity(deviceNum) > 0)
+            if (cfg.UsingSAforMouse && cfg.GyroSensitivity > 0)
             {
                 s = dev.getCurrentStateRef();
 
-                useReverseRatchet = Global.getGyroTriggerTurns(deviceNum);
+                useReverseRatchet = cfg.GyroTriggerTurns;
                 int i = 0;
-                string[] ss = Global.getSATriggers(deviceNum).Split(',');
-                bool andCond = Global.getSATriggerCond(deviceNum);
+                string[] ss = cfg.SATriggers.Split(',');
+                bool andCond = cfg.SATriggerCond == SATriggerCondType.And;
                 triggeractivated = andCond ? true : false;
                 if (!string.IsNullOrEmpty(ss[0]))
                 {
@@ -172,11 +167,11 @@ namespace DS4Windows
         {
             s = dev.getCurrentStateRef();
 
-            if (Global.getUseTPforControls(deviceNum) == false)
+            if (cfg.UseTPforControls == false)
             {
-                if (Global.GetTouchActive(deviceNum))
+                if (aux.TouchpadActive)
                 {
-                    int[] disArray = Global.getTouchDisInvertTriggers(deviceNum);
+                    int[] disArray = cfg.TouchDisInvertTriggers;
                     tempBool = true;
                     for (int i = 0, arlen = disArray.Length; tempBool && i < arlen; i++)
                     {
@@ -184,7 +179,7 @@ namespace DS4Windows
                             tempBool = false;
                     }
 
-                    if (Global.getTrackballMode(deviceNum))
+                    if (cfg.TrackballMode)
                     {
                         int iIndex = trackballBufferTail;
                         trackballXBuffer[iIndex] = (arg.touches[0].deltaX * TRACKBALL_SCALE) / dev.getCurrentStateRef().elapsedTime;
@@ -199,7 +194,7 @@ namespace DS4Windows
                 }
                 else
                 {
-                    if (Global.getTrackballMode(deviceNum))
+                    if (cfg.TrackballMode)
                     {
                         int iIndex = trackballBufferTail;
                         trackballXBuffer[iIndex] = 0;
@@ -239,7 +234,7 @@ namespace DS4Windows
 
         public virtual void touchesBegan(DS4Touchpad sender, TouchpadEventArgs arg)
         {
-            if (!Global.UseTPforControls[deviceNum])
+            if (!cfg.UseTPforControls)
             {
                 Array.Clear(trackballXBuffer, 0, TRACKBALL_BUFFER_LEN);
                 Array.Clear(trackballXBuffer, 0, TRACKBALL_BUFFER_LEN);
@@ -259,10 +254,10 @@ namespace DS4Windows
             firstTouch.populate(arg.touches[0].hwX, arg.touches[0].hwY, arg.touches[0].touchID,
                 arg.touches[0].previousTouch);
 
-            if (Global.getDoubleTap(deviceNum))
+            if (cfg.DoubleTap)
             {
                 DateTime test = arg.timeStamp;
-                if (test <= (firstTap + TimeSpan.FromMilliseconds((double)Global.TapSensitivity[deviceNum] * 1.5)) && !arg.touchButtonPressed)
+                if (test <= (firstTap + TimeSpan.FromMilliseconds((double)cfg.TapSensitivity * 1.5)) && !arg.touchButtonPressed)
                     secondtouchbegin = true;
             }
 
@@ -276,8 +271,8 @@ namespace DS4Windows
             slideright = slideleft = false;
             swipeUp = swipeDown = swipeLeft = swipeRight = false;
             swipeUpB = swipeDownB = swipeLeftB = swipeRightB = 0;
-            byte tapSensitivity = Global.getTapSensitivity(deviceNum);
-            if (tapSensitivity != 0 && !Global.getUseTPforControls(deviceNum))
+            byte tapSensitivity = cfg.TapSensitivity;
+            if (tapSensitivity != 0 && !cfg.UseTPforControls)
             {
                 if (secondtouchbegin)
                 {
@@ -290,7 +285,7 @@ namespace DS4Windows
                 {
                     if (Math.Abs(firstTouch.hwX - arg.touches[0].hwX) < 10 && Math.Abs(firstTouch.hwY - arg.touches[0].hwY) < 10)
                     {
-                        if (Global.getDoubleTap(deviceNum))
+                        if (cfg.DoubleTap)
                         {
                             tappedOnce = true;
                             firstTap = arg.timeStamp;
@@ -303,9 +298,9 @@ namespace DS4Windows
             }
             else
             {
-                if (Global.getUseTPforControls(deviceNum) == false)
+                if (!cfg.UseTPforControls)
                 {
-                    int[] disArray = Global.getTouchDisInvertTriggers(deviceNum);
+                    int[] disArray = cfg.TouchDisInvertTriggers;
                     tempBool = true;
                     for (int i = 0, arlen = disArray.Length; tempBool && i < arlen; i++)
                     {
@@ -313,7 +308,7 @@ namespace DS4Windows
                             tempBool = false;
                     }
 
-                    if (Global.getTrackballMode(deviceNum))
+                    if (cfg.TrackballMode)
                     {
                         if (!trackballActive)
                         {
@@ -408,9 +403,9 @@ namespace DS4Windows
 
             if (trackballActive)
             {
-                if (Global.getUseTPforControls(deviceNum) == false)
+                if (!cfg.UseTPforControls)
                 {
-                    int[] disArray = Global.getTouchDisInvertTriggers(deviceNum);
+                    int[] disArray = cfg.TouchDisInvertTriggers;
                     tempBool = true;
                     for (int i = 0, arlen = disArray.Length; tempBool && i < arlen; i++)
                     {
@@ -475,7 +470,7 @@ namespace DS4Windows
 
         private void synthesizeMouseButtons()
         {
-            if (Global.GetDS4Action(deviceNum, DS4Controls.TouchLeft, false) == null && leftDown)
+            if (cfg.GetDS4Action(DS4Controls.TouchLeft, false) == null && leftDown)
             {
                 Mapping.MapClick(deviceNum, Mapping.Click.Left);
                 dragging2 = true;
@@ -485,21 +480,21 @@ namespace DS4Windows
                 dragging2 = false;
             }
 
-            if (Global.GetDS4Action(deviceNum, DS4Controls.TouchUpper, false) == null && upperDown)
+            if (cfg.GetDS4Action(DS4Controls.TouchUpper, false) == null && upperDown)
                 Mapping.MapClick(deviceNum, Mapping.Click.Middle);
 
-            if (Global.GetDS4Action(deviceNum, DS4Controls.TouchRight, false) == null && rightDown)
+            if (cfg.GetDS4Action(DS4Controls.TouchRight, false) == null && rightDown)
                 Mapping.MapClick(deviceNum, Mapping.Click.Left);
 
-            if (Global.GetDS4Action(deviceNum, DS4Controls.TouchMulti, false) == null && multiDown)
+            if (cfg.GetDS4Action(DS4Controls.TouchMulti, false) == null && multiDown)
                 Mapping.MapClick(deviceNum, Mapping.Click.Right);
 
-            if (!Global.UseTPforControls[deviceNum])
+            if (!cfg.UseTPforControls)
             {
                 if (tappedOnce)
                 {
                     DateTime tester = DateTime.Now;
-                    if (tester > (TimeofEnd + TimeSpan.FromMilliseconds((double)(Global.TapSensitivity[deviceNum]) * 1.5)))
+                    if (tester > (TimeofEnd + TimeSpan.FromMilliseconds((double)(cfg.TapSensitivity) * 1.5)))
                     {
                         Mapping.MapClick(deviceNum, Mapping.Click.Left);
                         tappedOnce = false;
@@ -535,7 +530,7 @@ namespace DS4Windows
                 multiDown = true;
             else
             {
-                if ((Global.LowerRCOn[deviceNum] && arg.touches[0].hwX > (1920 * 3) / 4 && arg.touches[0].hwY > (960 * 3) / 4))
+                if ((cfg.LowerRCOn && arg.touches[0].hwX > (1920 * 3) / 4 && arg.touches[0].hwY > (960 * 3) / 4))
                     Mapping.MapClick(deviceNum, Mapping.Click.Right);
 
                 if (isLeft(arg.touches[0]))
