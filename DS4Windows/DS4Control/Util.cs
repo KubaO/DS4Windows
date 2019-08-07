@@ -342,4 +342,16 @@ namespace DS4Windows
         }
 
     }
+
+    namespace ExtensionMethods
+    {
+        public static class Extensions
+        {
+            public static Value GetOr<Key,Value>(this IDictionary<Key, Value> dict, Key key, Value defaultResult)
+            {
+                dict.TryGetValue(key, out defaultResult);
+                return defaultResult;
+            }
+        }
+    }
 }
