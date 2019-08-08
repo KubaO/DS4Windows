@@ -409,8 +409,8 @@ namespace DS4Windows
             }
         }
 
-        public event EventHandler<DeviceStatusChangeEventArgs> DeviceStatusChange;
-        public void OnDeviceStatusChanged(object sender, int index)
+        public static event EventHandler<DeviceStatusChangeEventArgs> DeviceStatusChange;
+        public static void OnDeviceStatusChanged(object sender, int index)
         {
             if (DeviceStatusChange != null)
             {
@@ -419,8 +419,8 @@ namespace DS4Windows
             }
         }
 
-        public event EventHandler<SerialChangeArgs> DeviceSerialChange;
-        public void OnDeviceSerialChange(object sender, int index, string serial)
+        public static event EventHandler<SerialChangeArgs> DeviceSerialChange;
+        public static void OnDeviceSerialChange(object sender, int index, string serial)
         {
             if (DeviceSerialChange != null)
             {

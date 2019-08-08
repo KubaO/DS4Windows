@@ -39,7 +39,7 @@ namespace DS4Windows
         public static bool IsAdministrator { get => app.IsAdministrator; }
 
         public static bool IsViGEmBusInstalled() => DeviceDetection.IsViGEmBusInstalled();
-        public string VigemBusVersion { get; } = DeviceDetection.ViGEmBusVersion();
+        public static string ViGEmBusVersion { get; } = DeviceDetection.ViGEmBusVersion();
 
         public static string AppDataPath { get => app.AppDataPath;  }
         public static string ExePath { get => AppState.ExePath; }
@@ -55,8 +55,7 @@ namespace DS4Windows
 
         static bool IsFirstRun { get => app.IsFirstRun; }
         static bool MultiSaveSpots { get => app.MultiSaveSpots; }
-        static bool RunHotPLug { get => app.RunHotPlug; }
-
+        public static bool RunHotPlug { get => app.RunHotPlug; set => app.RunHotPlug = value; }
     }
 
     public interface IGlobalConfig
@@ -191,7 +190,7 @@ namespace DS4Windows
         bool TrackballMode { get; set; }
         double TrackballFriction { get; set; }
 
-        bool UseSAforMouse { get; set; }
+        bool UsingSAforMouse { get; set; }
         string SATriggers { get; set; }
 
         SATriggerCondType SATriggerCond { get; set; }

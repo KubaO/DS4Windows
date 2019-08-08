@@ -1135,7 +1135,7 @@ namespace DS4Windows
 
                     if (conType == ConnectionType.BT && oldCharging != charging)
                     {
-                        if (Global.getQuickCharge() && charging)
+                        if (API.Config.QuickCharge && charging)
                         {
                             DisconnectBT(true);
                             timeoutExecuted = true;
