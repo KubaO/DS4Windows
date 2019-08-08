@@ -73,7 +73,7 @@ namespace DS4Windows
             report.LeftTrigger = state.L2;
             report.RightTrigger = state.R2;
 
-            SASteeringWheelEmulationAxisType steeringWheelMappedAxis = Global.cfg[device].sASteeringWheelEmulationAxis;
+            SASteeringWheelEmulationAxisType steeringWheelMappedAxis = API.Cfg(device).SASteeringWheelEmulationAxis;
             switch (steeringWheelMappedAxis)
             {
                 case SASteeringWheelEmulationAxisType.None:

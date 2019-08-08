@@ -41,24 +41,25 @@ namespace DS4Windows
 
         public static void updateLightBar(DS4Device device, int deviceNum)
         {
-            var cfg = Global.cfg[deviceNum];
+            var cfg = API.Cfg(deviceNum);
+            var aux = API.Aux(deviceNum);
             DS4Color color;
             if (!defaultLight && !forcelight[deviceNum])
             {
-                if (cfg.useCustomColor)
+                if (cfg.UseCustomColor)
                 {
-                    if (cfg.ledAsBatteryIndicator)
+                    if (cfg.LedAsBatteryIndicator)
                     {
-                        ref DS4Color fullColor = ref cfg.customColor;
-                        ref DS4Color lowColor = ref cfg.lowColor;
-                        color = getTransitionedColor(ref lowColor, ref fullColor, device.getBattery());
+                        DS4Color fullColor = cfg.CustomColor;
+                        DS4Color lowColor = cfg.LowColor;
+                        color = Util.getTransitionedColor(ref lowColor, ref fullColor, device.getBattery());
                     }
                     else
-                        color = cfg.customColor;
+                        color = cfg.CustomColor;
                 }
                 else
                 {
-                    double rainbow = cfg.getRainbow;
+                    double rainbow = cfg.Rainbow;
                     if (rainbow > 0)
                     {
                         // Display rainbow
@@ -77,33 +78,33 @@ namespace DS4Windows
                         else if (counters[deviceNum] > 180000)
                             counters[deviceNum] = 0;
 
-                        if (getLedAsBatteryIndicator(deviceNum))
+                        if (cfg.LedAsBatteryIndicator)
                             color = HuetoRGB((float)counters[deviceNum] % 360, (byte)(device.getBattery() * 2.55));
                         else
                             color = HuetoRGB((float)counters[deviceNum] % 360, 255);
 
                     }
-                    else if (getLedAsBatteryIndicator(deviceNum))
+                    else if (cfg.LedAsBatteryIndicator)
                     {
-                        ref DS4Color fullColor = ref getMainColor(deviceNum);
-                        ref DS4Color lowColor = ref getLowColor(deviceNum);
-                        color = getTransitionedColor(ref lowColor, ref fullColor, device.getBattery());
+                        DS4Color fullColor = cfg.MainColor;
+                        DS4Color lowColor = cfg.LowColor;
+                        color = Util.getTransitionedColor(ref lowColor, ref fullColor, device.getBattery());
                     }
                     else
                     {
-                        color = getMainColor(deviceNum);
+                        color = cfg.MainColor;
                     }
                 }
 
-                if (device.getBattery() <= getFlashAt(deviceNum) && !defaultLight && !device.isCharging())
+                if (device.getBattery() <= cfg.FlashBatteryAt && !defaultLight && !device.isCharging())
                 {
-                    ref DS4Color flashColor = ref getFlashColor(deviceNum);
+                    DS4Color flashColor = cfg.FlashColor;
                     if (!(flashColor.red == 0 &&
                         flashColor.green == 0 &&
                         flashColor.blue == 0))
                         color = flashColor;
 
-                    if (getFlashType(deviceNum) == 1)
+                    if (cfg.FlashType == 1)
                     {
                         double ratio = 0.0;
 
@@ -147,12 +148,12 @@ namespace DS4Windows
                         }
 
                         DS4Color tempCol = new DS4Color(0, 0, 0);
-                        color = getTransitionedColor(ref color, ref tempCol, ratio);
+                        color = Util.getTransitionedColor(ref color, ref tempCol, ratio);
                     }
                 }
 
-                int idleDisconnectTimeout = getIdleDisconnectTimeout(deviceNum);
-                if (idleDisconnectTimeout > 0 && getLedAsBatteryIndicator(deviceNum) &&
+                int idleDisconnectTimeout = cfg.IdleDisconnectTimeout;
+                if (idleDisconnectTimeout > 0 && cfg.LedAsBatteryIndicator &&
                     (!device.isCharging() || device.getBattery() >= 100))
                 {
                     //Fade lightbar by idle time
@@ -163,20 +164,20 @@ namespace DS4Windows
                     if (ratio >= 50.0 && ratio < 100.0)
                     {
                         DS4Color emptyCol = new DS4Color(0, 0, 0);
-                        color = getTransitionedColor(ref color, ref emptyCol,
+                        color = Util.getTransitionedColor(ref color, ref emptyCol,
                             (uint)(-100.0 * (elapsed = 0.02 * (ratio - 50.0)) * (elapsed - 2.0)));
                     }
                     else if (ratio >= 100.0)
                     {
                         DS4Color emptyCol = new DS4Color(0, 0, 0);
-                        color = getTransitionedColor(ref color, ref emptyCol, 100.0);
+                        color = Util.getTransitionedColor(ref color, ref emptyCol, 100.0);
                     }
                         
                 }
 
                 if (device.isCharging() && device.getBattery() < 100)
                 {
-                    switch (getChargingType(deviceNum))
+                    switch (cfg.ChargingType)
                     {
                         case 1:
                         {
@@ -226,7 +227,7 @@ namespace DS4Windows
                             }
 
                             DS4Color emptyCol = new DS4Color(0, 0, 0);
-                            color = getTransitionedColor(ref color, ref emptyCol, ratio);
+                            color = Util.getTransitionedColor(ref color, ref emptyCol, ratio);
                             break;
                         }
                         case 2:
@@ -237,7 +238,7 @@ namespace DS4Windows
                         }
                         case 3:
                         {
-                            color = getChargingColor(deviceNum);
+                            color = cfg.ChargingColor;
                             break;
                         }
                         default: break;
@@ -258,7 +259,7 @@ namespace DS4Windows
                     color = new DS4Color(0, 0, 0);
             }
 
-            bool distanceprofile = DistanceProfiles[deviceNum] || tempprofileDistance[deviceNum];
+            bool distanceprofile = cfg.DistanceProfiles || aux.TempProfileDistance;
             //distanceprofile = (ProfilePath[deviceNum].ToLower().Contains("distance") || TempProfileName[deviceNum].ToLower().Contains("distance"));
             if (distanceprofile && !defaultLight)
             {
@@ -269,16 +270,16 @@ namespace DS4Windows
                 {
                     DS4Color maxCol = new DS4Color(max, max, 0);
                     DS4Color redCol = new DS4Color(255, 0, 0);
-                    color = getTransitionedColor(ref maxCol, ref redCol, rumble);
+                    color = Util.getTransitionedColor(ref maxCol, ref redCol, rumble);
                 }
                     
                 else
                 {
                     DS4Color maxCol = new DS4Color(max, max, 0);
                     DS4Color redCol = new DS4Color(255, 0, 0);
-                    DS4Color tempCol = getTransitionedColor(ref maxCol,
+                    DS4Color tempCol = Util.getTransitionedColor(ref maxCol,
                         ref redCol, 39.6078f);
-                    color = getTransitionedColor(ref color, ref tempCol,
+                    color = Util.getTransitionedColor(ref color, ref tempCol,
                         device.getLeftHeavySlowRumble());
                 }
                     
@@ -296,7 +297,7 @@ namespace DS4Windows
                     haptics.LightBarFlashDurationOff = haptics.LightBarFlashDurationOn = (byte)(25 - forcedFlash[deviceNum]);
                     haptics.LightBarExplicitlyOff = true;
                 }
-                else if (device.getBattery() <= getFlashAt(deviceNum) && getFlashType(deviceNum) == 0 && !defaultLight && !device.isCharging())
+                else if (device.getBattery() <= cfg.FlashBatteryAt && cfg.FlashType == 0 && !defaultLight && !device.isCharging())
                 {
                     int level = device.getBattery() / 10;
                     if (level >= 10)

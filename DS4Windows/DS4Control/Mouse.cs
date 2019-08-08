@@ -80,7 +80,7 @@ namespace DS4Windows
 
         public virtual void sixaxisMoved(DS4SixAxis sender, SixAxisEventArgs arg)
         {
-            if (cfg.UsingSAforMouse && cfg.GyroSensitivity > 0)
+            if (cfg.UseSAforMouse && cfg.GyroSensitivity > 0)
             {
                 s = dev.getCurrentStateRef();
 
