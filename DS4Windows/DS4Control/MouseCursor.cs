@@ -4,12 +4,10 @@ namespace DS4Windows
 {
     class MouseCursor
     {
-        private DeviceBackingStore cfg;
-        private readonly int deviceNumber;
+        private IDeviceConfig cfg;
         public MouseCursor(int deviceNum)
         {
-            deviceNumber = deviceNum;
-            cfg = Global.cfg[deviceNum];
+            cfg = API.Cfg(deviceNum);
         }
 
         // Keep track of remainders when performing moves or we lose fractional parts.
@@ -47,20 +45,20 @@ namespace DS4Windows
         public virtual void sixaxisMoved(SixAxisEventArgs arg)
         {
             int deltaX = 0, deltaY = 0;
-            deltaX = Global.getGyroMouseHorizontalAxis(deviceNumber) == 0 ? arg.sixAxis.gyroYawFull :
+            deltaX = cfg.GyroMouseHorizontalAxis == 0 ? arg.sixAxis.gyroYawFull :
                 arg.sixAxis.gyroRollFull;
             deltaY = -arg.sixAxis.gyroPitchFull;
             //tempDouble = arg.sixAxis.elapsed * 0.001 * 200.0; // Base default speed on 5 ms
             tempDouble = arg.sixAxis.elapsed * 200.0; // Base default speed on 5 ms
 
-            gyroSmooth = Global.getGyroSmoothing(deviceNumber);
+            gyroSmooth = cfg.GyroSmoothing;
             double gyroSmoothWeight = 0.0;
 
-            coefficient = (Global.getGyroSensitivity(deviceNumber) * 0.01) * GYRO_MOUSE_COEFFICIENT;
+            coefficient = (cfg.GyroSensitivity * 0.01) * GYRO_MOUSE_COEFFICIENT;
             double offset = GYRO_MOUSE_OFFSET;
             if (gyroSmooth)
             {
-                gyroSmoothWeight = Global.getGyroSmoothingWeight(deviceNumber);
+                gyroSmoothWeight = cfg.GyroSmoothingWeight;
                 if (gyroSmoothWeight > 0.0)
                 {
                     offset = GYRO_SMOOTH_MOUSE_OFFSET;
@@ -117,7 +115,7 @@ namespace DS4Windows
                 hRemainder = 0.0;
             }
 
-            verticalScale = Global.getGyroSensVerticalScale(deviceNumber) * 0.01;
+            verticalScale = cfg.GyroSensVerticalScale * 0.01;
             double yMotion = deltaY != 0 ? (coefficient * verticalScale) * (deltaY * tempDouble)
                 + (normY * (offset * signY)) : 0;
 
@@ -170,7 +168,7 @@ namespace DS4Windows
                 vRemainder = yMotion - yAction;
             }
 
-            int gyroInvert = Global.getGyroInvert(deviceNumber);
+            int gyroInvert = cfg.GyroInvert;
             if ((gyroInvert & 0x02) == 2)
                 xAction *= -1;
 
@@ -242,8 +240,8 @@ namespace DS4Windows
             double normY = Math.Abs(Math.Sin(tempAngle));
             int signX = Math.Sign(dx);
             int signY = Math.Sign(dy);
-            double coefficient = cfg.touchSensitivity * 0.01;
-            bool jitterCompenstation = Global.cfg[deviceNumber].touchpadJitterCompensation;
+            double coefficient = cfg.TouchSensitivity * 0.01;
+            bool jitterCompenstation = cfg.TouchpadJitterCompensation;
 
             double xMotion = dx != 0 ?
                 coefficient * dx + (normX * (TOUCHPAD_MOUSE_OFFSET * signX)) : 0.0;
@@ -291,7 +289,7 @@ namespace DS4Windows
 
             if (disableInvert == false)
             {
-                int touchpadInvert = tempInt = Global.cfg[deviceNumber].touchpadInvert;
+                int touchpadInvert = tempInt = cfg.TouchpadInvert;
                 if ((touchpadInvert & 0x02) == 2)
                     xAction *= -1;
 
