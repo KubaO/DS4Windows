@@ -492,6 +492,7 @@ namespace DS4Windows
     public class DeviceConfig : IDeviceConfig
     {
         private readonly int devIndex;
+        public int DevIndex { get => devIndex;  }
 
         public DeviceConfig(int devIndex)
         {
@@ -583,19 +584,19 @@ namespace DS4Windows
         public bool TrackballMode { get; set; } = false;
         public double TrackballFriction { get; set; } = 10.0;
 
-        public bool UsingSAforMouse { get; set; } = false;
-        public string SATriggers { get; set; } = string.Empty;
+        public bool UseSAforMouse { get; set; } = false;
+        public int[] SATriggers { get; set; } = new int[0];
         public SATriggerCondType SATriggerCond { get; set; } = SATriggerCondType.And;
         public SASteeringWheelEmulationAxisType SASteeringWheelEmulationAxis { get; set; } =
             SASteeringWheelEmulationAxisType.None;
         public int SASteeringWheelEmulationRange { get; set; } = 360;
 
-        public ITrigger2Config L2 { get; set; } = new Trigger2Config();
-        public ITrigger2Config R2 { get; set; } = new Trigger2Config();
-        public IStickConfig LS { get; set; } = new StickConfig();
-        public IStickConfig RS { get; set; } = new StickConfig();
-        public IGyroConfig SX { get; set; } = new GyroConfig();
-        public IGyroConfig SZ { get; set; } = new GyroConfig();
+        public ITrigger2Config L2 { get; } = new Trigger2Config();
+        public ITrigger2Config R2 { get; } = new Trigger2Config();
+        public IStickConfig LS { get; } = new StickConfig();
+        public IStickConfig RS { get; } = new StickConfig();
+        public IGyroConfig SX { get; } = new GyroConfig();
+        public IGyroConfig SZ { get; } = new GyroConfig();
         public ISquareStickConfig SquStick { get; set; } = new SquareStickConfig();
 
         public OutContType OutputDevType { get; set; } = OutContType.X360;
@@ -730,6 +731,11 @@ namespace DS4Windows
 
         private static SATriggerCondType saTriggerCond(string text) =>
             saTriggerCondDict.ValueOr(text, SATriggerCondType.And);
+
+        public string SATriggerCondStr {
+            get => saTriggerCond(SATriggerCond);
+            set => SATriggerCond = saTriggerCond(value);
+        }
 
         private static BiDictionary<string, BezierPreset> outputCurveDict =
             new Func<BiDictionary<string, BezierPreset>>(() => {
@@ -1116,8 +1122,8 @@ namespace DS4Windows
             StartTouchpadOff = ldr.LoadBool("StartTouchpadOff") ?? def.StartTouchpadOff;
 
             UseTPforControls = ldr.LoadBool("UseTPforControls") ?? def.UseTPforControls;
-            UsingSAforMouse = ldr.LoadBool("UseSAforMouse") ?? def.UsingSAforMouse;
-            SATriggers = ldr.LoadText("SATriggers") ?? def.SATriggers;
+            UseSAforMouse = ldr.LoadBool("UseSAforMouse") ?? def.UseSAforMouse;
+            SATriggers = ldr.LoadInts("SATriggers", ',') ?? def.SATriggers;
             SATriggerCond = (ldr.LoadText("SATriggerCond") is string t1) ? saTriggerCond(t1) : def.SATriggerCond;
             SASteeringWheelEmulationAxis = ldr.LoadSASWEmulationAxis("SASteeringWheelEmulationAxis") ?? def.SASteeringWheelEmulationAxis;
             SASteeringWheelEmulationRange = ldr.LoadInt("SASteeringWheelEmulationRange") ?? def.SASteeringWheelEmulationRange;
@@ -1423,6 +1429,8 @@ namespace DS4Windows
             public void Append(string name, DateTime value) => Append(node, name, value.ToString());
             public void Append(string name, DS4Color color) => Append(node, name, color.toXMLText());
             public void DemandAttribute(string name, string value) => attributes.Add(name, value);
+            public void Append(string name, int[] values, string sep)
+                => Append(node, name, string.Join(sep, values.Select(i => i.ToString())));
         }
 
         private class XmlNodeControl
@@ -1537,8 +1545,8 @@ namespace DS4Windows
             svr.Append("DinputOnly", DInputOnly);
             svr.Append("StartTouchpadOff", StartTouchpadOff);
             svr.Append("UseTPforControls", UseTPforControls);
-            svr.Append("UseSAforMouse", UsingSAforMouse);
-            svr.Append("SATriggers", SATriggers);
+            svr.Append("UseSAforMouse", UseSAforMouse);
+            svr.Append("SATriggers", SATriggers, ",");
             svr.Append("SATriggerCond", saTriggerCond(SATriggerCond));
             svr.Append("SASteeringWheelEmulationAxis", SASteeringWheelEmulationAxis.ToString("G"));
             svr.Append("SASteeringWheelEmulationRange", SASteeringWheelEmulationRange);
