@@ -126,6 +126,7 @@ namespace DS4Windows
 
     public interface IDeviceConfig
     {
+        int DevIndex { get; }
         string ProfilePath { get; set; }
         string OlderProfilePath { get; set; }
         string LaunchProgram { get; set; }
@@ -190,19 +191,20 @@ namespace DS4Windows
         bool TrackballMode { get; set; }
         double TrackballFriction { get; set; }
 
-        bool UsingSAforMouse { get; set; }
-        string SATriggers { get; set; }
+        bool UseSAforMouse { get; set; }
+        int[] SATriggers { get; set; }
 
         SATriggerCondType SATriggerCond { get; set; }
+        string SATriggerCondStr { get; set; } // TODO: remove
         SASteeringWheelEmulationAxisType SASteeringWheelEmulationAxis { get; set; } 
         int SASteeringWheelEmulationRange { get; set; }
 
-        ITrigger2Config L2 { get; set; }
-        ITrigger2Config R2 { get; set; }
-        IStickConfig LS { get; set; }
-        IStickConfig RS { get; set; }
-        IGyroConfig SX { get; set; }
-        IGyroConfig SZ { get; set; }
+        ITrigger2Config L2 { get; }
+        ITrigger2Config R2 { get; }
+        IStickConfig LS { get; }
+        IStickConfig RS { get; }
+        IGyroConfig SX { get; }
+        IGyroConfig SZ { get; }
 
         ISquareStickConfig SquStick { get; set; }
 
