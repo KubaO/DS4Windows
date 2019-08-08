@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -534,11 +535,12 @@ namespace DS4Windows
 
         public static DS4State SetCurveAndDeadzone(int device, DS4State cState, DS4State dState)
         {
-            double rotation = /*tempDoubleArray[device] =*/  getLSRotation(device);
+            var cfg = API.Cfg(device);
+            double rotation = /*tempDoubleArray[device] =*/  cfg.LS.Rotation;
             if (rotation > 0.0 || rotation < 0.0)
                 cState.rotateLSCoordinates(rotation);
 
-            double rotationRS = /*tempDoubleArray[device] =*/ getRSRotation(device);
+            double rotationRS = /*tempDoubleArray[device] =*/ cfg.RS.Rotation;
             if (rotationRS > 0.0 || rotationRS < 0.0)
                 cState.rotateRSCoordinates(rotationRS);
 
@@ -549,7 +551,7 @@ namespace DS4Windows
             int curve;
 
             /* TODO: Look into curve options and make sure maximum axes values are being respected */
-            int lsCurve = getLSCurve(device);
+            int lsCurve = cfg.LS.Curve;
             if (lsCurve > 0)
             {
                 x = cState.LX;
@@ -584,7 +586,7 @@ namespace DS4Windows
             }
 
             /* TODO: Look into curve options and make sure maximum axes values are being respected */
-            int rsCurve = getRSCurve(device);
+            int rsCurve = cfg.RS.Curve;
             if (rsCurve > 0)
             {
                 x = cState.RX;
@@ -622,10 +624,10 @@ namespace DS4Windows
             int lsAntiDead = getLSAntiDeadzone(device);
             int lsMaxZone = getLSMaxzone(device);
             */
-            StickDeadZoneInfo lsMod = GetLSDeadInfo(device);
-            int lsDeadzone = lsMod.deadZone;
-            int lsAntiDead = lsMod.antiDeadZone;
-            int lsMaxZone = lsMod.maxZone;
+            IStickConfig ls = cfg.LS;
+            int lsDeadzone = ls.DeadZone;
+            int lsAntiDead = ls.AntiDeadZone;
+            int lsMaxZone = ls.MaxZone;
 
             if (lsDeadzone > 0 || lsAntiDead > 0 || lsMaxZone != 100)
             {
@@ -659,16 +661,16 @@ namespace DS4Windows
 
                         if (lsSquared > lsDeadzoneSquared)
                         {
-                            double currentX = Global.Clamp(maxZoneXNegValue, dState.LX, maxZoneXPosValue);
-                            double currentY = Global.Clamp(maxZoneYNegValue, dState.LY, maxZoneYPosValue);
+                            double currentX = Util.Clamp(maxZoneXNegValue, dState.LX, maxZoneXPosValue);
+                            double currentY = Util.Clamp(maxZoneYNegValue, dState.LY, maxZoneYPosValue);
                             tempOutputX = ((currentX - 128.0 - tempLsXDead) / (maxZoneX - tempLsXDead));
                             tempOutputY = ((currentY - 128.0 - tempLsYDead) / (maxZoneY - tempLsYDead));
                         }
                     }
                     else
                     {
-                        double currentX = Global.Clamp(maxZoneXNegValue, dState.LX, maxZoneXPosValue);
-                        double currentY = Global.Clamp(maxZoneYNegValue, dState.LY, maxZoneYPosValue);
+                        double currentX = Util.Clamp(maxZoneXNegValue, dState.LX, maxZoneXPosValue);
+                        double currentY = Util.Clamp(maxZoneYNegValue, dState.LY, maxZoneYPosValue);
                         tempOutputX = (currentX - 128.0) / maxZoneX;
                         tempOutputY = (currentY - 128.0) / maxZoneY;
                     }
@@ -700,14 +702,10 @@ namespace DS4Windows
                 }
             }
 
-            /*int rsDeadzone = getRSDeadzone(device);
-            int rsAntiDead = getRSAntiDeadzone(device);
-            int rsMaxZone = getRSMaxzone(device);
-            */
-            StickDeadZoneInfo rsMod = GetRSDeadInfo(device);
-            int rsDeadzone = rsMod.deadZone;
-            int rsAntiDead = rsMod.antiDeadZone;
-            int rsMaxZone = rsMod.maxZone;
+            IStickConfig rs = cfg.RS;
+            int rsDeadzone = rs.DeadZone;
+            int rsAntiDead = rs.AntiDeadZone;
+            int rsMaxZone = rs.MaxZone;
             if (rsDeadzone > 0 || rsAntiDead > 0 || rsMaxZone != 100)
             {
                 double rsSquared = Math.Pow(cState.RX - 128.0, 2) + Math.Pow(cState.RY - 128.0, 2);
@@ -740,8 +738,8 @@ namespace DS4Windows
 
                         if (rsSquared > rsDeadzoneSquared)
                         {
-                            double currentX = Global.Clamp(maxZoneXNegValue, dState.RX, maxZoneXPosValue);
-                            double currentY = Global.Clamp(maxZoneYNegValue, dState.RY, maxZoneYPosValue);
+                            double currentX = Util.Clamp(maxZoneXNegValue, dState.RX, maxZoneXPosValue);
+                            double currentY = Util.Clamp(maxZoneYNegValue, dState.RY, maxZoneYPosValue);
 
                             tempOutputX = ((currentX - 128.0 - tempRsXDead) / (maxZoneX - tempRsXDead));
                             tempOutputY = ((currentY - 128.0 - tempRsYDead) / (maxZoneY - tempRsYDead));
@@ -749,8 +747,8 @@ namespace DS4Windows
                     }
                     else
                     {
-                        double currentX = Global.Clamp(maxZoneXNegValue, dState.RX, maxZoneXPosValue);
-                        double currentY = Global.Clamp(maxZoneYNegValue, dState.RY, maxZoneYPosValue);
+                        double currentX = Util.Clamp(maxZoneXNegValue, dState.RX, maxZoneXPosValue);
+                        double currentY = Util.Clamp(maxZoneYNegValue, dState.RY, maxZoneYPosValue);
 
                         tempOutputX = (currentX - 128.0) / maxZoneX;
                         tempOutputY = (currentY - 128.0) / maxZoneY;
@@ -783,117 +781,63 @@ namespace DS4Windows
                 }
             }
 
-            /*byte l2Deadzone = getL2Deadzone(device);
-            int l2AntiDeadzone = getL2AntiDeadzone(device);
-            int l2Maxzone = getL2Maxzone(device);
-            */
-
-            TriggerDeadZoneZInfo l2ModInfo = GetL2ModInfo(device);
-            byte l2Deadzone = l2ModInfo.deadZone;
-            int l2AntiDeadzone = l2ModInfo.antiDeadZone;
-            int l2Maxzone = l2ModInfo.maxZone;
-            if (l2Deadzone > 0 || l2AntiDeadzone > 0 || l2Maxzone != 100)
+            void mapL2R2(ITrigger2Config l2r2, byte cState_L2R2, ref byte dState_L2R2)
             {
-                double tempL2Output = cState.L2 / 255.0;
-                double tempL2AntiDead = 0.0;
-                double ratio = l2Maxzone / 100.0;
-                double maxValue = 255.0 * ratio;
+                int deadzone = l2r2.DeadZone;
+                int antiDeadzone = l2r2.AntiDeadZone;
+                int maxzone = l2r2.MaxZone;
+                if (deadzone > 0 || antiDeadzone > 0 || maxzone != 100) {
+                    double tempOutput = cState_L2R2 / 255.0;
+                    double tempAntiDead = 0.0;
+                    double ratio = maxzone / 100.0;
+                    double maxValue = 255.0 * ratio;
 
-                if (l2Deadzone > 0)
-                {
-                    if (cState.L2 > l2Deadzone)
-                    {
-                        double current = Global.Clamp(0, dState.L2, maxValue);
-                        tempL2Output = (current - l2Deadzone) / (maxValue - l2Deadzone);
+                    if (deadzone > 0) {
+                        if (cState_L2R2 > deadzone) {
+                            double current = Util.Clamp(0, dState_L2R2, maxValue);
+                            tempOutput = (current - deadzone) / (maxValue - deadzone);
+                        }
+                        else {
+                            tempOutput = 0.0;
+                        }
                     }
-                    else
-                    {
-                        tempL2Output = 0.0;
+
+                    if (antiDeadzone > 0) {
+                        tempAntiDead = antiDeadzone * 0.01;
                     }
-                }
 
-                if (l2AntiDeadzone > 0)
-                {
-                    tempL2AntiDead = l2AntiDeadzone * 0.01;
-                }
-
-                if (tempL2Output > 0.0)
-                {
-                    dState.L2 = (byte)(((1.0 - tempL2AntiDead) * tempL2Output + tempL2AntiDead) * 255.0);
-                }
-                else
-                {
-                    dState.L2 = 0;
-                }
-            }
-
-            /*byte r2Deadzone = getR2Deadzone(device);
-            int r2AntiDeadzone = getR2AntiDeadzone(device);
-            int r2Maxzone = getR2Maxzone(device);
-            */
-            TriggerDeadZoneZInfo r2ModInfo = GetR2ModInfo(device);
-            byte r2Deadzone = r2ModInfo.deadZone;
-            int r2AntiDeadzone = r2ModInfo.antiDeadZone;
-            int r2Maxzone = r2ModInfo.maxZone;
-            if (r2Deadzone > 0 || r2AntiDeadzone > 0 || r2Maxzone != 100)
-            {
-                double tempR2Output = cState.R2 / 255.0;
-                double tempR2AntiDead = 0.0;
-                double ratio = r2Maxzone / 100.0;
-                double maxValue = 255 * ratio;
-
-                if (r2Deadzone > 0)
-                {
-                    if (cState.R2 > r2Deadzone)
-                    {
-                        double current = Global.Clamp(0, dState.R2, maxValue);
-                        tempR2Output = (current - r2Deadzone) / (maxValue - r2Deadzone);
+                    if (tempOutput > 0.0) {
+                        dState_L2R2 = (byte) (((1.0 - tempAntiDead) * tempOutput + tempAntiDead) * 255.0);
                     }
-                    else
-                    {
-                        tempR2Output = 0.0;
+                    else {
+                        dState_L2R2 = 0;
                     }
                 }
-
-                if (r2AntiDeadzone > 0)
-                {
-                    tempR2AntiDead = r2AntiDeadzone * 0.01;
-                }
-
-                if (tempR2Output > 0.0)
-                {
-                    dState.R2 = (byte)(((1.0 - tempR2AntiDead) * tempR2Output + tempR2AntiDead) * 255.0);
-                }
-                else
-                {
-                    dState.R2 = 0;
-                }
             }
+            mapL2R2(cfg.L2, cState.L2, ref dState.L2);
+            mapL2R2(cfg.R2, cState.R2, ref dState.R2);
 
-            double lsSens = getLSSens(device);
-            if (lsSens != 1.0)
+            void mapLSRSSensitivity(double sens, ref byte dState_LXRX, ref byte dState_LYRY)
             {
-                dState.LX = (byte)Global.Clamp(0, lsSens * (dState.LX - 128.0) + 128.0, 255);
-                dState.LY = (byte)Global.Clamp(0, lsSens * (dState.LY - 128.0) + 128.0, 255);
+                if (sens != 1.0)
+                {
+                    dState_LXRX = (byte)Util.Clamp(0, sens * (dState_LXRX - 128.0) + 128.0, 255);
+                    dState_LYRY = (byte)Util.Clamp(0, sens * (dState_LYRY - 128.0) + 128.0, 255);
+                }
             }
+            mapLSRSSensitivity(cfg.LS.Sensitivity, ref dState.LX, ref dState.LY);
+            mapLSRSSensitivity(cfg.RS.Sensitivity, ref dState.RX, ref dState.RY);
 
-            double rsSens = getRSSens(device);
-            if (rsSens != 1.0)
-            {
-                dState.RX = (byte)Global.Clamp(0, rsSens * (dState.RX - 128.0) + 128.0, 255);
-                dState.RY = (byte)Global.Clamp(0, rsSens * (dState.RY - 128.0) + 128.0, 255);
-            }
-
-            double l2Sens = getL2Sens(device);
+            double l2Sens = cfg.L2.Sensitivity;
             if (l2Sens != 1.0)
-                dState.L2 = (byte)Global.Clamp(0, l2Sens * dState.L2, 255);
+                dState.L2 = (byte)Util.Clamp(0, l2Sens * dState.L2, 255);
 
-            double r2Sens = getR2Sens(device);
+            double r2Sens = cfg.R2.Sensitivity;
             if (r2Sens != 1.0)
-                dState.R2 = (byte)Global.Clamp(0, r2Sens * dState.R2, 255);
+                dState.R2 = (byte)Util.Clamp(0, r2Sens * dState.R2, 255);
 
-            SquareStickInfo squStk = GetSquareStickInfo(device);
-            if (squStk.lsMode && (dState.LX != 128 || dState.LY != 128))
+            ISquareStickConfig squStk = cfg.SquStick;
+            if (squStk.LSMode && (dState.LX != 128 || dState.LY != 128))
             {
                 double capX = dState.LX >= 128 ? 127.0 : 128.0;
                 double capY = dState.LY >= 128 ? 127.0 : 128.0;
@@ -901,7 +845,7 @@ namespace DS4Windows
                 double tempY = (dState.LY - 128.0) / capY;
                 DS4SquareStick sqstick = outSqrStk[device];
                 sqstick.current.x = tempX; sqstick.current.y = tempY;
-                sqstick.CircleToSquare(squStk.roundness);
+                sqstick.CircleToSquare(squStk.Roundness);
                 //Console.WriteLine("Input ({0}) | Output ({1})", tempY, sqstick.current.y);
                 tempX = sqstick.current.x < -1.0 ? -1.0 : sqstick.current.x > 1.0
                     ? 1.0 : sqstick.current.x;
@@ -911,7 +855,7 @@ namespace DS4Windows
                 dState.LY = (byte)(tempY * capY + 128.0);
             }
 
-            int lsOutCurveMode = getLsOutCurveMode(device);
+            int lsOutCurveMode = (int)ls.OutCurvePreset;
             if (lsOutCurveMode > 0 && (dState.LX != 128 || dState.LY != 128))
             {
                 double capX = dState.LX >= 128 ? 127.0 : 128.0;
@@ -991,12 +935,12 @@ namespace DS4Windows
                 }
                 else if (lsOutCurveMode == 6)
                 {
-                    dState.LX = lsOutBezierCurveObj[device].arrayBezierLUT[dState.LX];
-                    dState.LY = lsOutBezierCurveObj[device].arrayBezierLUT[dState.LY];
+                    dState.LX = ls.OutBezierCurve.LUT[dState.LX];
+                    dState.LY = ls.OutBezierCurve.LUT[dState.LY];
                 }
             }
             
-            if (squStk.rsMode && (dState.RX != 128 || dState.RY != 128))
+            if (squStk.RSMode && (dState.RX != 128 || dState.RY != 128))
             {
                 double capX = dState.RX >= 128 ? 127.0 : 128.0;
                 double capY = dState.RY >= 128 ? 127.0 : 128.0;
@@ -1004,7 +948,7 @@ namespace DS4Windows
                 double tempY = (dState.RY - 128.0) / capY;
                 DS4SquareStick sqstick = outSqrStk[device];
                 sqstick.current.x = tempX; sqstick.current.y = tempY;
-                sqstick.CircleToSquare(squStk.roundness);
+                sqstick.CircleToSquare(squStk.Roundness);
                 tempX = sqstick.current.x < -1.0 ? -1.0 : sqstick.current.x > 1.0
                     ? 1.0 : sqstick.current.x;
                 tempY = sqstick.current.y < -1.0 ? -1.0 : sqstick.current.y > 1.0
@@ -1014,7 +958,7 @@ namespace DS4Windows
                 dState.RY = (byte)(tempY * capY + 128.0);
             }
 
-            int rsOutCurveMode = getRsOutCurveMode(device);
+            int rsOutCurveMode = (int)rs.OutCurvePreset;
             if (rsOutCurveMode > 0 && (dState.RX != 128 || dState.RY != 128))
             {
                 double capX = dState.RX >= 128 ? 127.0 : 128.0;
@@ -1094,12 +1038,13 @@ namespace DS4Windows
                 }
                 else if (rsOutCurveMode == 6)
                 {
-                    dState.RX = rsOutBezierCurveObj[device].arrayBezierLUT[dState.RX];
-                    dState.RY = rsOutBezierCurveObj[device].arrayBezierLUT[dState.RY];
+                    dState.RX = rs.OutBezierCurve.LUT[dState.RX];
+                    dState.RY = rs.OutBezierCurve.LUT[dState.RY];
                 }
             }
 
-            int l2OutCurveMode = getL2OutCurveMode(device);
+            ITrigger2Config l2 = cfg.L2;
+            int l2OutCurveMode = (int)l2.OutCurvePreset;
             if (l2OutCurveMode > 0 && dState.L2 != 0)
             {
                 double temp = dState.L2 / 255.0;
@@ -1138,11 +1083,12 @@ namespace DS4Windows
                 }
                 else if (l2OutCurveMode == 6)
                 {
-                    dState.L2 = l2OutBezierCurveObj[device].arrayBezierLUT[dState.L2];
+                    dState.L2 = l2.OutBezierCurve.LUT[dState.L2];
                 }
             }
 
-            int r2OutCurveMode = getR2OutCurveMode(device);
+            ITrigger2Config r2 = cfg.R2;
+            int r2OutCurveMode = (int)r2.OutCurvePreste;
             if (r2OutCurveMode > 0 && dState.R2 != 0)
             {
                 double temp = dState.R2 / 255.0;
@@ -1181,18 +1127,19 @@ namespace DS4Windows
                 }
                 else if (r2OutCurveMode == 6)
                 {
-                    dState.R2 = r2OutBezierCurveObj[device].arrayBezierLUT[dState.R2];
+                    dState.R2 = r2.OutBezierCurve.LUT[dState.R2];
                 }
             }
                 
 
-            bool sOff = /*tempBool =*/ isUsingSAforMouse(device);
-            if (sOff == false)
-            {
-                int SXD = (int)(128d * getSXDeadzone(device));
-                int SZD = (int)(128d * getSZDeadzone(device));
-                double SXMax = getSXMaxzone(device);
-                double SZMax = getSZMaxzone(device);
+            bool sOff = /*tempBool =*/ cfg.UseSAforMouse;
+            if (sOff == false) {
+                var sx = cfg.SX;
+                var sz = cfg.SZ;
+                int SXD = (int)(128d * sx.DeadZone);
+                int SZD = (int)(128d * sz.DeadZone);
+                double SXMax = sx.MaxZone;
+                double SZMax = sz.MaxZone;
                 double sxAntiDead = getSXAntiDeadzone(device);
                 double szAntiDead = getSZAntiDeadzone(device);
                 double sxsens = getSXSens(device);
@@ -3935,7 +3882,7 @@ namespace DS4Windows
                 else
                 {
                     double angle = Math.Acos(dotProduct / (magAB * magCD));
-                    result = Convert.ToInt32(Global.Clamp(
+                    result = Convert.ToInt32(Util.Clamp(
                             -180.0 * C_WHEEL_ANGLE_PRECISION,
                             Math.Round((angle * (180.0 / Math.PI)), 1) * C_WHEEL_ANGLE_PRECISION,
                             180.0 * C_WHEEL_ANGLE_PRECISION)
