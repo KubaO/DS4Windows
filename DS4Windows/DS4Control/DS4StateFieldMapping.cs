@@ -8,7 +8,7 @@ namespace DS4Windows
         public bool[] buttons = new bool[(int)DS4Controls.SwipeDown + 1];
         public byte[] axisdirs = new byte[(int)DS4Controls.SwipeDown + 1];
         public byte[] triggers = new byte[(int)DS4Controls.SwipeDown + 1];
-        public int[] gryodirs = new int[(int)DS4Controls.SwipeDown + 1];
+        public int[] gyrodirs = new int[(int)DS4Controls.SwipeDown + 1];
         public byte[] swipedirs = new byte[(int)DS4Controls.SwipeDown + 1];
         public bool[] swipedirbools = new bool[(int)DS4Controls.SwipeDown + 1];
         public bool touchButton = false;
@@ -103,12 +103,12 @@ namespace DS4Windows
                 buttons[(int)DS4Controls.TouchMulti] = tp != null ? (!priorMouse ? tp.multiDown : tp.priorMultiDown) : false;
 
                 int sixAxisX = -exposeState.getOutputAccelX();
-                gryodirs[(int)DS4Controls.GyroXPos] = sixAxisX > 0 ? sixAxisX : 0;
-                gryodirs[(int)DS4Controls.GyroXNeg] = sixAxisX < 0 ? sixAxisX : 0;
+                gyrodirs[(int)DS4Controls.GyroXPos] = sixAxisX > 0 ? sixAxisX : 0;
+                gyrodirs[(int)DS4Controls.GyroXNeg] = sixAxisX < 0 ? sixAxisX : 0;
 
                 int sixAxisZ = exposeState.getOutputAccelZ();
-                gryodirs[(int)DS4Controls.GyroZPos] = sixAxisZ > 0 ? sixAxisZ : 0;
-                gryodirs[(int)DS4Controls.GyroZNeg] = sixAxisZ < 0 ? sixAxisZ : 0;
+                gyrodirs[(int)DS4Controls.GyroZPos] = sixAxisZ > 0 ? sixAxisZ : 0;
+                gyrodirs[(int)DS4Controls.GyroZNeg] = sixAxisZ < 0 ? sixAxisZ : 0;
 
                 swipedirs[(int)DS4Controls.SwipeLeft] = tp != null ? (!priorMouse ? tp.swipeLeftB : tp.priorSwipeLeftB) : (byte)0;
                 swipedirs[(int)DS4Controls.SwipeRight] = tp != null ? (!priorMouse ? tp.swipeRightB : tp.priorSwipeRightB) : (byte)0;

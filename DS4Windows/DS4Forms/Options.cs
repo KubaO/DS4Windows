@@ -13,6 +13,7 @@ namespace DS4Windows.Forms
         //public int device;
         public int device { get => cfg.DevIndex;  }
         private IDeviceConfig cfg;
+        private DS4LightBar lightBar;
         public string filename;
         public Timer inputtimer = new Timer(), sixaxisTimer = new Timer();
         public List<Button> buttons = new List<Button>();
@@ -332,6 +333,7 @@ namespace DS4Windows.Forms
         {
             cfg = API.Cfg(deviceNum);
             var aux = API.Aux(deviceNum);
+            lightBar = (deviceNum < 4) ? API.Bar(deviceNum) : null;
             loading = true;
             filename = name;
             lBControls.SelectedIndex = -1;
@@ -1290,8 +1292,8 @@ namespace DS4Windows.Forms
             }
 
             advColorDialog.OnUpdateColor -= tempDel;
-            if (device < 4)
-                DS4LightBar.forcelight[device] = false;
+            if (lightBar != null)
+                lightBar.forcedLight = false;
         }
         
         private void lowColorChooserButton_Click(object sender, EventArgs e)
@@ -1307,8 +1309,8 @@ namespace DS4Windows.Forms
                 tBLowBlueBar.Value = advColorDialog.Color.B;
             }
 
-            if (device < 4)
-                DS4LightBar.forcelight[device] = false;
+            if (lightBar != null)
+                lightBar.forcedLight = false;
         }
 
         private void btnChargingColor_Click(object sender, EventArgs e)
@@ -1321,20 +1323,20 @@ namespace DS4Windows.Forms
                 btnChargingColor.BackColor = chargingBackColor = advColorDialog.Color;
             }
 
-            if (device < 4)
-                DS4LightBar.forcelight[device] = false;
+            if (lightBar != null)
+                lightBar.forcedLight = false;
 
             cfg.ChargingColor = new DS4Color(chargingBackColor);
         }
 
         private void advColorDialog_OnUpdateColor(Color color, EventArgs e)
         {
-            if (device < 4)
+            if (lightBar != null)
             {
                 DS4Color dcolor = new DS4Color { red = color.R, green = color.G, blue = color.B };
-                DS4LightBar.forcedColor[device] = dcolor;
-                DS4LightBar.forcedFlash[device] = 0;
-                DS4LightBar.forcelight[device] = true;
+                lightBar.forcedColor = dcolor;
+                lightBar.forcedFlash = 0;
+                lightBar.forcedLight = true;
             }
         }
 
@@ -2469,8 +2471,8 @@ namespace DS4Windows.Forms
 
             advColorDialog.OnUpdateColor -= advColorDialog_OnUpdateColor;
 
-            if (device < 4)
-                DS4LightBar.forcelight[device] = false;
+            if (lightBar != null)
+                lightBar.forcedLight = false;
         }
 
         private void useSAforMouse_CheckedChanged(object sender, EventArgs e)

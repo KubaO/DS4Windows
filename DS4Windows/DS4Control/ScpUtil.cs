@@ -188,7 +188,10 @@ namespace DS4Windows
 
         public static string ExePath = Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName;
 
-        public string ProfilePath { get; private set; }
+        public string ProfileExePath { get; private set; }
+        public string AutoProfileExePath { get; private set; }
+        public string ProfileDataPath { get; private set; }
+        public string AutoProfileDataPath { get; private set; }
         public string ActionsPath { get; private set; }
         public string LinkedProfilesPath { get; private set; }
         public string ControllerConfigsPath { get; private set; }
@@ -199,8 +202,12 @@ namespace DS4Windows
             set
             {
                 appDataPath = value;
-                //ProfilePath = $"{appDataPath}\\Profiles.xml";
-                ProfilePath = Directory.GetParent(ExePath).FullName + "\\Profiles.xml";
+                //ProfileExePath = $"{appDataPath}\\Profiles.xml";
+                var exeParent = Directory.GetParent(ExePath).FullName;
+                ProfileExePath = $"{exeParent}\\Profiles.xml";
+                AutoProfileExePath = $"{exeParent}\\Auto Profiles.xml";
+                ProfileDataPath = $"{appDataPath}\\Profiles.xml";
+                AutoProfileDataPath = $"{appDataPath}\\Auto Profiles.xml";
                 ActionsPath = $"{appDataPath}\\Actions.xml";
                 LinkedProfilesPath = $"{appDataPath}\\LinkedProfiles.xml";
                 ControllerConfigsPath = $"{appDataPath}\\ControllerConfigs.xml";
@@ -209,17 +216,17 @@ namespace DS4Windows
 
         public void FindConfigLocation()
         {
-            if (File.Exists($"{ExePath}\\Auto Profiles.xml")
-                && File.Exists($"{AppDataPath}\\Auto Profiles.xml"))
+            var hasExeAutoProfiles = File.Exists(API.AutoProfileExePath);
+            var hasAppDataAutoProfiles = File.Exists("${AppDataPath}\\Auto Profiles.xml");
+
+            if (hasExeAutoProfiles && hasAppDataAutoProfiles)
             {
                 IsFirstRun = true;
                 MultiSaveSpots = true;
             }
-            else if (File.Exists($"{ExePath}\\Auto Profiles.xml"))
+            else if (hasExeAutoProfiles)
                 AppDataPath = ExePath;
-            else if (File.Exists($"{AppDataPath}\\Auto Profiles.xml")) { }
-            else if (!File.Exists("${ExePath}\\Auto Profiles.xml")
-                     && !File.Exists("${AppDataPath}\\Auto Profiles.xml"))
+            else if (!hasAppDataAutoProfiles) { }
             {
                 IsFirstRun = true;
                 MultiSaveSpots = false;
@@ -377,6 +384,33 @@ namespace DS4Windows
 
                 return revButtonMapping;
             }
+        }
+
+        internal static string GetDeviceProperty(string deviceInstanceId, NativeMethods.DEVPROPKEY prop)
+        {
+            string result = string.Empty;
+            NativeMethods.SP_DEVINFO_DATA deviceInfoData = new NativeMethods.SP_DEVINFO_DATA();
+            deviceInfoData.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(deviceInfoData);
+            var dataBuffer = new byte[4096];
+            ulong propertyType = 0;
+            var requiredSize = 0;
+
+            Guid hidGuid = new Guid();
+            NativeMethods.HidD_GetHidGuid(ref hidGuid);
+            IntPtr deviceInfoSet = NativeMethods.SetupDiGetClassDevs(ref hidGuid, deviceInstanceId, 0, NativeMethods.DIGCF_PRESENT | NativeMethods.DIGCF_DEVICEINTERFACE);
+            NativeMethods.SetupDiEnumDeviceInfo(deviceInfoSet, 0, ref deviceInfoData);
+            if (NativeMethods.SetupDiGetDeviceProperty(deviceInfoSet, ref deviceInfoData, ref prop, ref propertyType,
+                dataBuffer, dataBuffer.Length, ref requiredSize, 0))
+            {
+                result = dataBuffer.ToUTF16String();
+            }
+
+            if (deviceInfoSet.ToInt64() != NativeMethods.INVALID_HANDLE_VALUE)
+            {
+                NativeMethods.SetupDiDestroyDeviceInfoList(deviceInfoSet);
+            }
+
+            return result;
         }
     }
 
@@ -1031,10 +1065,11 @@ namespace DS4Windows
             var def = new DeviceConfig(devIndex);
 
             ldr.Open(doc);
+            
             if (devIndex < 4) // TODO: this doesn't belong here!
             {
-                DS4LightBar.forcelight[devIndex] = false;
-                DS4LightBar.forcedFlash[devIndex] = 0;
+                API.Bar(devIndex).forcedLight = false;
+                API.Bar(devIndex).forcedFlash = 0;
             }
 
             aux.PreviousOutputDevType = OutputDevType;
@@ -1666,10 +1701,8 @@ namespace DS4Windows
 
         // general values
         public bool UseExclusiveMode { get; set; } = false;
-        public int FormWidth { get; set; } = 782;
-        public int FormHeight { get; set; } = 550;
-        public int FormLocationX { get; set; } = 0;
-        public int FormLocationY { get; set; } = 0;
+        public Size FormSize { get; set; } = new Size{ Height = 550, Width = 782 };
+        public Point FormLocation { get; set; } = new Point {X = 0, Y = 0};
         public bool StartMinimized { get; set; } = false;
         public bool MinToTaskbar { get; set; } = false;
         public DateTime LastChecked { get; set; }
@@ -1692,7 +1725,7 @@ namespace DS4Windows
         public bool UseCustomSteamFolder { get; set; }
         public string CustomSteamFolder { get; set; }
 
-        private void CreateStdActions()
+        public void CreateStdActions()
         {
             XmlDocument xDoc = new XmlDocument();
             try
@@ -1816,21 +1849,25 @@ namespace DS4Windows
             bool Loaded = true;
             var ldr = new DeviceConfig.Loader();
 
-            if (File.Exists(API.ProfilePath)) {
+            if (File.Exists(API.ProfileExePath)) {
                 var Xdoc = new XmlDocument();
                 ldr.Xdoc = Xdoc;
                 ldr.rootname = "Profile";
                 XmlNode Item;
-                Xdoc.Load(API.ProfilePath);
+                Xdoc.Load(API.ProfileExePath);
                 var def = new GlobalConfig();
 
                 UseExclusiveMode = ldr.LoadBool("useExclusiveMode") ?? def.UseExclusiveMode;
                 StartMinimized = ldr.LoadBool("startMinimized") ?? def.StartMinimized;
                 MinToTaskbar = ldr.LoadBool("minimizeToTaskbar") ?? def.MinToTaskbar;
-                FormWidth = ldr.LoadInt("formWidth") ?? def.FormWidth;
-                FormHeight = ldr.LoadInt("formHeight") ?? def.FormHeight;
-                FormLocationX = Math.Max(ldr.LoadInt("formLocationX") ?? def.FormLocationX, 0);
-                FormLocationY = Math.Max(ldr.LoadInt("formLocationY") ?? def.FormLocationY, 0);
+                Size formSize = new Size();
+                formSize.Width = ldr.LoadInt("formWidth") ?? def.FormSize.Width;
+                formSize.Height = ldr.LoadInt("formHeight") ?? def.FormSize.Height;
+                Point formLoc = new Point();
+                formLoc.X = Math.Max(ldr.LoadInt("formLocationX") ?? def.FormLocation.X, 0);
+                formLoc.Y = Math.Max(ldr.LoadInt("formLocationY") ?? def.FormLocation.Y, 0);
+                FormSize = formSize;
+                FormLocation = formLoc;
 
                 for (int i = 0; i < 4; i++) {
                     var cfg = Cfg(i);
@@ -1899,10 +1936,10 @@ namespace DS4Windows
             svr.Append("useExclusiveMode", UseExclusiveMode);
             svr.Append("startMinimized", StartMinimized);
             svr.Append("minimizeToTaskbar", MinToTaskbar);
-            svr.Append("formWidth", FormWidth);
-            svr.Append("formHeight", FormHeight);
-            svr.Append("formLocationX", FormLocationX);
-            svr.Append("formLocationY", FormLocationY);
+            svr.Append("formWidth", FormSize.Width);
+            svr.Append("formHeight", FormSize.Height);
+            svr.Append("formLocationX", FormLocation.X);
+            svr.Append("formLocationY", FormLocation.Y);
 
             for (int i = 0; i < 4; i++)
                 svr.Append($"Controller{i+1}", !Aux(i).LinkedProfileCheck ? Cfg(i).ProfilePath : Cfg(i).OlderProfilePath);
@@ -1934,7 +1971,7 @@ namespace DS4Windows
 
             Xdoc.AppendChild(Node);
 
-            try { Xdoc.Save(API.ProfilePath); }
+            try { Xdoc.Save(API.ProfileExePath); }
             catch (UnauthorizedAccessException) { Saved = false; }
             return Saved;
         }
@@ -2034,7 +2071,6 @@ namespace DS4Windows
             catch { saved = false; }
             LoadActions();
 
-            Mapping.actionDone.Add(new Mapping.ActionState());
             return saved;
         }
 
@@ -2055,7 +2091,7 @@ namespace DS4Windows
         public bool LoadActions()
         {
             bool saved = true;
-            if (!File.Exists($"{API.AppDataPath}\\Actions.xml"))
+            if (!File.Exists(API.ActionsPath))
             {
                 SaveAction("Disconnect Controller", "PS/Options", 5, "0", false);
                 saved = false;
@@ -2065,17 +2101,15 @@ namespace DS4Windows
             {
                 actions.Clear();
                 XmlDocument doc = new XmlDocument();
-                doc.Load($"{API.AppDataPath}\\Actions.xml");
+                doc.Load(API.ActionsPath);
                 XmlNodeList actionslist = doc.SelectNodes("Actions/Action");
                 string name, controls, type, details, extras, extras2;
-                Mapping.actionDone.Clear();
                 foreach (XmlNode x in actionslist)
                 {
                     name = x.Attributes["Name"].Value;
                     controls = x.ChildNodes[0].InnerText;
                     type = x.ChildNodes[1].InnerText;
                     details = x.ChildNodes[2].InnerText;
-                    Mapping.actionDone.Add(new Mapping.ActionState());
                     if (type == "Profile")
                     {
                         extras = x.ChildNodes[3].InnerText;

@@ -69,7 +69,7 @@ namespace DS4Windows
         private static bool IsRealDS4(HidDevice hDevice)
         {
             string deviceInstanceId = devicePathToInstanceId(hDevice.DevicePath);
-            string temp = Global.GetDeviceProperty(deviceInstanceId,
+            string temp = API.GetDeviceProperty(deviceInstanceId,
                 NativeMethods.DEVPKEY_Device_UINumber);
             return string.IsNullOrEmpty(temp);
         }

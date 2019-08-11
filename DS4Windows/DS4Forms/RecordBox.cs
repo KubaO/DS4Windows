@@ -128,6 +128,8 @@ namespace DS4Windows.Forms
 
         private void Ds4_Tick(object sender, System.Timers.ElapsedEventArgs e)
         {
+            var cfg0 = API.Cfg(0);
+            var mapping0 = API.Mapping(0);
             if (Program.rootHub.DS4Controllers[0] != null)
             {
                 cState = Program.rootHub.getDS4State(0);
@@ -158,7 +160,7 @@ namespace DS4Windows.Forms
                         for (int controlIndex = 0, dcsLen = dcs.Count; controlIndex < dcsLen; controlIndex++)
                         {
                             DS4Controls dc = dcs[controlIndex];
-                            if (Mapping.getBoolMapping(0, dc, cState, null, null))
+                            if (mapping0.getBoolMapping(dc, cState, null, null))
                             {
                                 int value = DS4ControltoInt(dc);
                                 int count = 0;
@@ -196,7 +198,7 @@ namespace DS4Windows.Forms
 
                                 lVMacros.Items[lVMacros.Items.Count - 1].EnsureVisible();
                             }
-                            else if (!Mapping.getBoolMapping(0, dc, cState, null, null))
+                            else if (!mapping0.getBoolMapping(dc, cState, null, null))
                             {
                                 int macroLen = macros.Count;
                                 if (macroLen != 0)
@@ -921,9 +923,9 @@ namespace DS4Windows.Forms
             {
                 Stream stream;
                 Console.WriteLine(Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName);
-                Console.WriteLine(Global.appdatapath);
+                Console.WriteLine(API.AppDataPath);
                 //string path;
-                if (Global.appdatapath == Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName)
+                if (API.AppDataPath == Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName)
                     savePresets.InitialDirectory = Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName + @"\Macros\";
                 else
                     savePresets.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\DS4Tool" + @"\Macros\";
@@ -971,10 +973,11 @@ namespace DS4Windows.Forms
 
         private void fromFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (Global.appdatapath == Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName)
-                openPresets.InitialDirectory = Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName + @"\Macros\";
+            // FIXME: This if statement is almost certainly superfluous
+            if (API.AppDataPath == API.ExePath)
+                openPresets.InitialDirectory = $"{API.ExePath}\\Macros\\";
             else
-                openPresets.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\DS4Tool" + @"\Macros\";
+                openPresets.InitialDirectory = $"{API.AppDataPath}\\Macros\\";
 
             if (openPresets.ShowDialog() == DialogResult.OK)
             {
@@ -1358,12 +1361,12 @@ namespace DS4Windows.Forms
 
         private void advColorDialog_OnUpdateColor(Color color, EventArgs e)
         {
-            if (Program.rootHub.DS4Controllers[0] != null)
-            {
+            if (Program.rootHub.DS4Controllers[0] != null) {
+                var lightBar = API.Bar(0);
                 DS4Color dcolor = new DS4Color { red = color.R, green = color.G, blue = color.B };
-                DS4LightBar.forcedColor[0] = dcolor;
-                DS4LightBar.forcedFlash[0] = 0;
-                DS4LightBar.forcelight[0] = true;
+                lightBar.forcedColor = dcolor;
+                lightBar.forcedFlash = 0;
+                lightBar.forcedLight = true;
             }
         }
 

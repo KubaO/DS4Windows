@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DS4Windows;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -16,7 +17,7 @@ namespace DS4Windows.Forms
     {
         Options opt;
         RecordBox rb;
-        int device;
+        DS4LightBar lightBar;
         public List<string> macros = new List<string>();
         public List<string> controls = new List<string>();
         public List<string> ucontrols = new List<string>();
@@ -25,16 +26,17 @@ namespace DS4Windows.Forms
         public bool macrorepeat, newaction;
         public string program;
         int editIndex;
-        protected String m_Actions = Global.appdatapath + "\\Actions.xml";
         string oldprofilename;
         bool loadingAction = true;
+        private static IGlobalConfig Config = API.Config;
+
         public SpecActions(Options opt, string edit = "", int editindex = -1)
         {
             InitializeComponent();
             this.opt = opt;
             lbHoldForBatt.Text = lbHoldForProg.Text = lbHoldFor.Text;
             lbSecsBatt.Text = lbSecsBatt.Text = lbSecsBatt.Text;
-            device = opt.device;
+            lightBar = API.Bar(opt.device);
             cBProfiles.Items.Add(Properties.Resources.noneProfile);
             cBProfiles.SelectedIndex = 0;
             cBActions.SelectedIndex = 0;
@@ -65,7 +67,7 @@ namespace DS4Windows.Forms
 
         void LoadAction()
         {
-            SpecialAction act = Global.GetAction(oldprofilename);
+            SpecialAction act = Config.ActionByName(oldprofilename);
             string[] dets;
             foreach (string s in act.controls.Split('/'))
                 foreach (ListViewItem lvi in lVTrigger.Items)
@@ -219,7 +221,7 @@ namespace DS4Windows.Forms
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            foreach (SpecialAction sA in Global.GetActions())
+            foreach (SpecialAction sA in Config.Actions)
             {
                 if ((sA.name == tBName.Text && editIndex > -1 && tBName.Text != oldprofilename) ||
                    (sA.name == tBName.Text && editIndex == -1))
@@ -250,8 +252,8 @@ namespace DS4Windows.Forms
                             action = Properties.Resources.Macro + (cBMacroScanCode.Checked ? " (" + Properties.Resources.ScanCode + ")" : "");
                             actRe = true;
                             if (!string.IsNullOrEmpty(oldprofilename) && oldprofilename != tBName.Text)
-                                Global.RemoveAction(oldprofilename);
-                            Global.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, String.Join("/", macrostag), edit, (cBMacroScanCode.Checked ? "Scan Code" : ""));
+                                Config.RemoveAction(oldprofilename);
+                            Config.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, String.Join("/", macrostag), edit, (cBMacroScanCode.Checked ? "Scan Code" : ""));
                         }
                         break;
                     case 2:
@@ -260,8 +262,8 @@ namespace DS4Windows.Forms
                             action = Properties.Resources.LaunchProgram.Replace("*program*", lbProgram.Text);
                             actRe = true;
                             if (!string.IsNullOrEmpty(oldprofilename) && oldprofilename != tBName.Text)
-                                Global.RemoveAction(oldprofilename);
-                            Global.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, program + "?" + nUDProg.Value, edit, tBArg.Text);
+                                Config.RemoveAction(oldprofilename);
+                            Config.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, program + "?" + nUDProg.Value, edit, tBArg.Text);
                         }
                         break;
                     case 3:
@@ -270,8 +272,8 @@ namespace DS4Windows.Forms
                             action = Properties.Resources.LoadProfile.Replace("*profile*", cBProfiles.Text);
                             actRe = true;
                             if (!string.IsNullOrEmpty(oldprofilename) && oldprofilename != tBName.Text)
-                                Global.RemoveAction(oldprofilename);
-                            Global.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, cBProfiles.Text, edit, String.Join("/", ucontrols) + (cbProfileAutoUntrigger.Checked ? (ucontrols.Count > 0 ? "/" : "") + "AutomaticUntrigger" : "") );
+                                Config.RemoveAction(oldprofilename);
+                            Config.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, cBProfiles.Text, edit, String.Join("/", ucontrols) + (cbProfileAutoUntrigger.Checked ? (ucontrols.Count > 0 ? "/" : "") + "AutomaticUntrigger" : "") );
                         }
                         else
                             btnSetUTriggerProfile.ForeColor = Color.Red;
@@ -283,7 +285,7 @@ namespace DS4Windows.Forms
                             action = ((Keys)int.Parse(btnSelectKey.Tag.ToString())).ToString() + ((btnSelectKey.Text.Contains("(Toggle)") ? " (Toggle)" : ""));
                             actRe = true;
                             if (!string.IsNullOrEmpty(oldprofilename) && oldprofilename != tBName.Text)
-                                Global.RemoveAction(oldprofilename);
+                                Config.RemoveAction(oldprofilename);
                             if (btnSelectKey.Text.Contains("(Toggle)") && ucontrols.Count > 0)
                             {
                                 string uaction;
@@ -291,11 +293,11 @@ namespace DS4Windows.Forms
                                     uaction = "Release";
                                 else
                                     uaction = "Press";
-                                Global.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, btnSelectKey.Tag.ToString() + (btnSelectKey.Text.Contains("(SC)") ? " Scan Code" : ""),
+                                Config.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, btnSelectKey.Tag.ToString() + (btnSelectKey.Text.Contains("(SC)") ? " Scan Code" : ""),
                                     edit, uaction + '\n' + String.Join("/", ucontrols));
                             }
                             else
-                                Global.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, btnSelectKey.Tag.ToString() + (btnSelectKey.Text.Contains("(SC)") ? " Scan Code" : ""), edit);
+                                Config.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, btnSelectKey.Tag.ToString() + (btnSelectKey.Text.Contains("(SC)") ? " Scan Code" : ""), edit);
                         }
                         else if (btnSelectKey.Tag == null)
                             btnSelectKey.ForeColor = Color.Red;
@@ -306,8 +308,8 @@ namespace DS4Windows.Forms
                         action = Properties.Resources.DisconnectBT;
                         actRe = true;
                         if (!string.IsNullOrEmpty(oldprofilename) && oldprofilename != tBName.Text)
-                            Global.RemoveAction(oldprofilename);
-                        Global.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, Math.Round(nUDDCBT.Value, 1).ToString(), edit);
+                            Config.RemoveAction(oldprofilename);
+                        Config.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, Math.Round(nUDDCBT.Value, 1).ToString(), edit);
                         break;
                     case 6:
                         if (cbLightbarBatt.Checked || cBNotificationBatt.Checked)
@@ -315,11 +317,11 @@ namespace DS4Windows.Forms
                             action = Properties.Resources.CheckBattery;
                             actRe = true;
                             if (!string.IsNullOrEmpty(oldprofilename) && oldprofilename != tBName.Text)
-                                Global.RemoveAction(oldprofilename);
+                                Config.RemoveAction(oldprofilename);
                             dets = Math.Round(nUDDCBatt.Value, 1).ToString() + "|" + cBNotificationBatt.Checked + "|" + cbLightbarBatt.Checked + "|" +
                                 bnEmptyColor.BackColor.R + "|" + bnEmptyColor.BackColor.G + "|" + bnEmptyColor.BackColor.B + "|" +
                                 bnFullColor.BackColor.R + "|" + bnFullColor.BackColor.G + "|" + bnFullColor.BackColor.B;
-                            Global.SaveAction(tBName.Text, string.Join("/", controls), cBActions.SelectedIndex, dets, edit);
+                            Config.SaveAction(tBName.Text, string.Join("/", controls), cBActions.SelectedIndex, dets, edit);
                         }
                         else
                         {
@@ -333,10 +335,10 @@ namespace DS4Windows.Forms
                             action = Properties.Resources.MultiAction;
                             actRe = true;
                             if (!string.IsNullOrEmpty(oldprofilename) && oldprofilename != tBName.Text)
-                                Global.RemoveAction(oldprofilename);
+                                Config.RemoveAction(oldprofilename);
                             //dets = cBTapDVR.SelectedIndex + "," + cBHoldDVR.SelectedIndex + "," + cBDTapDVR.SelectedIndex + "," + int.Parse(btnCustomDVRKey.Tag.ToString());
                             dets = string.Join("/", multiMacrostag[0]) + "," + string.Join("/", multiMacrostag[1]) + "," + string.Join("/", multiMacrostag[2]);
-                            Global.SaveAction(tBName.Text, controls[0], cBActions.SelectedIndex, dets, edit);
+                            Config.SaveAction(tBName.Text, controls[0], cBActions.SelectedIndex, dets, edit);
                         }
                         else
                         {
@@ -347,8 +349,8 @@ namespace DS4Windows.Forms
                         action = Properties.Resources.SASteeringWheelEmulationCalibrate;
                         actRe = true;
                         if (!string.IsNullOrEmpty(oldprofilename) && oldprofilename != tBName.Text)
-                            Global.RemoveAction(oldprofilename);
-                        Global.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, Math.Round(nUDDCBT.Value, 1).ToString(), edit);
+                            Config.RemoveAction(oldprofilename);
+                        Config.SaveAction(tBName.Text, String.Join("/", controls), cBActions.SelectedIndex, Math.Round(nUDDCBT.Value, 1).ToString(), edit);
                         break;
                 }
                 if (actRe)
@@ -463,8 +465,8 @@ namespace DS4Windows.Forms
                 bnEmptyColor.BackColor = advColorDialog.Color;
                 pBGraident.Refresh();
             }
-            if (device < 4)
-                DS4LightBar.forcelight[device] = false;
+            if (lightBar != null)
+                lightBar.forcedLight = false;
         }
 
         private void bnFullColor_Click(object sender, EventArgs e)
@@ -476,8 +478,8 @@ namespace DS4Windows.Forms
                 bnFullColor.BackColor = advColorDialog.Color;
                 pBGraident.Refresh();
             }
-            if (device < 4)
-                DS4LightBar.forcelight[device] = false;
+            if (lightBar != null)
+                lightBar.forcedLight = false;
         }
 
         private void pBGraident_Paint(object sender, PaintEventArgs e)
@@ -497,12 +499,12 @@ namespace DS4Windows.Forms
 
         private void advColorDialog_OnUpdateColor(Color color, EventArgs e)
         {
-            if (device < 4)
+            if (lightBar != null)
             {
                 DS4Color dcolor = new DS4Color { red = color.R, green = color.G, blue = color.B };
-                DS4LightBar.forcedColor[device] = dcolor;
-                DS4LightBar.forcedFlash[device] = 0;
-                DS4LightBar.forcelight[device] = true;
+                lightBar.forcedColor = dcolor;
+                lightBar.forcedFlash = 0;
+                lightBar.forcedLight = true;
             }
         }
         private void cBDVR_SelectedIndexChanged(object sender, EventArgs e)

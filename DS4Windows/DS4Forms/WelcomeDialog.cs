@@ -25,9 +25,9 @@ namespace DS4Windows.Forms
         {
             if (loadConfig)
             {
-                Global.FindConfigLocation();
-                Global.Load();
-                Global.SetCulture(Global.UseLang);
+                API.FindConfigLocation();
+                API.Config.Load();
+                API.SetCulture(API.Config.UseLang);
             }
 
             InitializeComponent();
@@ -46,13 +46,13 @@ namespace DS4Windows.Forms
 
         private void bnStep1_Click(object sender, EventArgs e)
         {
-            if (File.Exists(exepath + $"\\{InstFileName}"))
+            if (File.Exists($"{API.ExePath}\\{InstFileName}"))
             {
-                File.Delete(exepath + $"\\{InstFileName}");
+                File.Delete( $"{API.ExePath}\\{InstFileName}");
             }
 
             WebClient wb = new WebClient();
-            wb.DownloadFileAsync(new Uri(InstallerDL), exepath + $"\\{InstFileName}");
+            wb.DownloadFileAsync(new Uri(InstallerDL), $"{API.ExePath}\\{InstFileName}");
 
             wb.DownloadProgressChanged += wb_DownloadProgressChanged;
             wb.DownloadFileCompleted += wb_DownloadFileCompleted;
@@ -65,15 +65,15 @@ namespace DS4Windows.Forms
 
         private void wb_DownloadFileCompleted(object sender, AsyncCompletedEventArgs e)
         {
-            if (Directory.Exists(exepath + "\\ViGEmBusInstaller"))
+            if (Directory.Exists($"{API.ExePath}\\ViGEmBusInstaller"))
             {
-                Directory.Delete(exepath + "\\ViGEmBusInstaller", true);
+                Directory.Delete($"{API.ExePath}\\ViGEmBusInstaller", true);
             }
 
-            if (File.Exists(exepath + $"\\{InstFileName}"))
+            if (File.Exists($"{API.ExePath}\\{InstFileName}"))
             {
                 bnStep1.Text = Properties.Resources.OpeningInstaller;
-                monitorProc = Process.Start(exepath + $"\\{InstFileName}");
+                monitorProc = Process.Start($"{API.ExePath}\\{InstFileName}");
                 bnStep1.Text = Properties.Resources.Installing;
             }
 
@@ -86,7 +86,7 @@ namespace DS4Windows.Forms
         {
             if (monitorProc != null && monitorProc.HasExited)
             {
-                if (Global.IsViGEmBusInstalled())
+                if (API.IsViGEmBusInstalled())
                 {
                     this.BeginInvoke((Action)(() => { bnStep1.Text = Properties.Resources.InstallComplete; }));
                 }
@@ -95,7 +95,7 @@ namespace DS4Windows.Forms
                     this.BeginInvoke((Action)(() => { bnStep1.Text = Properties.Resources.InstallFailed; }), null);
                 }
 
-                File.Delete(exepath + $"\\{InstFileName}");
+                File.Delete($"{API.ExePath}\\{InstFileName}");
                 ((NonFormTimer)sender).Stop();
             }
         }

@@ -26,7 +26,7 @@ namespace DS4Windows.Forms
         {
             if (tBProfile.Text != null && tBProfile.Text != "" && !tBProfile.Text.Contains("\\") && !tBProfile.Text.Contains("/") && !tBProfile.Text.Contains(":") && !tBProfile.Text.Contains("*") && !tBProfile.Text.Contains("?") && !tBProfile.Text.Contains("\"") && !tBProfile.Text.Contains("<") && !tBProfile.Text.Contains(">") && !tBProfile.Text.Contains("|"))
             {
-                System.IO.File.Copy(Global.appdatapath + "\\Profiles\\" + oldfilename + ".xml", Global.appdatapath + "\\Profiles\\" + tBProfile.Text + ".xml", true);
+                System.IO.File.Copy($"{API.AppDataPath}\\Profiles\\{oldfilename}.xml", $"{API.AppDataPath}\\Profiles\\{tBProfile.Text}.xml", true);
                 yes.RefreshProfiles();
                 this.Close();
             }

@@ -8,6 +8,15 @@ namespace DS4Windows
 {
     public class DS4LightBar
     {
+        private readonly IDeviceConfig cfg;
+        private readonly IDeviceAuxiliaryConfig aux;
+
+        internal DS4LightBar(int devIndex)
+        {
+            cfg = API.Cfg(devIndex);
+            aux = API.Aux(devIndex);
+        }
+
         private readonly static byte[/* Light On duration */, /* Light Off duration */] BatteryIndicatorDurations =
         {
             { 28, 252 }, // on 10% of the time at 0
@@ -23,28 +32,24 @@ namespace DS4Windows
             { 0, 0 }     // use on 100%. 0 is for "charging" OR anything sufficiently-"charged"
         };
 
-        static double[] counters = new double[4] { 0, 0, 0, 0 };
-        public static Stopwatch[] fadewatches = new Stopwatch[4]
-            { new Stopwatch(), new Stopwatch(), new Stopwatch(), new Stopwatch() };
+        double counter = 0.0;
+        public Stopwatch fadewatch = new Stopwatch();
 
-        static bool[] fadedirection = new bool[4] { false, false, false, false };
-        static DateTime[] oldnow = new DateTime[4]
-            { DateTime.UtcNow, DateTime.UtcNow, DateTime.UtcNow, DateTime.UtcNow };
+        private bool fadedirection = false;
+        DateTime oldnow = DateTime.UtcNow;
 
-        public static bool[] forcelight = new bool[4] { false, false, false, false };
-        public static DS4Color[] forcedColor = new DS4Color[4];
-        public static byte[] forcedFlash = new byte[4];
+        public bool forcedLight = false;
+        public DS4Color forcedColor;
+        public byte forcedFlash;
         internal const int PULSE_FLASH_DURATION = 2000;
         internal const double PULSE_FLASH_SEGMENTS = PULSE_FLASH_DURATION / 40;
         internal const int PULSE_CHARGING_DURATION = 4000;
         internal const double PULSE_CHARGING_SEGMENTS = (PULSE_CHARGING_DURATION / 40) - 2;
 
-        public static void updateLightBar(DS4Device device, int deviceNum)
+        public void updateLightBar(DS4Device device)
         {
-            var cfg = API.Cfg(deviceNum);
-            var aux = API.Aux(deviceNum);
             DS4Color color;
-            if (!defaultLight && !forcelight[deviceNum])
+            if (!defaultLight && !forcedLight)
             {
                 if (cfg.UseCustomColor)
                 {
@@ -64,24 +69,24 @@ namespace DS4Windows
                     {
                         // Display rainbow
                         DateTime now = DateTime.UtcNow;
-                        if (now >= oldnow[deviceNum] + TimeSpan.FromMilliseconds(10)) //update by the millisecond that way it's a smooth transtion
+                        if (now >= oldnow + TimeSpan.FromMilliseconds(10)) //update by the millisecond that way it's a smooth transtion
                         {
-                            oldnow[deviceNum] = now;
+                            oldnow = now;
                             if (device.isCharging())
-                                counters[deviceNum] -= 1.5 * 3 / rainbow;
+                                counter -= 1.5 * 3 / rainbow;
                             else
-                                counters[deviceNum] += 1.5 * 3 / rainbow;
+                                counter += 1.5 * 3 / rainbow;
                         }
 
-                        if (counters[deviceNum] < 0)
-                            counters[deviceNum] = 180000;
-                        else if (counters[deviceNum] > 180000)
-                            counters[deviceNum] = 0;
+                        if (counter < 0)
+                            counter = 180000;
+                        else if (counter > 180000)
+                            counter = 0;
 
                         if (cfg.LedAsBatteryIndicator)
-                            color = HuetoRGB((float)counters[deviceNum] % 360, (byte)(device.getBattery() * 2.55));
+                            color = HuetoRGB((float)counter % 360, (byte)(device.getBattery() * 2.55));
                         else
-                            color = HuetoRGB((float)counters[deviceNum] % 360, 255);
+                            color = HuetoRGB((float)counter % 360, 255);
 
                     }
                     else if (cfg.LedAsBatteryIndicator)
@@ -108,18 +113,18 @@ namespace DS4Windows
                     {
                         double ratio = 0.0;
 
-                        if (!fadewatches[deviceNum].IsRunning)
+                        if (!fadewatch.IsRunning)
                         {
-                            bool temp = fadedirection[deviceNum];
-                            fadedirection[deviceNum] = !temp;
-                            fadewatches[deviceNum].Restart();
+                            bool temp = fadedirection;
+                            fadedirection = !temp;
+                            fadewatch.Restart();
                             ratio = temp ? 100.0 : 0.0;
                         }
                         else
                         {
-                            long elapsed = fadewatches[deviceNum].ElapsedMilliseconds;
+                            long elapsed = fadewatch.ElapsedMilliseconds;
 
-                            if (fadedirection[deviceNum])
+                            if (fadedirection)
                             {
                                 if (elapsed < PULSE_FLASH_DURATION)
                                 {
@@ -129,7 +134,7 @@ namespace DS4Windows
                                 else
                                 {
                                     ratio = 100.0;
-                                    fadewatches[deviceNum].Stop();
+                                    fadewatch.Stop();
                                 }
                             }
                             else
@@ -142,7 +147,7 @@ namespace DS4Windows
                                 else
                                 {
                                     ratio = 0.0;
-                                    fadewatches[deviceNum].Stop();
+                                    fadewatch.Stop();
                                 }
                             }
                         }
@@ -183,18 +188,18 @@ namespace DS4Windows
                         {
                             double ratio = 0.0;
 
-                            if (!fadewatches[deviceNum].IsRunning)
+                            if (!fadewatch.IsRunning)
                             {
-                                bool temp = fadedirection[deviceNum];
-                                fadedirection[deviceNum] = !temp;
-                                fadewatches[deviceNum].Restart();
+                                bool temp = fadedirection;
+                                fadedirection = !temp;
+                                fadewatch.Restart();
                                 ratio = temp ? 100.0 : 0.0;
                             }
                             else
                             {
-                                long elapsed = fadewatches[deviceNum].ElapsedMilliseconds;
+                                long elapsed = fadewatch.ElapsedMilliseconds;
 
-                                if (fadedirection[deviceNum])
+                                if (fadedirection)
                                 {
                                     if (elapsed < PULSE_CHARGING_DURATION)
                                     {
@@ -206,7 +211,7 @@ namespace DS4Windows
                                     else
                                     {
                                         ratio = 100.0;
-                                        fadewatches[deviceNum].Stop();
+                                        fadewatch.Stop();
                                     }
                                 }
                                 else
@@ -221,7 +226,7 @@ namespace DS4Windows
                                     else
                                     {
                                         ratio = 0.0;
-                                        fadewatches[deviceNum].Stop();
+                                        fadewatch.Stop();
                                     }
                                 }
                             }
@@ -232,8 +237,8 @@ namespace DS4Windows
                         }
                         case 2:
                         {
-                            counters[deviceNum] += 0.167;
-                            color = HuetoRGB((float)counters[deviceNum] % 360, 255);
+                            counter += 0.167;
+                            color = HuetoRGB((float)counter % 360, 255);
                             break;
                         }
                         case 3:
@@ -245,9 +250,9 @@ namespace DS4Windows
                     }
                 }
             }
-            else if (forcelight[deviceNum])
+            else if (forcedLight)
             {
-                color = forcedColor[deviceNum];
+                color = forcedColor;
             }
             else if (shuttingdown)
                 color = new DS4Color(0, 0, 0);
@@ -260,7 +265,7 @@ namespace DS4Windows
             }
 
             bool distanceprofile = cfg.DistanceProfiles || aux.TempProfileDistance;
-            //distanceprofile = (ProfilePath[deviceNum].ToLower().Contains("distance") || TempProfileName[deviceNum].ToLower().Contains("distance"));
+            //distanceprofile = (ProfileExePath[deviceNum].ToLower().Contains("distance") || TempProfileName[deviceNum].ToLower().Contains("distance"));
             if (distanceprofile && !defaultLight)
             {
                 // Thing I did for Distance
@@ -292,9 +297,9 @@ namespace DS4Windows
 
             if (haptics.IsLightBarSet())
             {
-                if (forcelight[deviceNum] && forcedFlash[deviceNum] > 0)
+                if (forcedLight && forcedFlash > 0)
                 {
-                    haptics.LightBarFlashDurationOff = haptics.LightBarFlashDurationOn = (byte)(25 - forcedFlash[deviceNum]);
+                    haptics.LightBarFlashDurationOff = haptics.LightBarFlashDurationOn = (byte)(25 - forcedFlash);
                     haptics.LightBarExplicitlyOff = true;
                 }
                 else if (device.getBattery() <= cfg.FlashBatteryAt && cfg.FlashType == 0 && !defaultLight && !device.isCharging())

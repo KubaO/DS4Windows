@@ -20,7 +20,6 @@ namespace DS4Windows.Forms
         public DS4Form form;
         //C:\ProgramData\Microsoft\Windows\Start Menu\Programs
         string steamgamesdir, origingamesdir;
-        protected String m_Profile = Global.appdatapath + "\\Auto Profiles.xml";
 
         ProgramPathItem selectedProgramPathItem = null;
         List<string> lodsf = new List<string>();
@@ -29,6 +28,9 @@ namespace DS4Windows.Forms
         public const string steamCommLoc = @"C:\Program Files\Steam\steamapps\common";
         const string originx86Loc = @"C:\Program Files (x86)\Origin Games";
         const string originLoc = @"C:\Program Files\Origin Games";
+
+        private readonly IGlobalConfig Config = API.Config;
+        private readonly string autoProfile = API.AutoProfileDataPath;
 
         public WinProgs(string[] oc, DS4Form main)
         {
@@ -49,13 +51,13 @@ namespace DS4Windows.Forms
             tp.SetToolTip(tBPath, Properties.Resources.AutoProfilePathAndWindowTitleEditTip);
             tp.SetToolTip(tBWndTitle, Properties.Resources.AutoProfilePathAndWindowTitleEditTip);
 
-            if (!File.Exists(Global.appdatapath + @"\Auto Profiles.xml"))
+            if (!File.Exists(autoProfile))
                 Create();
 
             LoadP();
 
-            if (UseCustomSteamFolder && Directory.Exists(CustomSteamFolder))
-                steamgamesdir = CustomSteamFolder;
+            if (Config.UseCustomSteamFolder && Directory.Exists(Config.CustomSteamFolder))
+                steamgamesdir = Config.CustomSteamFolder;
             else if (Directory.Exists(steamCommx86Loc))
                 steamgamesdir = steamCommx86Loc;
             else if (Directory.Exists(steamCommLoc))
@@ -95,7 +97,7 @@ namespace DS4Windows.Forms
 
                 Node = doc.CreateNode(XmlNodeType.Element, "Programs", "");
                 doc.AppendChild(Node);
-                doc.Save(m_Profile);
+                doc.Save(autoProfile);
             }
             catch { Saved = false; }
 
@@ -116,10 +118,10 @@ namespace DS4Windows.Forms
                 XmlDocument doc = new XmlDocument();
 
                 iLIcons.Images.Clear();
-                if (!File.Exists(Global.appdatapath + "\\Auto Profiles.xml"))
+                if (!File.Exists(autoProfile))
                     return;
 
-                doc.Load(Global.appdatapath + "\\Auto Profiles.xml");
+                doc.Load(autoProfile);
                 XmlNodeList programslist = doc.SelectNodes("Programs/Program");
 
                 int index;
@@ -157,8 +159,8 @@ namespace DS4Windows.Forms
             }
             catch (Exception e)
             {
-                // Eat all exceptions while reading auto-profile file because we don't want to crash DS4Win app just because there are some permissions or other issues with the file
-                AppLogger.LogToGui($"ERROR. Auto-profile XML file {Global.appdatapath}\\Auto Profiles.xml reading failed. {e.Message}", true);
+                // Eat all exceptions while reading auto-autoProfile file because we don't want to crash DS4Win app just because there are some permissions or other issues with the file
+                AppLogger.LogToGui($"ERROR. Auto-autoProfile XML file {autoProfile} reading failed. {e.Message}", true);
             }
             finally
             {
@@ -273,7 +275,7 @@ namespace DS4Windows.Forms
                 catch (Exception e)
                 {
                     // Eat all exceptions while processing added apps because we don't want to crash DS4Win app just because there are some permissions or other issues with the file
-                    AppLogger.LogToGui($"ERROR. Failed to add selected applications to an auto-profile list. {e.Message}", true);
+                    AppLogger.LogToGui($"ERROR. Failed to add selected applications to an auto-autoProfile list. {e.Message}", true);
                 }
                 finally
                 {
@@ -320,7 +322,7 @@ namespace DS4Windows.Forms
 
             try
             {
-                doc.Load(m_Profile);
+                doc.Load(autoProfile);
                 Node = doc.CreateComment(String.Format(" Auto-Profile Configuration Data. {0} ", DateTime.Now));
                 foreach (XmlNode node in doc.SelectNodes("//comment()"))
                     node.ParentNode.ReplaceChild(Node, node);
@@ -346,7 +348,7 @@ namespace DS4Windows.Forms
                     Node.AppendChild(el);
 
                 doc.AppendChild(Node);
-                doc.Save(m_Profile);
+                doc.Save(autoProfile);
 
                 if(selectedProgramPathItem != null)
                 {
@@ -380,8 +382,8 @@ namespace DS4Windows.Forms
             }
             catch (Exception e)
             {
-                // Eat all exceptions while writing auto-profile file because we don't want to crash DS4Win app just because there are some permissions or other issues with the file
-                AppLogger.LogToGui($"ERROR. Auto-profile XML file {Global.appdatapath}\\Auto Profiles.xml writing failed. {e.Message}", true);
+                // Eat all exceptions while writing auto-autoProfile file because we don't want to crash DS4Win app just because there are some permissions or other issues with the file
+                AppLogger.LogToGui($"ERROR. Auto-autoProfile XML file {autoProfile} writing failed. {e.Message}", true);
             }
         }
 
@@ -393,7 +395,7 @@ namespace DS4Windows.Forms
             try
             {
                 XmlDocument doc = new XmlDocument();
-                doc.Load(m_Profile);
+                doc.Load(autoProfile);
 
                 XmlNode programItem = FindProgramXMLItem(doc, loadProgPathItem.path, loadProgPathItem.title);
                 if (programItem != null)
@@ -435,7 +437,7 @@ namespace DS4Windows.Forms
             }
             catch (Exception e)
             {
-                // Eat all exceptions while reading auto-profile file because we don't want to crash DS4Win app just because there are some permissions or other issues with the file
+                // Eat all exceptions while reading auto-autoProfile file because we don't want to crash DS4Win app just because there are some permissions or other issues with the file
                 AppLogger.LogToGui($"ERROR. Failed to read {loadProgPathItem.path} {loadProgPathItem.title} XML entry. {e.Message}", true);
             }
             bnSave.Enabled = false;
@@ -451,7 +453,7 @@ namespace DS4Windows.Forms
             try
             {
                 XmlDocument doc = new XmlDocument();
-                doc.Load(m_Profile);
+                doc.Load(autoProfile);
 
                 XmlNode programItem = FindProgramXMLItem(doc, removeProgPathItem.path, removeProgPathItem.title);
                 if (programItem != null)
@@ -461,7 +463,7 @@ namespace DS4Windows.Forms
                     {
                         parentNode.RemoveChild(programItem);
                         doc.AppendChild(parentNode);
-                        doc.Save(m_Profile);
+                        doc.Save(autoProfile);
                     }
                 }
                 if (lVPrograms.SelectedItems.Count > 0 && uncheck)
@@ -469,7 +471,7 @@ namespace DS4Windows.Forms
             }
             catch (Exception e)
             {
-                // Eat all exceptions while updating auto-profile file because we don't want to crash DS4Win app just because there are some permissions or other issues with the file
+                // Eat all exceptions while updating auto-autoProfile file because we don't want to crash DS4Win app just because there are some permissions or other issues with the file
                 AppLogger.LogToGui($"ERROR. Failed to remove {removeProgPathItem.path} {removeProgPathItem.title} XML entry. {e.Message}", true);
             }
 
@@ -491,7 +493,7 @@ namespace DS4Windows.Forms
             {
                 int last = cbs[0].Items.Count - 1;
 
-                // Set all profile combox values to "none" value (ie. the last item in a controller combobox list)
+                // Set all autoProfile combox values to "none" value (ie. the last item in a controller combobox list)
                 for (int i = 0; i < 4; i++)
                 {
                     cbs[i].Enabled = false;

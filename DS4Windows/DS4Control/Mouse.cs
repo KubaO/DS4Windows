@@ -11,6 +11,7 @@ namespace DS4Windows
         private DS4Device dev = null;
         private readonly IDeviceConfig cfg;
         private readonly IDeviceAuxiliaryConfig aux;
+        private readonly Mapping mapping;
         private readonly int deviceNum;
         private readonly MouseCursor cursor;
         private readonly MouseWheel wheel;
@@ -50,6 +51,7 @@ namespace DS4Windows
         {
             cfg = API.Cfg(deviceNum);
             aux = API.Aux(deviceNum);
+            mapping = API.Mapping(deviceNum);
             this.deviceNum = deviceNum;
             dev = d;
             cursor = new MouseCursor(deviceNum);
@@ -85,23 +87,17 @@ namespace DS4Windows
                 s = dev.getCurrentStateRef();
 
                 useReverseRatchet = cfg.GyroTriggerTurns;
-                int i = 0;
-                string[] ss = cfg.SATriggers.Split(',');
+                /* int i = 0; */
                 bool andCond = cfg.SATriggerCond == SATriggerCondType.And;
                 triggeractivated = andCond ? true : false;
-                if (!string.IsNullOrEmpty(ss[0]))
-                {
-                    string s = string.Empty;
-                    for (int index = 0, arlen = ss.Length; index < arlen; index++)
-                    {
-                        s = ss[index];
-                        if (andCond && !(int.TryParse(s, out i) && getDS4ControlsByName(i)))
-                        {
+                foreach (int i in cfg.SATriggers) {
+                    // FIXME: The iteration went through some unparseable triggers - WTF?!
+                    if (getDS4ControlsByName(i)) {
+                        if (andCond /* && !(int.TryParse(s, out i)*/) {
                             triggeractivated = false;
                             break;
                         }
-                        else if (!andCond && int.TryParse(s, out i) && getDS4ControlsByName(i))
-                        {
+                        else if (!andCond /* && int.TryParse(s, out i)*/) {
                             triggeractivated = true;
                             break;
                         }
@@ -292,7 +288,7 @@ namespace DS4Windows
                             TimeofEnd = DateTime.Now; //since arg can't be used in synthesizeMouseButtons
                         }
                         else
-                            Mapping.MapClick(deviceNum, Mapping.Click.Left); //this way no delay if disabled
+                            mapping.MapClick(Mapping.Click.Left); //this way no delay if disabled
                     }
                 }
             }
@@ -472,7 +468,7 @@ namespace DS4Windows
         {
             if (cfg.GetDS4Action(DS4Controls.TouchLeft, false) == null && leftDown)
             {
-                Mapping.MapClick(deviceNum, Mapping.Click.Left);
+                mapping.MapClick(Mapping.Click.Left);
                 dragging2 = true;
             }
             else
@@ -481,13 +477,13 @@ namespace DS4Windows
             }
 
             if (cfg.GetDS4Action(DS4Controls.TouchUpper, false) == null && upperDown)
-                Mapping.MapClick(deviceNum, Mapping.Click.Middle);
+                mapping.MapClick(Mapping.Click.Middle);
 
             if (cfg.GetDS4Action(DS4Controls.TouchRight, false) == null && rightDown)
-                Mapping.MapClick(deviceNum, Mapping.Click.Left);
+                mapping.MapClick(Mapping.Click.Left);
 
             if (cfg.GetDS4Action(DS4Controls.TouchMulti, false) == null && multiDown)
-                Mapping.MapClick(deviceNum, Mapping.Click.Right);
+                mapping.MapClick(Mapping.Click.Right);
 
             if (!cfg.UseTPforControls)
             {
@@ -496,14 +492,14 @@ namespace DS4Windows
                     DateTime tester = DateTime.Now;
                     if (tester > (TimeofEnd + TimeSpan.FromMilliseconds((double)(cfg.TapSensitivity) * 1.5)))
                     {
-                        Mapping.MapClick(deviceNum, Mapping.Click.Left);
+                        mapping.MapClick(Mapping.Click.Left);
                         tappedOnce = false;
                     }
                     //if it fails the method resets, and tries again with a new tester value (gives tap a delay so tap and hold can work)
                 }
                 if (secondtouchbegin) //if tap and hold (also works as double tap)
                 {
-                    Mapping.MapClick(deviceNum, Mapping.Click.Left);
+                    mapping.MapClick(Mapping.Click.Left);
                     dragging = true;
                 }
                 else
@@ -531,7 +527,7 @@ namespace DS4Windows
             else
             {
                 if ((cfg.LowerRCOn && arg.touches[0].hwX > (1920 * 3) / 4 && arg.touches[0].hwY > (960 * 3) / 4))
-                    Mapping.MapClick(deviceNum, Mapping.Click.Right);
+                    mapping.MapClick(Mapping.Click.Right);
 
                 if (isLeft(arg.touches[0]))
                     leftDown = true;

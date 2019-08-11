@@ -487,7 +487,7 @@ namespace DS4Windows
                         TouchPadOn(i, device);
                         CheckProfileOptions(i, device, true);
                         device.StartUpdate();
-                        //string filename = ProfilePath[ind];
+                        //string filename = ProfileExePath[ind];
                         //ind++;
                         if (showlog)
                         {
@@ -560,8 +560,8 @@ namespace DS4Windows
 
                 LogDebug("Closing connection to ViGEmBus");
 
-                for (int i = 0, arlength = DS4Controllers.Length; i < arlength; i++)
-                {
+                for (int i = 0, arlength = DS4Controllers.Length; i < arlength; i++) {
+                    DS4LightBar lightBar = API.Bar(i);
                     DS4Device tempDevice = DS4Controllers[i];
                     if (tempDevice != null)
                     {
@@ -584,10 +584,10 @@ namespace DS4Windows
                         }
                         else
                         {
-                            DS4LightBar.forcelight[i] = false;
-                            DS4LightBar.forcedFlash[i] = 0;
+                            lightBar.forcedLight = false;
+                            lightBar.forcedFlash = 0;
                             DS4LightBar.defaultLight = true;
-                            DS4LightBar.updateLightBar(DS4Controllers[i], i);
+                            lightBar.updateLightBar(DS4Controllers[i]);
                             tempDevice.IsRemoved = true;
                             tempDevice.StopUpdate();
                             DS4Devices.RemoveDevice(tempDevice);
@@ -751,7 +751,7 @@ namespace DS4Windows
                             CheckProfileOptions(index, device);
                             device.StartUpdate();
 
-                            //string filename = Path.GetFileName(ProfilePath[Index]);
+                            //string filename = Path.GetFileName(ProfileExePath[Index]);
                             if (File.Exists($"{API.AppDataPath}\\Profiles\\{cfg.ProfilePath}.xml"))
                             {
                                 string prolog = Properties.Resources.UsingProfile.Replace("*number*", (index + 1).ToString()).Replace("*Profile name*", cfg.ProfilePath);
@@ -1188,7 +1188,7 @@ namespace DS4Windows
                     // Use Task to reset device synth state and commit it
                     Task.Run(() =>
                     {
-                        Mapping.Commit(ind);
+                        API.Mapping(ind).Commit();
                     }).Wait();
 
                     string removed = Properties.Resources.ControllerWasRemoved.Replace("*Mac address*", (ind + 1).ToString());
@@ -1241,6 +1241,7 @@ namespace DS4Windows
             if (ind == -1) return;
             var cfg = API.Cfg(ind);
             var aux = API.Aux(ind);
+            var mapping = API.Mapping(ind);
             if (cfg.FlushHIDQueue)
                 device.FlushHID();
 
@@ -1308,14 +1309,14 @@ namespace DS4Windows
             if (cfg.EnableTouchToggle)
                 CheckForTouchToggle(ind, cState, pState);
 
-            cState = Mapping.SetCurveAndDeadzone(ind, cState, TempState[ind]);
+            cState = mapping.SetCurveAndDeadzone(cState, TempState[ind]);
 
             if (!recordingMacro && (aux.UseTempProfile ||
                 cfg.HasCustomActions || cfg.HasCustomExtras ||
                 cfg.ProfileActions.Count > 0 ||
                 cfg.SASteeringWheelEmulationAxis >= SASteeringWheelEmulationAxisType.VJoy1X))
             {
-                Mapping.MapCustom(ind, cState, MappedState[ind], ExposedState[ind], touchPad[ind], this);
+                mapping.MapCustom(cState, MappedState[ind], ExposedState[ind], touchPad[ind], this);
                 cState = MappedState[ind];
             }
 
@@ -1367,14 +1368,15 @@ namespace DS4Windows
             }
 
             // Output any synthetic events.
-            Mapping.Commit(ind);
+            mapping.Commit();
 
             // Update the GUI/whatever.
-            DS4LightBar.updateLightBar(device, ind);
+            API.Bar(ind).updateLightBar(device);
         }
 
         public void LagFlashWarning(int ind, bool on)
         {
+            var lightBar = API.Bar(ind);
             if (on)
             {
                 lag[ind] = true;
@@ -1382,17 +1384,17 @@ namespace DS4Windows
                 if (API.Config.FlashWhenLate)
                 {
                     DS4Color color = new DS4Color { red = 50, green = 0, blue = 0 };
-                    DS4LightBar.forcedColor[ind] = color;
-                    DS4LightBar.forcedFlash[ind] = 2;
-                    DS4LightBar.forcelight[ind] = true;
+                    lightBar.forcedColor = color;
+                    lightBar.forcedFlash = 2;
+                    lightBar.forcedLight = true;
                 }
             }
             else
             {
                 lag[ind] = false;
                 LogDebug(Properties.Resources.LatencyNotOverTen.Replace("*number*", (ind + 1).ToString()));
-                DS4LightBar.forcelight[ind] = false;
-                DS4LightBar.forcedFlash[ind] = 0;
+                lightBar.forcedLight = false;
+                lightBar.forcedFlash = 0;
             }
         }
 

@@ -17,7 +17,6 @@ namespace DS4Windows.Forms
     public partial class SaveWhere : Form
     {
         private bool multisaves;
-        string exepath = Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName;
         public SaveWhere(bool multisavespots)
         {
             InitializeComponent();
@@ -27,20 +26,20 @@ namespace DS4Windows.Forms
             cBDeleteOther.Visible = multisaves;
             if (multisaves)
                 lbPickWhere.Text += Properties.Resources.OtherFileLocation;
-            if (Global.AdminNeeded())
+            if (API.ExePathNeedsAdmin)
                 bnPrgmFolder.Enabled = false;
         }
 
         private void bnPrgmFolder_Click(object sender, EventArgs e)
         {
-            Global.SaveWhere(Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName);
+            API.AppDataPath = API.ExePath;
             if (multisaves && !cBDeleteOther.Checked)
             {
                 try { Directory.Delete(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\DS4Windows", true); }
                 catch { }
             }
             else if (!multisaves)
-                Save(Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName + "\\Profiles.xml");
+                Save(API.ProfileExePath);
             Close();
         }
 
@@ -50,14 +49,14 @@ namespace DS4Windows.Forms
             if (multisaves && !cBDeleteOther.Checked)
                 try
                 {
-                    Directory.Delete(exepath + "\\Profiles", true);
-                    File.Delete(exepath + "\\Profiles.xml");
-                    File.Delete(exepath + "\\Auto Profiles.xml");
+                    Directory.Delete($"{API.ExePath}\\Profiles", true);
+                    File.Delete(API.ProfileExePath);
+                    File.Delete(API.AutoProfileExePath);
                 }
                 catch (UnauthorizedAccessException) { MessageBox.Show("Cannot Delete old settings, please manaully delete", "DS4Windows"); }
             else if (!multisaves)
                 Save(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\DS4Windows\\Profiles.xml");
-            Global.SaveWhere(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\DS4Windows");
+            API.AppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\DS4Windows";
             Close();
         }
 
@@ -93,7 +92,7 @@ namespace DS4Windows.Forms
 
         private void SaveWhere_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (String.IsNullOrEmpty(Global.appdatapath))
+            if (String.IsNullOrEmpty(API.AppDataPath))
                 if (MessageBox.Show(Properties.Resources.ALocactionNeeded, Properties.Resources.CloseDS4W,
              MessageBoxButtons.YesNo) == DialogResult.No)
                     e.Cancel = true;

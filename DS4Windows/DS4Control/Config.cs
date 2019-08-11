@@ -31,30 +31,45 @@ namespace DS4Windows
     {
         // That's our interface to the outside 
         private static AppState app = new AppState();
-        static GlobalConfig config = new GlobalConfig();
+        private static GlobalConfig config = new GlobalConfig();
+        private static DS4LightBar[] lightBar = new DS4LightBar[4] {
+            new DS4LightBar(0), new DS4LightBar(1), new DS4LightBar(2), new DS4LightBar(3)
+        };
+        private static Mapping[] mappings = new Mapping[4] {
+            new Mapping(0), new Mapping(1), new Mapping(2), new Mapping(3)
+        };
+
         public static IGlobalConfig Config = config;
         public static IDeviceConfig Cfg(int index) => Config.Cfg(index);
         public static IDeviceAuxiliaryConfig Aux(int index) => Config.Aux(index);
+        public static DS4LightBar Bar(int index) => (index < lightBar.Length) ? lightBar[index] : null;
+        public static Mapping Mapping(int index) => mappings[index];
 
         public static bool IsAdministrator { get => app.IsAdministrator; }
 
         public static bool IsViGEmBusInstalled() => DeviceDetection.IsViGEmBusInstalled();
         public static string ViGEmBusVersion { get; } = DeviceDetection.ViGEmBusVersion();
 
-        public static string AppDataPath { get => app.AppDataPath;  }
+        internal static string GetDeviceProperty(string deviceInstanceId, NativeMethods.DEVPROPKEY prop) =>
+            AppState.GetDeviceProperty(deviceInstanceId, prop);
+
+        public static string AppDataPath { get => app.AppDataPath; set => app.AppDataPath = value; }
         public static string ExePath { get => AppState.ExePath; }
-		static bool ExePathNeedsAdmin { get => app.ExePathNeedsAdmin; }
+		public static bool ExePathNeedsAdmin { get => app.ExePathNeedsAdmin; }
 
         public static void FindConfigLocation() => app.FindConfigLocation();
         public static void SetCulture(string culture) => AppState.SetCulture(culture);
 
-        public static string ProfilePath { get => app.ProfilePath; }
+        public static string ProfileExePath { get => app.ProfileExePath; }
+        public static string AutoProfileExePath { get => app.AutoProfileExePath; }
+        public static string ProfileDataPath { get => app.ProfileDataPath; }
+        public static string AutoProfileDataPath { get => app.AutoProfileDataPath; }
         public static string ActionsPath { get => app.ActionsPath; }
         public static string LinkedProfilesPath { get => app.LinkedProfilesPath; }
         public static string ControllerConfigsPath { get => app.ControllerConfigsPath; }
 
-        static bool IsFirstRun { get => app.IsFirstRun; }
-        static bool MultiSaveSpots { get => app.MultiSaveSpots; }
+        public static bool IsFirstRun { get => app.IsFirstRun; }
+        public static bool MultiSaveSpots { get => app.MultiSaveSpots; }
         public static bool RunHotPlug { get => app.RunHotPlug; set => app.RunHotPlug = value; }
     }
 
@@ -62,6 +77,13 @@ namespace DS4Windows
     {
         IDeviceConfig Cfg(int index);
         IDeviceAuxiliaryConfig Aux(int index);
+
+        bool Load();
+        bool Save();
+        bool LoadActions();
+        void CreateStdActions();
+        bool LoadLinkedProfiles();
+        bool SaveLinkedProfiles();
 
         bool UseExclusiveMode { get; set; }
         DateTime LastChecked { get; set; }
@@ -74,10 +96,8 @@ namespace DS4Windows
         bool CloseMinimizes { get; set; }
         bool StartMinimized { get; set; }
         bool MinToTaskbar { get; set; }
-        int FormWidth { get; set; }
-        int FormHeight { get; set; }
-		int FormLocationX { get; set; }
-        int FormLocationY { get; set; }
+        System.Drawing.Size FormSize { get; set; }
+        System.Drawing.Point FormLocation { get; set; }
         string UseLang { get; set; }
         bool DownloadLang { get; set; }
         bool FlashWhenLate { get; set; }
@@ -101,6 +121,7 @@ namespace DS4Windows
         SpecialAction ActionByName(string name);
         SpecialAction ActionByIndex(int index);
         int LookupActionIndexOf(string name);
+        void RemoveAction(string name);
         bool SaveAction(string name, string controls, int mode, string details, bool edt, string extras = "");
 
         // These are in AppState

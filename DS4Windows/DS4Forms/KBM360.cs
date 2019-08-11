@@ -11,6 +11,9 @@ namespace DS4Windows.Forms
         private Dictionary<string, string> ds4StrAliases =
             new Dictionary<string, string>();
         private int device;
+        private IDeviceConfig cfg;
+        private IDeviceAuxiliaryConfig aux;
+        private DS4LightBar lightBar;
         private Button button;
         private Options ops;
         private SpecActions sA;
@@ -32,6 +35,9 @@ namespace DS4Windows.Forms
 
         public KBM360(int deviceNum, Options ooo, Button buton)
         {
+            cfg = API.Cfg(deviceNum);
+            aux = API.Aux(deviceNum);
+            lightBar = API.Bar(deviceNum);
             InitializeComponent();
             advColorDialog = new AdvancedColorDialog();
             this.advColorDialog.OnUpdateColor += new AdvancedColorDialog.ColorUpdateHandler(this.advColorDialog_OnUpdateColor);
@@ -40,7 +46,7 @@ namespace DS4Windows.Forms
             //pnl360Controls.BackgroundImageLayout = ImageLayout.None;
             use360 = true;
             pnl360Controls.Paint -= pnl360Controls_Paint;
-            if (Global.outDevTypeTemp[device] == OutContType.DS4)
+            if (cfg.OutputDevType == OutContType.DS4)
             {
                 use360 = false;
                 InitDS4Panel();
@@ -52,9 +58,9 @@ namespace DS4Windows.Forms
             device = deviceNum;
             ops = ooo;
             button = buton;
-            DS4ControlSettings dcs = Global.getDS4CSetting(device, button.Name);
-            cBToggle.Checked = dcs.keyType.HasFlag(DS4KeyType.Toggle);
-            cBScanCode.Checked = dcs.keyType.HasFlag(DS4KeyType.ScanCode);
+            DS4ControlSettings dcs = cfg.GetDS4CSetting(button.Name);
+            cBToggle.Checked = dcs.Norm.KeyType.HasFlag(DS4KeyType.Toggle);
+            cBScanCode.Checked = dcs.Norm.KeyType.HasFlag(DS4KeyType.ScanCode);
             oldSC = cBScanCode.Location;
             defaultText = btnDefault.Text;
             if (button.Name.StartsWith("bnShift"))
@@ -103,7 +109,7 @@ namespace DS4Windows.Forms
             ActiveControl = lBMacroOn;
             guideText = btnGuide.Text;
             btnGuide.Text = "";
-            cBShiftButton.SelectedIndex = Global.GetDS4STrigger(device, button.Name);
+            cBShiftButton.SelectedIndex = cfg.GetDS4STrigger(button.Name);
             cBShiftButton.Items[26] = ops.fingerOnTouchpadToolStripMenuItem.Text;
             rBRegular.Checked = true;
             loading = false;
@@ -358,9 +364,9 @@ namespace DS4Windows.Forms
                 if (bn.Tag != null && bn.Tag.ToString().Contains("X360"))
                 {
                     //keytag = ((Button)sender).Tag.ToString().Substring(4);
-                    keytag = Global.getX360ControlsByName(bn.Tag.ToString().Substring(4));
-                    DS4Controls psButton = Global.getDS4ControlsByName(button.Name);
-                    if ((X360Controls)keytag == Global.getDefaultX360ControlBinding(psButton) &&
+                    keytag = AppState.GetX360ControlsByName(bn.Tag.ToString().Substring(4));
+                    DS4Controls psButton = AppState.GetDS4ControlsByName(button.Name);
+                    if ((X360Controls)keytag == AppState.DefaultButtonMapping[(int)psButton] &&
                         !cBScanCode.Checked && !cBToggle.Checked && !rBShiftModifer.Checked)
                     {
                         // Reset action
@@ -458,14 +464,14 @@ namespace DS4Windows.Forms
                     }
 
                     int value;
-                    object tt = Global.GetDS4Action(device, button.Name, rBShiftModifer.Checked);
+                    object tt = cfg.GetDS4Action(button.Name, rBShiftModifer.Checked);
                     bool tagisint = tt != null
                         && int.TryParse(tt.ToString(), out value);
                     bool scanavail = tagisint;
                     bool toggleavil = tagisint;
                     KeyValuePair<object, string> tag;
                     if (tt is X360Controls)
-                        tag = new KeyValuePair<object, string>(getX360ControlsByName((X360Controls)tt, Global.outDevTypeTemp[device]), extras);
+                        tag = new KeyValuePair<object, string>(getX360ControlsByName((X360Controls)tt, aux.PreviousOutputDevType), extras);
                     else
                         tag = new KeyValuePair<object, string>(tt, extras);
                     ops.ChangeButtonText(button, rBShiftModifer.Checked, tag, (scanavail ? cBScanCode.Checked : false), (toggleavil ? cBToggle.Checked : false), lBMacroOn.Visible, macrorepeat, cBShiftButton.SelectedIndex);
@@ -652,18 +658,18 @@ namespace DS4Windows.Forms
                 extraChanged = true;
             }
 
-            if (device < 4)
-                DS4LightBar.forcelight[device] = false;
+            if (lightBar != null)
+                lightBar.forcedLight = false;
         }
 
         private void advColorDialog_OnUpdateColor(Color color, EventArgs e)
         {
-            if (device < 4)
+            if (lightBar != null)
             {
                 DS4Color dcolor = new DS4Color { red = color.R, green = color.G, blue = color.B };
-                DS4LightBar.forcedColor[device] = dcolor;
-                DS4LightBar.forcedFlash[device] = 0;
-                DS4LightBar.forcelight[device] = true;
+                lightBar.forcedColor = dcolor;
+                lightBar.forcedFlash = 0;
+                lightBar.forcedLight = true;
             }
         }
 
@@ -714,10 +720,10 @@ namespace DS4Windows.Forms
                     strextras = GetExtras();
                 }
 
-                Global.UpdateDS4Extra(device, button.Name, !rBShiftModifer.Checked, strextras);
+                cfg.UpdateDS4CExtra(button.Name, !rBShiftModifer.Checked, strextras);
             }
 
-            object tagO = Global.GetDS4Action(device, button.Name, rBShiftModifer.Checked);
+            object tagO = cfg.GetDS4Action(button.Name, rBShiftModifer.Checked);
             if (rBShiftModifer.Checked)
                 btnDefault.Text = Properties.Resources.FallBack;
             else
@@ -759,14 +765,14 @@ namespace DS4Windows.Forms
                     foreach (int i in tag)
                         macrostag.Add(i);
 
-                    if (Global.GetDS4KeyType(device, button.Name, rBShiftModifer.Checked).HasFlag(DS4KeyType.HoldMacro))
+                    if (cfg.GetDS4KeyType(button.Name, rBShiftModifer.Checked).HasFlag(DS4KeyType.HoldMacro))
                         macrorepeat = true;
                 }
                 else if (tagO is string || tagO is X360Controls)
                 {
                     string tag;
                     if (tagO is X360Controls)
-                        tag = getX360ControlsByName((X360Controls)tagO, Global.outDevTypeTemp[device]);
+                        tag = getX360ControlsByName((X360Controls)tagO, aux.PreviousOutputDevType);
                     else
                         tag = tagO.ToString();
 
@@ -803,7 +809,7 @@ namespace DS4Windows.Forms
                     tagO = ops.defaults[button.Name];
                     string tag;
                     if (tagO is X360Controls)
-                        tag = getX360ControlsByName((X360Controls)tagO, Global.outDevTypeTemp[device]);
+                        tag = getX360ControlsByName((X360Controls)tagO, aux.PreviousOutputDevType);
                     else
                         tag = tagO.ToString();
 
@@ -833,7 +839,7 @@ namespace DS4Windows.Forms
                 }
             }
 
-            string dcExtras = Global.GetDS4Extra(device, button.Name, rBShiftModifer.Checked);
+            string dcExtras = cfg.GetDS4Extra(button.Name, rBShiftModifer.Checked);
             string[] extras = null;
             if (!string.IsNullOrEmpty(dcExtras))
             {

@@ -18,6 +18,7 @@ using NonFormTimer = System.Timers.Timer;
 using static DS4Windows.Global;
 using System.Security;
 using System.Management;
+using System.Runtime.CompilerServices;
 
 namespace DS4Windows.Forms
 {
@@ -54,6 +55,7 @@ namespace DS4Windows.Forms
         private static string prevForegroundProcessName = string.Empty;
         private static StringBuilder autoProfileCheckTextBuilder = null;
 
+        private IGlobalConfig Config = API.Config;
         private bool systemShutdown = false;
         private bool wasrunning = false;
         Options opt;
@@ -78,6 +80,10 @@ namespace DS4Windows.Forms
         private const int WM_CLOSE = 0x10;
         public  const int WM_COPYDATA = 0x004A;
 
+        private readonly string DS4_UPDATER_FN = $"{API.ExePath}\\DS4Updater.exe";
+        private readonly string VERSION_FN = $"{API.AppDataPath}\\version.txt";
+
+
         internal string updaterExe = Environment.Is64BitProcess ? "DS4Updater.exe" : "DS4Updater_x86.exe";
 
         [DllImport("user32.dll")]
@@ -100,15 +106,15 @@ namespace DS4Windows.Forms
 
         public DS4Form(string[] args)
         {
-            Global.FindConfigLocation();
+            API.FindConfigLocation();
 
-            if (Global.firstRun)
+            if (API.IsFirstRun)
             {
-                new SaveWhere(Global.multisavespots).ShowDialog();
+                new SaveWhere(API.MultiSaveSpots).ShowDialog();
             }
 
-            Global.Load();
-            Global.SetCulture(UseLang);
+            Config.Load();
+            API.SetCulture(Config.UseLang);
 
             InitializeComponent();
             advColorDialog = new AdvancedColorDialog();
@@ -161,7 +167,7 @@ namespace DS4Windows.Forms
 
             TaskRunner.Run(() => CheckDrivers());
 
-            if (string.IsNullOrEmpty(appdatapath))
+            if (string.IsNullOrEmpty(API.AppDataPath))
             {
                 Close();
                 return;
@@ -180,21 +186,21 @@ namespace DS4Windows.Forms
 
             blankControllerTab();
 
-            Directory.CreateDirectory(appdatapath);
-            if (!Save()) //if can't write to file
+            Directory.CreateDirectory(API.AppDataPath);
+            if (!API.Config.Save()) //if can't write to file
             {
                 if (MessageBox.Show("Cannot write at current location\nCopy Settings to appdata?", "DS4Windows",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                 {
                     try
                     {
-                        Directory.CreateDirectory(appDataPpath);
-                        File.Copy(exepath + "\\Profiles.xml", appDataPpath + "\\Profiles.xml");
-                        File.Copy(exepath + "\\Auto Profiles.xml", appDataPpath + "\\Auto Profiles.xml");
-                        Directory.CreateDirectory(appDataPpath + "\\Profiles");
-                        foreach (string s in Directory.GetFiles(exepath + "\\Profiles"))
+                        Directory.CreateDirectory(API.AppDataPath);
+                        File.Copy(API.ProfileExePath, API.ProfileDataPath);
+                        File.Copy(API.AutoProfileExePath, API.AutoProfileDataPath);
+                        Directory.CreateDirectory($"{API.AppDataPath}\\Profiles");
+                        foreach (string s in Directory.GetFiles($"{API.ExePath}\\Profiles"))
                         {
-                            File.Copy(s, appDataPpath + "\\Profiles\\" + Path.GetFileName(s));
+                            File.Copy(s, $"{API.AppDataPath}\\Profiles\\{Path.GetFileName(s)}");
                         }
                     }
                     catch { }
@@ -205,45 +211,47 @@ namespace DS4Windows.Forms
                     MessageBox.Show("DS4Windows cannot edit settings here, This will now close", "DS4Windows");
                 }
 
-                appdatapath = null;
+#if false
+                // FIXME: it was being set to null. Why?!
+                API.AppDataPath = null;
+#endif
                 Close();
                 return;
             }
 
-            cBUseWhiteIcon.Checked = UseWhiteIcon;
+            cBUseWhiteIcon.Checked = Config.UseWhiteIcon;
             Icon = Properties.Resources.DS4W;
-            notifyIcon1.Icon = UseWhiteIcon ? Properties.Resources.DS4W___White : Properties.Resources.DS4W;
+            notifyIcon1.Icon = Config.UseWhiteIcon ? Properties.Resources.DS4W___White : Properties.Resources.DS4W;
             populateNotifyText();
             foreach (ToolStripMenuItem t in shortcuts)
                 t.DropDownItemClicked += Profile_Changed_Menu;
 
             hideDS4CheckBox.CheckedChanged -= hideDS4CheckBox_CheckedChanged;
-            hideDS4CheckBox.Checked = UseExclusiveMode;
+            hideDS4CheckBox.Checked = Config.UseExclusiveMode;
             hideDS4CheckBox.CheckedChanged += hideDS4CheckBox_CheckedChanged;
 
-            cBDisconnectBT.Checked = DCBTatStop;
-            cBQuickCharge.Checked = QuickCharge;
-            cBCustomSteam.Checked = UseCustomSteamFolder;
-            tBSteamFolder.Text = CustomSteamFolder;
+            cBDisconnectBT.Checked = Config.DisconnectBTAtStop;
+            cBQuickCharge.Checked = Config.QuickCharge;
+            cBCustomSteam.Checked = Config.UseCustomSteamFolder;
+            tBSteamFolder.Text = Config.CustomSteamFolder;
             // New settings
-            this.Width = FormWidth;
-            this.Height = FormHeight;
-            Location = new Point(FormLocationX, FormLocationY);
+            Size = Config.FormSize;
+            Location = Config.FormLocation;
             startMinimizedCheckBox.CheckedChanged -= startMinimizedCheckBox_CheckedChanged;
-            startMinimizedCheckBox.Checked = StartMinimized;
+            startMinimizedCheckBox.Checked = Config.StartMinimized;
             startMinimizedCheckBox.CheckedChanged += startMinimizedCheckBox_CheckedChanged;
 
-            mintoTaskCheckBox.Checked = Global.MinToTaskbar;
+            mintoTaskCheckBox.Checked = Config.MinToTaskbar;
             mintoTaskCheckBox.CheckedChanged += MintoTaskCheckBox_CheckedChanged;
 
-            cBCloseMini.Checked = CloseMini;
+            cBCloseMini.Checked = Config.CloseMinimizes;
 
-            cBFlashWhenLate.Checked = FlashWhenLate;
-            nUDLatency.Value = FlashWhenLateAt;
+            cBFlashWhenLate.Checked = Config.FlashWhenLate;
+            nUDLatency.Value = Config.FlashWhenLateAt;
 
-            if (!LoadActions()) //if first no actions have been made yet, create PS+Option to D/C and save it to every profile
+            if (!Config.LoadActions()) //if first no actions have been made yet, create PS+Option to D/C and save it to every profile
             {
-                Global.CreateStdActions();
+                Config.CreateStdActions();
             }
 
             bool start = true;
@@ -289,9 +297,9 @@ namespace DS4Windows.Forms
             btnStartStop.Text = Properties.Resources.StartText;
 
             startToolStripMenuItem.Text = btnStartStop.Text;
-            cBoxNotifications.SelectedIndex = Notifications;
+            cBoxNotifications.SelectedIndex = Config.Notifications;
             //cBSwipeProfiles.Checked = SwipeProfiles;
-            int checkwhen = CheckWhen;
+            int checkwhen = Config.CheckWhen;
             cBUpdate.Checked = checkwhen > 0;
             if (checkwhen > 23)
             {
@@ -304,13 +312,14 @@ namespace DS4Windows.Forms
                 nUDUpdateTime.Value = checkwhen;
             }
 
-            if (File.Exists(exepath + "\\Updater.exe"))
-            {
-                Thread.Sleep(2000);
-                File.Delete(exepath + "\\Updater.exe");
+            if (File.Exists($"{API.ExePath}\\Updater.exe")) {
+                TaskRunner.Run(async delegate {
+                    await TaskRunner.Delay(2000);
+                    File.Delete($"{API.ExePath}\\Updater.exe");
+                });
             }
 
-            bool isElevated = IsAdministrator();
+            bool isElevated = API.IsAdministrator;
             if (!isElevated)
             {
                 Image tempImg = new Bitmap(uacPictureBox.Width, uacPictureBox.Height);
@@ -352,9 +361,9 @@ namespace DS4Windows.Forms
             StartWindowsCheckBox.CheckedChanged += new EventHandler(StartWindowsCheckBox_CheckedChanged);
             new ToolTip().SetToolTip(StartWindowsCheckBox, Properties.Resources.RunAtStartup);
 
-            ckUdpServ.Checked = nUDUdpPortNum.Enabled = tBUdpListenAddress.Enabled = isUsingUDPServer();
-            nUDUdpPortNum.Value = getUDPServerPortNum();
-            tBUdpListenAddress.Text = getUDPServerListenAddress();
+            ckUdpServ.Checked = nUDUdpPortNum.Enabled = tBUdpListenAddress.Enabled = Config.UseUDPServer;
+            nUDUdpPortNum.Value = Config.UDPServerPort;
+            tBUdpListenAddress.Text = Config.UDPServerListenAddress;
             new ToolTip().SetToolTip(ckUdpServ, Properties.Resources.UdpServer);
 
             ckUdpServ.CheckedChanged += CkUdpServ_CheckedChanged;
@@ -396,7 +405,7 @@ namespace DS4Windows.Forms
 
             this.Resize += Form_Resize;
             this.LocationChanged += TrackLocationChanged;
-            if (!(StartMinimized || mini))
+            if (!(Config.StartMinimized || mini))
                 Form_Resize(null, null);
 
             Program.CreateIPCClassNameMMF(this.Handle);
@@ -405,20 +414,20 @@ namespace DS4Windows.Forms
 
             AppLogger.GuiLog += On_Debug;
             AppLogger.TrayIconLog += ShowNotification;
-            LoadLinkedProfiles();
+            Config.LoadLinkedProfiles();
 
             TaskRunner.Delay(50).ContinueWith((t) =>
             {
-                if (checkwhen > 0 && DateTime.Now >= LastChecked + TimeSpan.FromHours(checkwhen))
+                if (checkwhen > 0 && DateTime.Now >= Config.LastChecked + TimeSpan.FromHours(checkwhen))
                 {
                     this.BeginInvoke((System.Action)(() =>
                     {
                         // Sorry other devs, gonna have to find your own server
                         Uri url = new Uri("https://raw.githubusercontent.com/Ryochan7/DS4Windows/jay/DS4Windows/newest.txt");
                         WebClient wc = new WebClient();
-                        wc.DownloadFileAsync(url, appdatapath + "\\version.txt");
+                        wc.DownloadFileAsync(url, $"{API.AppDataPath}\\version.txt");
                         wc.DownloadFileCompleted += (sender, e) => { TaskRunner.Run(() => Check_Version(sender, e)); };
-                        LastChecked = DateTime.Now;
+                        Config.LastChecked = DateTime.Now;
                     }));
                 }
 
@@ -437,7 +446,7 @@ namespace DS4Windows.Forms
                 hotkeysTimer = new NonFormTimer();
                 //hotkeysTimer.Elapsed += Hotkeys;
                 hotkeysTimer.AutoReset = false;
-                if (SwipeProfiles)
+                if (Config.SwipeProfiles)
                 {
                     ChangeHotkeysStatus(true);
                     //hotkeysTimer.Start();
@@ -452,7 +461,7 @@ namespace DS4Windows.Forms
 
                 this.BeginInvoke((System.Action)(() =>
                 {
-                    cBSwipeProfiles.Checked = SwipeProfiles;
+                    cBSwipeProfiles.Checked = Config.SwipeProfiles;
                 }));
             });
             timerThread.IsBackground = true;
@@ -462,7 +471,7 @@ namespace DS4Windows.Forms
 
         private void TBUdpListenAddress_Leave(object sender, EventArgs e)
         {
-            setUDPServerListenAddress(tBUdpListenAddress.Text.Trim());
+            API.Config.UDPServerListenAddress = tBUdpListenAddress.Text.Trim();
         }
 
         private void populateHoverTextDict()
@@ -543,17 +552,14 @@ namespace DS4Windows.Forms
 
         private void UpdateTheUpdater()
         {
-            if (File.Exists(exepath + "\\Update Files\\DS4Updater.exe"))
-            {
-                Process[] processes = Process.GetProcessesByName("DS4Updater");
-                while (processes.Length > 0)
-                {
-                    Thread.Sleep(500);
-                }
-
-                File.Delete(exepath + "\\DS4Updater.exe");
-                File.Move(exepath + "\\Update Files\\DS4Updater.exe", exepath + "\\DS4Updater.exe");
-                Directory.Delete(exepath + "\\Update Files");
+            if (File.Exists($"{API.ExePath}\\Update Files\\DS4Updater.exe")) {
+                TaskRunner.Run(async delegate {
+                    while (Process.GetProcessesByName("DS4Updater").Length > 0)
+                        await TaskRunner.Delay(250);
+                    File.Delete(  DS4_UPDATER_FN);
+                    File.Move($"{API.ExePath}\\Update Files\\DS4Updater.exe", DS4_UPDATER_FN);
+                    Directory.Delete($"{API.ExePath}\\Update Files");
+                });
             }
         }
 
@@ -703,7 +709,7 @@ namespace DS4Windows.Forms
         {
             hotkeysTimer.Stop();
 
-            if (SwipeProfiles)
+            if (Config.SwipeProfiles)
             {
                 for (int i = 0; i < 4; i++)
                 {
@@ -792,15 +798,16 @@ namespace DS4Windows.Forms
                     // Program match found. Check if the new profile is different than current profile of the controller. Load the new profile only if it is not already loaded.
                     for (int j = 0; j < 4; j++)
                     {
+                        var cfg = API.Cfg(j);
+                        var aux = API.Aux(j);
                         if (newProfileName[j] != String.Empty)
                         {
-                            if ((Global.useTempProfile[j] && newProfileName[j] != Global.tempprofilename[j]) || (!Global.useTempProfile[j] && newProfileName[j] != Global.ProfilePath[j]))
+                            if ((aux.UseTempProfile && newProfileName[j] != aux.TempProfileName) || (!aux.UseTempProfile && newProfileName[j] != cfg.ProfilePath))
                             {
                                 if (DS4Form.autoProfileDebugLogLevel > 0)
                                     AppLogger.LogToGui($"DEBUG: Auto-Profile. LoadProfile Controller {j+1}={newProfileName[j]}", false);
 
-                                LoadTempProfile(j, newProfileName[j], true, Program.rootHub); // j is controller index, i is filename
-                                                                                              //if (LaunchProgram[j] != string.Empty) Process.Start(LaunchProgram[j]);
+                                cfg.LoadTempProfile(newProfileName[j], true, Program.rootHub); // j is controller index, i is filename
                             }
                             else
                             {
@@ -850,12 +857,13 @@ namespace DS4Windows.Forms
                     tempProfileProgram = null;
                     for (int j = 0; j < 4; j++)
                     {
-                        if (Global.useTempProfile[j])
+                        var cfg = API.Cfg(j);
+                        if (API.Aux(j).UseTempProfile)
                         {
                             if (DS4Form.autoProfileDebugLogLevel > 0)
-                                AppLogger.LogToGui($"DEBUG: Auto-Profile. RestoreProfile Controller {j + 1}={Global.ProfilePath[j]} (default)", false);
+                                AppLogger.LogToGui($"DEBUG: Auto-Profile. RestoreProfile Controller {j + 1}={cfg.ProfilePath} (default)", false);
 
-                            LoadProfile(j, false, Program.rootHub);
+                            cfg.LoadProfile(false, Program.rootHub);
                         }
                     }
 
@@ -884,10 +892,10 @@ namespace DS4Windows.Forms
                 new List<string>(), new List<string>() };
             turnOffTempProfiles = new List<bool>();
             programpaths.Clear();
-            if (!File.Exists(appdatapath + "\\Auto Profiles.xml"))
+            if (!File.Exists(API.AutoProfileDataPath))
                 return;
 
-            doc.Load(appdatapath + "\\Auto Profiles.xml");
+            doc.Load(API.AutoProfileDataPath);
             XmlNodeList programslist = doc.SelectNodes("Programs/Program");
             foreach (XmlNode x in programslist)
                 programpaths.Add(new ProgramPathItem(x.Attributes["path"]?.Value, x.Attributes["title"]?.Value));
@@ -935,7 +943,7 @@ namespace DS4Windows.Forms
         {
             originalsettingstext = tabSettings.Text;
             bool deriverinstalled = false;
-            deriverinstalled = Global.IsViGEmBusInstalled();
+            deriverinstalled = API.IsViGEmBusInstalled();
             if (!deriverinstalled)
             {
                 Process p = new Process();
@@ -951,57 +959,57 @@ namespace DS4Windows.Forms
         {
             FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location);
             string version = fvi.FileVersion;
-            string newversion = File.ReadAllText(appdatapath + "\\version.txt").Trim();
+            string newversion = File.ReadAllText(VERSION_FN).Trim();
             bool launchUpdate = false;
-            if (!string.IsNullOrWhiteSpace(newversion) && version.Replace(',', '.').CompareTo(newversion) != 0)
-            {
-                if ((DialogResult)this.Invoke(new Func<DialogResult>(() => {
+            if (!string.IsNullOrWhiteSpace(newversion) && version.Replace(',', '.').CompareTo(newversion) != 0) {
+                if ((DialogResult) this.Invoke(new Func<DialogResult>(() => {
                     return MessageBox.Show(Properties.Resources.DownloadVersion.Replace("*number*", newversion),
-Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question); })) == DialogResult.Yes)
-                {
+                        Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                })) == DialogResult.Yes) {
                     launchUpdate = true;
-                    if (!File.Exists(exepath + "\\DS4Updater.exe") || (File.Exists(exepath + "\\DS4Updater.exe")
-                        && (FileVersionInfo.GetVersionInfo(exepath + "\\DS4Updater.exe").FileVersion.CompareTo(UPDATER_VERSION) != 0)))
-                    {
+                    if (!File.Exists(DS4_UPDATER_FN) ||
+                        (FileVersionInfo.GetVersionInfo(DS4_UPDATER_FN).FileVersion.CompareTo(UPDATER_VERSION) != 0)) {
                         Uri url2 = new Uri($"https://github.com/Ryochan7/DS4Updater/releases/download/v{UPDATER_VERSION}/{updaterExe}");
                         WebClient wc2 = new WebClient();
-                        if (appdatapath == exepath)
-                        {
-                            wc2.DownloadFile(url2, exepath + "\\DS4Updater.exe");
+                        if (API.AppDataPath == API.ExePath) {
+                            wc2.DownloadFile(url2, DS4_UPDATER_FN);
                         }
-                        else
-                        {
-                            this.BeginInvoke((System.Action)(() => MessageBox.Show(Properties.Resources.PleaseDownloadUpdater)));
+                        else {
+                            this.BeginInvoke((System.Action) (() => MessageBox.Show(Properties.Resources.PleaseDownloadUpdater)));
                             Process.Start($"https://github.com/Ryochan7/DS4Updater/releases/download/v{UPDATER_VERSION}/{updaterExe}");
                             launchUpdate = false;
                         }
                     }
 
-                    if (launchUpdate)
-                    {
+                    if (launchUpdate) {
                         Process p = new Process();
-                        p.StartInfo.FileName = exepath + "\\DS4Updater.exe";
+                        p.StartInfo.FileName = DS4_UPDATER_FN;
                         p.StartInfo.Arguments = "-autolaunch";
-                        if (AdminNeeded())
+                        if (API.ExePathNeedsAdmin)
                             p.StartInfo.Verb = "runas";
 
-                        try { p.Start(); Close(); }
+                        try {
+                            p.Start();
+                            Close();
+                        }
                         catch { }
                     }
                 }
                 else
-                    File.Delete(appdatapath + "\\version.txt");
+                    File.Delete(VERSION_FN);
             }
             else
-                File.Delete(appdatapath + "\\version.txt");
+                File.Delete(VERSION_FN);
         }
 
         public void RefreshProfiles()
         {
+            var cfg0 = API.Cfg(0);
+            var profilePath = $"{API.AppDataPath}\\Profiles\\";
             try
             {
                 profilenames.Clear();
-                string[] profiles = Directory.GetFiles(appdatapath + @"\Profiles\");
+                string[] profiles = Directory.GetFiles(profilePath);
                 foreach (string s in profiles)
                 {
                     if (s.EndsWith(".xml"))
@@ -1010,28 +1018,27 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
                 lBProfiles.Items.Clear();
                 lBProfiles.Items.AddRange(profilenames.ToArray());
-                if (lBProfiles.Items.Count == 0)
-                {
-                    SaveProfile(0, "Default");
-                    ProfilePath[0] = OlderProfilePath[0] = "Default";
+                if (lBProfiles.Items.Count == 0) {
+                    cfg0.SaveProfile("Default");
+                    cfg0.ProfilePath = cfg0.OlderProfilePath = "Default";
                     RefreshProfiles();
                     return;
                 }
                 for (int i = 0; i < 4; i++)
                 {
+                    var cfg = API.Cfg(i);
                     cbs[i].Items.Clear();
                     shortcuts[i].DropDownItems.Clear();
                     cbs[i].Items.AddRange(profilenames.ToArray());
                     foreach (string s in profilenames)
                         shortcuts[i].DropDownItems.Add(s);
 
-                    for (int j = 0, itemCount = cbs[i].Items.Count; j < itemCount; j++)
-                    {
-                        if (cbs[i].Items[j].ToString() == Path.GetFileNameWithoutExtension(ProfilePath[i]))
+                    for (int j = 0, itemCount = cbs[i].Items.Count; j < itemCount; j++) {
+                        if (cbs[i].Items[j].ToString() == Path.GetFileNameWithoutExtension(cfg.ProfilePath))
                         {
                             cbs[i].SelectedIndex = j;
                             ((ToolStripMenuItem)shortcuts[i].DropDownItems[j]).Checked = true;
-                            ProfilePath[i] = OlderProfilePath[i] = cbs[i].Text;
+                            cfg.ProfilePath = cfg.OlderProfilePath = cbs[i].Text;
                             shortcuts[i].Text = Properties.Resources.ContextEdit.Replace("*number*", (i + 1).ToString());
                             ebns[i].Text = Properties.Resources.EditProfile;
                             break;
@@ -1047,9 +1054,9 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             }
             catch (DirectoryNotFoundException)
             {
-                Directory.CreateDirectory(appdatapath + @"\Profiles\");
-                SaveProfile(0, "Default");
-                ProfilePath[0] = OlderProfilePath[0] = "Default";
+                Directory.CreateDirectory(profilePath);
+                cfg0.SaveProfile("Default");
+                cfg0.ProfilePath = cfg0.OlderProfilePath = "Default";
                 RefreshProfiles();
                 return;
             }
@@ -1119,7 +1126,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             }
             else
             {
-                if (Form.ActiveForm != this && (Notifications == 2 || (Notifications == 1 && args.Warning) || sender != null))
+                if (Form.ActiveForm != this && (Config.Notifications == 2 || (Config.Notifications == 1 && args.Warning) || sender != null))
                 {
                     this.notifyIcon1.BalloonTipText = args.Data;
                     notifyIcon1.BalloonTipTitle = "DS4Windows";
@@ -1130,7 +1137,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         protected void ShowNotification(object sender, string text)
         {
-            if (Form.ActiveForm != this && Notifications == 2)
+            if (Form.ActiveForm != this && Config.Notifications == 2)
             {
                 this.notifyIcon1.BalloonTipText = text;
                 notifyIcon1.BalloonTipTitle = "DS4Windows";
@@ -1140,7 +1147,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         protected void Form_Resize(object sender, EventArgs e)
         {
-            bool minToTask = GetMinToTaskbar();
+            bool minToTask = Config.MinToTaskbar;
             if (FormWindowState.Minimized == WindowState && !minToTask)
             {
                 Hide();
@@ -1157,10 +1164,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             }
 
             if (WindowState != FormWindowState.Minimized)
-            {
-                FormWidth = Width;
-                FormHeight = Height;
-            }
+                Config.FormSize = Size;
 
             chData.AutoResize(ColumnHeaderAutoResizeStyle.HeaderSize);
         }
@@ -1168,10 +1172,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
         private void TrackLocationChanged(object sender, EventArgs e)
         {
             if (WindowState != FormWindowState.Minimized)
-            {
-                FormLocationX = Location.X;
-                FormLocationY = Location.Y;
-            }
+                Config.FormLocation = Location;
         }
 
         private void BtnStartStop_Click(object sender, EventArgs e)
@@ -1195,7 +1196,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void ServiceStartupFinish()
         {
-            if (SwipeProfiles && !hotkeysTimer.Enabled)
+            if (Config.SwipeProfiles && !hotkeysTimer.Enabled)
             {
                 ChangeHotkeysStatus(true);
                 //hotkeysTimer.Start();
@@ -1278,7 +1279,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                 }
                 case Util.WM_DEVICECHANGE:
                 {
-                    if (runHotPlug)
+                    if (API.RunHotPlug)
                     {
                         Int32 Type = m.WParam.ToInt32();
                         if (Type == DBT_DEVICEARRIVAL ||
@@ -1330,16 +1331,17 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                                     // Command syntax: LoadProfile.device#.profileName (fex LoadProfile.1.GameSnake or LoadTempProfile.1.WebBrowserSet)
                                     if(int.TryParse(strData[1], out tdevice)) tdevice--;
 
-                                    if (tdevice >= 0 && tdevice < ControlService.DS4_CONTROLLER_COUNT && File.Exists(Global.appdatapath + "\\Profiles\\" + strData[2] + ".xml"))
+                                    if (tdevice >= 0 && tdevice < ControlService.DS4_CONTROLLER_COUNT && File.Exists($"{API.AppDataPath}\\Profiles\\{strData[2]}.xml"))
                                     {
+                                        var cfg = API.Cfg(tdevice);
                                         if (strData[0] == "loadprofile")
                                         {
-                                            ProfilePath[tdevice] = strData[2];
-                                            LoadProfile(tdevice, true, Program.rootHub);
+                                            cfg.ProfilePath = strData[2];
+                                            cfg.LoadProfile(true, Program.rootHub);
                                         }
                                         else
                                         {
-                                            LoadTempProfile(tdevice, strData[2], true, Program.rootHub);
+                                            cfg.LoadTempProfile(strData[2], true, Program.rootHub);
                                         }
 
                                         Program.rootHub.LogDebug(Properties.Resources.UsingProfile.Replace("*number*", (tdevice + 1).ToString()).Replace("*Profile name*", strData[2]));
@@ -1384,26 +1386,25 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         protected void BatteryStatusUpdate(object sender, BatteryReportArgs args)
         {
+            int level = args.level;
+            int index = args.index;
             string battery;
-            int level = args.getLevel();
-            bool charging = args.isCharging();
-            int Index = args.getIndex();
-            if (charging)
+            if (args.isCharging)
             {
                 if (level >= 100)
                     battery = Properties.Resources.Full;
                 else
-                    battery = level + "%+";
+                    battery = $"{level}%+";
             }
             else
             {
-                battery = level + "%";
+                battery = $"{level}%";
             }
 
-            Batteries[args.getIndex()].Text = battery;
+            Batteries[index].Text = battery;
 
             // Update device battery level display for tray icon
-            generateDeviceNotifyText(args.getIndex());
+            generateDeviceNotifyText(index);
             populateNotifyText();
         }
 
@@ -1462,8 +1463,9 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             }
             else
             {
-                int devIndex = args.getIndex();
-                string serial = args.getSerial();
+                int devIndex = args.index;
+                var cfg = API.Cfg(devIndex);
+                string serial = args.serial;
                 DS4Device device = (devIndex >= 0 && devIndex < ControlService.DS4_CONTROLLER_COUNT) ?
                     Program.rootHub.DS4Controllers[devIndex] : null;
                 if (device != null)
@@ -1478,10 +1480,10 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                         linkedProfileCB[devIndex].Enabled = false;
                     }
 
-                    if (device.isValidSerial() && containsLinkedProfile(device.getMacAddress()))
+                    if (device.isValidSerial() && Config.ContainsLinkedProfile(device.getMacAddress()))
                     {
-                        ProfilePath[devIndex] = getLinkedProfile(device.getMacAddress());
-                        int profileIndex = cbs[devIndex].FindString(ProfilePath[devIndex]);
+                        cfg.ProfilePath = Config.GetLinkedProfile(device.getMacAddress());
+                        int profileIndex = cbs[devIndex].FindString(cfg.ProfilePath);
                         if (profileIndex >= 0)
                         {
                             cbs[devIndex].SelectedIndex = profileIndex;
@@ -1489,7 +1491,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                     }
                     else
                     {
-                        ProfilePath[devIndex] = OlderProfilePath[devIndex];                        
+                        cfg.ProfilePath = cfg.OlderProfilePath;                        
                     }
 
                     linkedProfileCB[devIndex].Checked = false;
@@ -1517,15 +1519,16 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                 }
 
                 //string tooltip = "DS4Windows v" + FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
-                int Index = args.getIndex();
+                int Index = args.index;
                 if (Index >= 0 && Index < ControlService.DS4_CONTROLLER_COUNT)
                 {
+                    var cfg = API.Cfg(Index);
                     Pads[Index].Text = Program.rootHub.getDS4MacAddress(Index);
 
                     linkedProfileCB[Index].CheckedChanged -= linkCB_CheckedChanged;
                     if (DS4Device.isValidSerial(Pads[Index].Text))
                     {
-                        linkedProfileCB[Index].Checked = containsLinkedProfile(Pads[Index].Text);
+                        linkedProfileCB[Index].Checked = Config.ContainsLinkedProfile(Pads[Index].Text);
                         linkedProfileCB[Index].Enabled = true;
                     }
                     else
@@ -1545,7 +1548,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                     }
 
                     Batteries[Index].Text = Program.rootHub.getDS4Battery(Index);
-                    int profileIndex = cbs[Index].FindStringExact(ProfilePath[Index]);
+                    int profileIndex = cbs[Index].FindStringExact(cfg.ProfilePath);
                     if (profileIndex >= 0)
                     {
                         cbs[Index].SelectedValueChanged -= Profile_Changed;
@@ -1553,10 +1556,10 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                         cbs[Index].SelectedValueChanged += Profile_Changed;
                     }
 
-                    if (UseCustomLed[Index])
-                        lights[Index].BackColor = CustomColor[Index].ToColorA;
+                    if (cfg.UseCustomColor)
+                        lights[Index].BackColor = cfg.CustomColor.ToColorA;
                     else
-                        lights[Index].BackColor = MainColor[Index].ToColorA;
+                        lights[Index].BackColor = cfg.MainColor.ToColorA;
 
                     if (Pads[Index].Text != String.Empty)
                     {
@@ -1589,7 +1592,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         protected void ControllerRemovedChange(object sender, ControllerRemovedArgs args)
         {
-            int devIndex = args.getIndex();
+            int devIndex = args.index;
             Pads[devIndex].Text = Properties.Resources.Disconnected;
             Enable_Controls(devIndex, false);
             statPB[devIndex].Visible = false;
@@ -1715,7 +1718,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                     Properties.Resources.DeleteProfile,
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
-                    File.Delete(appdatapath + @"\Profiles\" + filename + ".xml");
+                    File.Delete($"{API.AppDataPath}\\Profiles\\{filename}.xml");
                     RefreshProfiles();
                 }
             }
@@ -1743,7 +1746,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void tSBImportProfile_Click(object sender, EventArgs e)
         {
-            if (appdatapath == Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName)
+            if (API.AppDataPath == Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName)
                 openProfiles.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\DS4Tool" + @"\Profiles\";
             else
                 openProfiles.InitialDirectory = Directory.GetParent(Assembly.GetExecutingAssembly().Location).FullName + @"\Profiles\";
@@ -1752,7 +1755,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             {
                 string[] files = openProfiles.FileNames;
                 for (int i = 0, arlen = files.Length; i < arlen; i++)
-                    File.Copy(openProfiles.FileNames[i], appdatapath + "\\Profiles\\" + Path.GetFileName(files[i]), true);
+                    File.Copy(openProfiles.FileNames[i], $"{API.AppDataPath}\\Profiles\\{Path.GetFileName(files[i])}", true);
 
                 RefreshProfiles();
             }
@@ -1763,7 +1766,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             if (lBProfiles.SelectedIndex >= 0)
             {
                 Stream stream;
-                Stream profile = new StreamReader(appdatapath + "\\Profiles\\" + lBProfiles.SelectedItem.ToString() + ".xml").BaseStream;                
+                Stream profile = new StreamReader($"{API.AppDataPath}\\Profiles\\{lBProfiles.SelectedItem.ToString()}.xml").BaseStream;                
                 if (saveProfiles.ShowDialog() == DialogResult.OK)
                 {
                     if ((stream = saveProfiles.OpenFile()) != null)
@@ -1895,10 +1898,10 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             }
 
             bool exclusiveMode = hideDS4CheckBox.Checked;
-            UseExclusiveMode = exclusiveMode;
+            Config.UseExclusiveMode = exclusiveMode;
 
             hideDS4CheckBox.Enabled = false;
-            Save();
+            Config.Save();
             BtnStartStop_Clicked(false);
             finishHideDS4Check();
         }
@@ -1928,8 +1931,8 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void startMinimizedCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            StartMinimized = startMinimizedCheckBox.Checked;
-            Save();
+            Config.StartMinimized = startMinimizedCheckBox.Checked;
+            Config.Save();
         }
 
         private void lvDebug_ItemActivate(object sender, EventArgs e)
@@ -1941,6 +1944,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
         {
             ComboBox cb = (ComboBox)sender;
             int tdevice = Convert.ToInt32(cb.Tag);
+            var cfg = API.Cfg(tdevice);
             if (cb.Items[cb.Items.Count - 1].ToString() == "+" + Properties.Resources.PlusNewProfile)
             {
                 if (cb.SelectedIndex < cb.Items.Count - 1)
@@ -1954,26 +1958,26 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                     ((ToolStripMenuItem)shortcuts[tdevice].DropDownItems[cb.SelectedIndex]).Checked = true;
                     LogDebug(DateTime.Now, Properties.Resources.UsingProfile.Replace("*number*", (tdevice + 1).ToString()).Replace("*Profile name*", cb.Text), false);
                     shortcuts[tdevice].Text = Properties.Resources.ContextEdit.Replace("*number*", (tdevice + 1).ToString());
-                    ProfilePath[tdevice] = cb.Items[cb.SelectedIndex].ToString();
-                    Save();
-                    LoadProfile(tdevice, true, Program.rootHub);
-                    if (UseCustomLed[tdevice])
-                        lights[tdevice].BackColor = CustomColor[tdevice].ToColorA;
+                    cfg.ProfilePath = cb.Items[cb.SelectedIndex].ToString();
+                    Config.Save();
+                    cfg.LoadProfile(true, Program.rootHub);
+                    if (cfg.UseCustomColor)
+                        lights[tdevice].BackColor = cfg.CustomColor.ToColorA;
                     else
-                        lights[tdevice].BackColor = MainColor[tdevice].ToColorA;
+                        lights[tdevice].BackColor = cfg.MainColor.ToColorA;
 
                     if (linkedProfileCB[tdevice].Checked)
                     {
                         DS4Device device = Program.rootHub.DS4Controllers[tdevice];
                         if (device != null && device.isValidSerial())
                         {
-                            changeLinkedProfile(device.getMacAddress(), ProfilePath[tdevice]);
-                            SaveLinkedProfiles();
+                            Config.SetLinkedProfile(device.getMacAddress(), cfg.ProfilePath);
+                            Config.SaveLinkedProfiles();
                         }
                     }
                     else
                     {
-                        OlderProfilePath[tdevice] = ProfilePath[tdevice];
+                        cfg.OlderProfilePath = cfg.ProfilePath;
                     }
                 }
                 else if (cb.SelectedIndex == cb.Items.Count - 1 && cb.Items.Count > 1) //if +New Profile selected
@@ -2217,6 +2221,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void tSBSaveProfile_Click(object sender, EventArgs e)
         {
+            var cfg = API.Cfg(opt.device);
             if (optPop && opt.Visible)
             {
                 opt.saving = true;
@@ -2229,11 +2234,10 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                     !tSTBProfile.Text.Contains("<") && !tSTBProfile.Text.Contains(">") &&
                     !tSTBProfile.Text.Contains("|"))
                 {
-                    File.Delete(appdatapath + @"\Profiles\" + opt.filename + ".xml");
-                    ProfilePath[opt.device] = tSTBProfile.Text;
-                    SaveProfile(opt.device, tSTBProfile.Text);
-                    cacheProfileCustomsFlags(opt.device);
-                    Save();
+                    File.Delete($"{API.AppDataPath}\\Profiles\\{opt.filename}.xml");
+                    cfg.ProfilePath = tSTBProfile.Text;
+                    cfg.SaveProfile(tSTBProfile.Text);
+                    Config.Save();
                     opt.Close();
                 }
                 else
@@ -2266,22 +2270,22 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void cBCustomSteam_CheckedChanged(object sender, EventArgs e)
         {
-            UseCustomSteamFolder = cBCustomSteam.Checked;
+            Config.UseCustomSteamFolder = cBCustomSteam.Checked;
             tBSteamFolder.Enabled = cBCustomSteam.Checked;
         }
 
         private void tBSteamFolder_TextChanged(object sender, EventArgs e)
         {
-            CustomSteamFolder = tBSteamFolder.Text;
+            Config.CustomSteamFolder = tBSteamFolder.Text;
         }
 
         private void nUDUpdateTime_ValueChanged(object sender, EventArgs e)
         {
             int currentIndex = cBUpdateTime.SelectedIndex;
             if (currentIndex == 0)
-                CheckWhen = (int)nUDUpdateTime.Value;
+                Config.CheckWhen = (int)nUDUpdateTime.Value;
             else if (currentIndex == 1)
-                CheckWhen = (int)nUDUpdateTime.Value * 24;
+                Config.CheckWhen = (int)nUDUpdateTime.Value * 24;
 
             if (nUDUpdateTime.Value < 1)
                 cBUpdate.Checked = false;
@@ -2312,9 +2316,9 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
         {
             int index = cBUpdateTime.SelectedIndex;
             if (index == 0)
-                CheckWhen = (int)nUDUpdateTime.Value;
+                Config.CheckWhen = (int)nUDUpdateTime.Value;
             else if (index == 1)
-                CheckWhen = (int)nUDUpdateTime.Value * 24;
+                Config.CheckWhen = (int)nUDUpdateTime.Value * 24;
         }
 
         private void lLBUpdate_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -2322,21 +2326,21 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             // Sorry other devs, gonna have to find your own server
             Uri url = new Uri("https://raw.githubusercontent.com/Ryochan7/DS4Windows/jay/DS4Windows/newest.txt");
             WebClient wct = new WebClient();
-            wct.DownloadFileAsync(url, appdatapath + "\\version.txt");
+            wct.DownloadFileAsync(url, $"{API.AppDataPath}\\version.txt");
             wct.DownloadFileCompleted += (sender2, e2) => TaskRunner.Run(() => wct_DownloadFileCompleted(sender2, e2));
         }
 
         private void cBDisconnectBT_CheckedChanged(object sender, EventArgs e)
         {
-            DCBTatStop = cBDisconnectBT.Checked;
+            Config.DisconnectBTAtStop = cBDisconnectBT.Checked;
         }
 
         void wct_DownloadFileCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
-            LastChecked = DateTime.Now;
+            Config.LastChecked = DateTime.Now;
             FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location);
             string version2 = fvi.FileVersion;
-            string newversion2 = File.ReadAllText(appdatapath + "\\version.txt").Trim();
+            string newversion2 = File.ReadAllText($"{API.AppDataPath}\\version.txt").Trim();
             if (!string.IsNullOrWhiteSpace(newversion2) && version2.Replace(',', '.').CompareTo(newversion2) != 0)
             {
                 if ((DialogResult)this.Invoke(new Func<DialogResult>(() =>
@@ -2345,13 +2349,13 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                     Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 })) == DialogResult.Yes)
                 {
-                    if (!File.Exists(exepath + "\\DS4Updater.exe") || (File.Exists(exepath + "\\DS4Updater.exe")
-                         && (FileVersionInfo.GetVersionInfo(exepath + "\\DS4Updater.exe").FileVersion.CompareTo(UPDATER_VERSION) != 0)))
+                    if (!File.Exists(DS4_UPDATER_FN) || 
+                        (FileVersionInfo.GetVersionInfo(DS4_UPDATER_FN).FileVersion.CompareTo(UPDATER_VERSION) != 0))
                     {
                         Uri url2 = new Uri($"https://github.com/Ryochan7/DS4Updater/releases/download/v{UPDATER_VERSION}/{updaterExe}");
                         WebClient wc2 = new WebClient();
-                        if (appdatapath == exepath)
-                            wc2.DownloadFile(url2, exepath + "\\DS4Updater.exe");
+                        if (API.AppDataPath == API.ExePath)
+                            wc2.DownloadFile(url2, DS4_UPDATER_FN);
                         else
                         {
                             this.BeginInvoke((System.Action)(() => MessageBox.Show(Properties.Resources.PleaseDownloadUpdater)));
@@ -2360,32 +2364,31 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                     }
 
                     Process p = new Process();
-                    p.StartInfo.FileName = exepath + "\\DS4Updater.exe";
+                    p.StartInfo.FileName = DS4_UPDATER_FN;
                     p.StartInfo.Arguments = "-autolaunch";
-                    if (AdminNeeded())
+                    if (API.ExePathNeedsAdmin)
                         p.StartInfo.Verb = "runas";
 
                     try { p.Start(); Close(); }
                     catch { }
                 }
                 else
-                    File.Delete(appdatapath + "\\version.txt");
+                    File.Delete(VERSION_FN);
             }
-            else
-            {
-                File.Delete(appdatapath + "\\version.txt");
+            else {
+                File.Delete(VERSION_FN);
                 this.BeginInvoke((System.Action)(() => MessageBox.Show(Properties.Resources.UpToDate, "DS4Windows Updater")));
             }
         }
 
         private void linkProfiles_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start(appdatapath + "\\Profiles");
+            Process.Start($"{API.AppDataPath}\\Profiles");
         }
 
         private void cBoxNotifications_SelectedIndexChanged(object sender, EventArgs e)
         {
-            Notifications = cBoxNotifications.SelectedIndex;
+            Config.Notifications = cBoxNotifications.SelectedIndex;
         }
 
         private void lLSetup_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -2478,9 +2481,9 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
             Global.ControllerRemoved -= ControllerRemovedChange;
 
-            if (!string.IsNullOrEmpty(appdatapath))
+            if (!string.IsNullOrEmpty(API.AppDataPath))
             {
-                Save();
+                Config.Save();
                 blankControllerTab();
             }
 
@@ -2492,7 +2495,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
         private void cBSwipeProfiles_CheckedChanged(object sender, EventArgs e)
         {
             bool swipe = false;
-            SwipeProfiles = swipe = cBSwipeProfiles.Checked;
+            Config.SwipeProfiles = swipe = cBSwipeProfiles.Checked;
             bool timerEnabled = hotkeysTimer.Enabled;
             if (swipe && !timerEnabled)
             {
@@ -2508,7 +2511,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void cBQuickCharge_CheckedChanged(object sender, EventArgs e)
         {
-            QuickCharge = cBQuickCharge.Checked;
+            Config.QuickCharge = cBQuickCharge.Checked;
         }
 
         private void lbLastMessage_MouseHover(object sender, EventArgs e)
@@ -2523,7 +2526,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void cBCloseMini_CheckedChanged(object sender, EventArgs e)
         {
-            CloseMini = cBCloseMini.Checked;
+            Config.CloseMinimizes = cBCloseMini.Checked;
         }
 
         private void Pads_MouseHover(object sender, EventArgs e)
@@ -2546,12 +2549,15 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         Process bat;
 
-        int currentCustomLed;
+        private IDeviceConfig curCustomLedCfg;
+        private DS4LightBar curCustomLedLightBar;
         private void EditCustomLed(object sender, EventArgs e)
         {
             Button btn = (Button)sender;
-            currentCustomLed = Convert.ToInt32(btn.Tag);
-            bool customLedChecked = UseCustomLed[currentCustomLed];
+            int devIndex = Convert.ToInt32(btn.Tag);
+            curCustomLedCfg = API.Cfg(devIndex);
+            curCustomLedLightBar = API.Bar(devIndex);
+            bool customLedChecked = curCustomLedCfg.UseCustomColor;;
             useCustomColorToolStripMenuItem.Checked = customLedChecked;
             useProfileColorToolStripMenuItem.Checked = !customLedChecked;
             cMCustomLed.Show(btn, new Point(0, btn.Height));
@@ -2559,46 +2565,46 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void useProfileColorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            UseCustomLed[currentCustomLed] = false;
-            lights[currentCustomLed].BackColor = MainColor[currentCustomLed].ToColorA;
-            Global.Save();
+            curCustomLedCfg.UseCustomColor = false;
+            lights[curCustomLedCfg.DevIndex].BackColor = curCustomLedCfg.MainColor.ToColorA;
+            Config.Save();
         }
     
         private void useCustomColorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            advColorDialog.Color = CustomColor[currentCustomLed].ToColor;
+            advColorDialog.Color = curCustomLedCfg.CustomColor.ToColor;
             AdvancedColorDialog.ColorUpdateHandler tempDel =
                 new AdvancedColorDialog.ColorUpdateHandler(advColor_CustomColorUpdate);
 
             advColorDialog.OnUpdateColor += tempDel;
             if (advColorDialog.ShowDialog() == DialogResult.OK)
             {
-                lights[currentCustomLed].BackColor = new DS4Color(advColorDialog.Color).ToColorA;
-                CustomColor[currentCustomLed] = new DS4Color(advColorDialog.Color);
-                UseCustomLed[currentCustomLed] = true;
-                Global.Save();
+                lights[curCustomLedCfg.DevIndex].BackColor = new DS4Color(advColorDialog.Color).ToColorA;
+                curCustomLedCfg.CustomColor = new DS4Color(advColorDialog.Color);
+                curCustomLedCfg.UseCustomColor = true;
+                Config.Save();
             }
 
             advColorDialog.OnUpdateColor -= tempDel;
-            DS4LightBar.forcedFlash[currentCustomLed] = 0;
-            DS4LightBar.forcelight[currentCustomLed] = false;
+            curCustomLedLightBar.forcedFlash = 0;
+            curCustomLedLightBar.forcedLight = false;
         }
 
         private void advColor_CustomColorUpdate(Color color, EventArgs e)
         {
-            if (currentCustomLed < 4)
+            if (curCustomLedCfg.DevIndex < 4)
             {
                 DS4Color dcolor = new DS4Color { red = color.R, green = color.G, blue = color.B };
-                DS4LightBar.forcedColor[currentCustomLed] = dcolor;
-                DS4LightBar.forcedFlash[currentCustomLed] = 0;
-                DS4LightBar.forcelight[currentCustomLed] = true;
+                curCustomLedLightBar.forcedColor = dcolor;
+                curCustomLedLightBar.forcedFlash = 0;
+                curCustomLedLightBar.forcedLight = true;
             }
         }
 
         private void cBUseWhiteIcon_CheckedChanged(object sender, EventArgs e)
         {
-            UseWhiteIcon = cBUseWhiteIcon.Checked;
-            notifyIcon1.Icon = UseWhiteIcon ? Properties.Resources.DS4W___White : Properties.Resources.DS4W;
+            Config.UseWhiteIcon = cBUseWhiteIcon.Checked;
+            notifyIcon1.Icon = Config.UseWhiteIcon ? Properties.Resources.DS4W___White : Properties.Resources.DS4W;
         }
 
         private void advColorDialog_OnUpdateColor(object sender, EventArgs e)
@@ -2608,9 +2614,9 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                 Color color = (Color)sender;
                 DS4Color dcolor = new DS4Color(color);
                 Console.WriteLine(dcolor);
-                DS4LightBar.forcedColor[currentCustomLed] = dcolor;
-                DS4LightBar.forcedFlash[currentCustomLed] = 0;
-                DS4LightBar.forcelight[currentCustomLed] = true;
+                curCustomLedLightBar.forcedColor = dcolor;
+                curCustomLedLightBar.forcedFlash = 0;
+                curCustomLedLightBar.forcedLight = true;
             }
         }
 
@@ -2693,8 +2699,10 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
         {
             CheckBox linkCb = (CheckBox)sender;
             int i = Convert.ToInt32(linkCb.Tag);
+            var aux = API.Aux(i);
+            var cfg = API.Cfg(i);
             bool check = linkCb.Checked;
-            aux[i].LinkedProfileCheck = check;
+            aux.LinkedProfileCheck = check;
             DS4Device device = Program.rootHub.DS4Controllers[i];
             if (device != null && device.isSynced())
             {
@@ -2702,21 +2710,21 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                 {
                     if (device.isValidSerial())
                     {
-                        changeLinkedProfile(device.getMacAddress(), cfg[i].profilePath);
+                        Config.SetLinkedProfile(device.getMacAddress(), cfg.ProfilePath);
                     }
                 }
                 else
                 {
-                    removeLinkedProfile(device.getMacAddress());
-                    ProfilePath[i] = OlderProfilePath[i];
-                    int profileIndex = cbs[i].FindString(ProfilePath[i]);
+                    Config.RemoveLinkedProfile(device.getMacAddress());
+                    cfg.ProfilePath = cfg.OlderProfilePath;
+                    int profileIndex = cbs[i].FindString(cfg.ProfilePath);
                     if (profileIndex >= 0)
                     {
                         cbs[i].SelectedIndex = profileIndex;
                     }
                 }
 
-                SaveLinkedProfiles();
+                Config.SaveLinkedProfiles();
             }
         }
 
@@ -2727,7 +2735,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             dialog.DefaultExt = ".txt";
             dialog.Filter = "Text Documents (*.txt)|*.txt";
             dialog.Title = "Select Export File";
-            dialog.InitialDirectory = Global.appdatapath;
+            dialog.InitialDirectory = API.AppDataPath;
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 string outputFile = dialog.FileName;
@@ -2757,10 +2765,10 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
         private void languagePackComboBox1_SelectedValueChanged(object sender, EventArgs e)
         {
             string newValue = ((DS4Forms.LanguagePackComboBox)sender).SelectedValue.ToString();
-            if (newValue != UseLang)
+            if (newValue != Config.UseLang)
             {
-                UseLang = newValue;
-                Save();
+                Config.UseLang = newValue;
+                Config.Save();
                 MessageBox.Show(Properties.Resources.LanguagePackApplyRestartRequired, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -2794,8 +2802,8 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void MintoTaskCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            MinToTaskbar = mintoTaskCheckBox.Checked;
-            Save();
+            Config.MinToTaskbar = mintoTaskCheckBox.Checked;
+            Config.Save();
         }
 
         private void CBController_KeyPress(object sender, KeyPressEventArgs e)
@@ -2806,7 +2814,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
         private async void CkUdpServ_CheckedChanged(object sender, EventArgs e)
         {
             bool state = ckUdpServ.Checked;
-            setUsingUDPServer(state);
+            Config.UseUDPServer = state;
             if (!state)
             {
                 Program.rootHub.ChangeMotionEventStatus(state);
@@ -2831,9 +2839,9 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
         private void NUDUdpPortNum_Leave(object sender, EventArgs e)
         {
             int curValue = (int)nUDUdpPortNum.Value;
-            if (curValue != getUDPServerPortNum())
+            if (curValue != Config.UDPServerPort)
             {
-                setUDPServerPort(curValue);
+                Config.UDPServerPort = curValue;
                 nUDUdpPortNum.Enabled = false;
                 tBUdpListenAddress.Enabled = false;
                 WaitUDPPortChange();
@@ -2843,7 +2851,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
         private async void WaitUDPPortChange()
         {
             await TaskRunner.Delay(100);
-            if (isUsingUDPServer())
+            if (Config.UseUDPServer)
             {
                 await TaskRunner.Run(() => Program.rootHub.UseUDPPort());
                 nUDUdpPortNum.Enabled = true;
@@ -2853,14 +2861,14 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
 
         private void cBFlashWhenLate_CheckedChanged(object sender, EventArgs e)
         {
-            FlashWhenLate = cBFlashWhenLate.Checked;
+            Config.FlashWhenLate = cBFlashWhenLate.Checked;
             nUDLatency.Enabled = cBFlashWhenLate.Checked;
             lbMsLatency.Enabled = cBFlashWhenLate.Checked;
         }
 
         private void nUDLatency_ValueChanged(object sender, EventArgs e)
         {
-            FlashWhenLateAt = (int)Math.Round(nUDLatency.Value);
+            Config.FlashWhenLateAt = (int)Math.Round(nUDLatency.Value);
         }
     }
 
