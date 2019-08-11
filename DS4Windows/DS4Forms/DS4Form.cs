@@ -2204,7 +2204,7 @@ namespace DS4Windows.Forms
 
         private void tSBSaveProfile_Click(object sender, EventArgs e)
         {
-            var cfg = API.Cfg(opt.device);
+            var cfg = opt.cfg;
             if (optPop && opt.Visible)
             {
                 opt.saving = true;

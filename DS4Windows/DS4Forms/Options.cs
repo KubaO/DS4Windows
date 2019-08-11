@@ -10,10 +10,8 @@ namespace DS4Windows.Forms
 {
     public partial class Options : Form
     {
-        //public int device;
-        public int device { get => cfg.DevIndex;  }
-        private IDeviceConfig cfg;
-        private DS4LightBar lightBar;
+        internal IDeviceConfig cfg;
+        internal DS4LightBar lightBar;
         private DeviceControlService dCS;
         public string filename;
         public Timer inputtimer = new Timer(), sixaxisTimer = new Timer();
@@ -333,9 +331,9 @@ namespace DS4Windows.Forms
         public void Reload(int deviceNum, string name)
         {
             cfg = API.Cfg(deviceNum);
-            var aux = API.Aux(deviceNum);
-            lightBar = (deviceNum < 4) ? API.Bar(deviceNum) : null;
+            lightBar = API.Bar(deviceNum);
             dCS = Program.RootHub(deviceNum);
+            var aux = API.Aux(deviceNum);
             loading = true;
             filename = name;
             lBControls.SelectedIndex = -1;
@@ -358,14 +356,14 @@ namespace DS4Windows.Forms
 
             root.lbLastMessage.ForeColor = Color.Black;
             root.lbLastMessage.Text = "Hover over items to see description or more about";
-            if (device < 4)
+            if (deviceNum < 4)
                 nUDSixaxis.Value = deviceNum + 1;
 
             lVActions.ItemCheck -= this.lVActions_ItemCheck;
 
             if (filename != "")
             {
-                if (device == 4) //if temp device is called
+                if (deviceNum == 4) //if temp device is called
                     cfg.ProfilePath = name;
 
                 cfg.LoadProfile(false, dCS);
@@ -521,10 +519,7 @@ namespace DS4Windows.Forms
                 cBControllerInput.Checked = API.Config.DS4Mapping;
                 trackballCk.Checked = cfg.TrackballMode;
                 trackFrictionNUD.Value = (decimal)cfg.TrackballFriction;
-                if (device < 4)
-                {
-                    dCS.touchPad?.ResetTrackAccel(cfg.TrackballFriction);
-                }
+                dCS?.touchPad?.ResetTrackAccel(cfg.TrackballFriction);
 
                 for (int i = 0, arlen = cMGyroTriggers.Items.Count; i < arlen; i++)
                 {
@@ -632,8 +627,9 @@ namespace DS4Windows.Forms
                 rBSAControls.Checked = true;
                 rBTPMouse.Checked = true;
 
-                switch (device)
+                switch (deviceNum)
                 {
+                    // FIXME: Doesn't IDeviceConfiguration have something like this already?
                     case 0: tBRedBar.Value = 0; tBGreenBar.Value = 0; tBBlueBar.Value = 255; break;
                     case 1: tBRedBar.Value = 255; tBGreenBar.Value = 0; tBBlueBar.Value = 0; break;
                     case 2: tBRedBar.Value = 0; tBGreenBar.Value = 255; tBBlueBar.Value = 0; break;
@@ -708,10 +704,7 @@ namespace DS4Windows.Forms
                 cBControllerInput.Checked = API.Config.DS4Mapping;
                 trackballCk.Checked = false;
                 trackFrictionNUD.Value = 10.0m;
-                if (device < 4)
-                {
-                    dCS.touchPad?.ResetTrackAccel(10.0);
-                }
+                dCS?.touchPad?.ResetTrackAccel(10.0);
 
                 for (int i = 0, arlen = cMGyroTriggers.Items.Count - 1; i < arlen; i++)
                 {
@@ -1170,10 +1163,7 @@ namespace DS4Windows.Forms
             fLPTouchSwipe.Visible = rBTPControls.Checked;
             cfg.TrackballMode = trackballCk.Checked;
             cfg.TrackballFriction = (double)trackFrictionNUD.Value;
-            if (device < 4)
-            {
-                dCS.touchPad?.ResetTrackAccel(cfg.TrackballFriction);
-            }
+            dCS?.touchPad?.ResetTrackAccel(cfg.TrackballFriction);
 
             cfg.GyroSensitivity = (int)Math.Round(nUDGyroSensitivity.Value, 0);
             cfg.GyroTriggerTurns = gyroTriggerBehavior.Checked;
@@ -1245,10 +1235,10 @@ namespace DS4Windows.Forms
 
         private void Show_ControlsBn(object sender, EventArgs e)
         {
-            KBM360 kbm360 = new KBM360(device, this, (Button)sender);
+            KBM360 kbm360 = new KBM360(cfg.DevIndex, this, (Button)sender);
             kbm360.Icon = Icon;
             kbm360.ShowDialog();
-        }        
+        }
 
         public void ChangeButtonText(Control ctrl, bool shift, KeyValuePair<object, string> tag,
             bool SC, bool TG, bool MC, bool MR, int sTrigger = 0)
@@ -1527,23 +1517,19 @@ namespace DS4Windows.Forms
 
             if (saving)
             {
-                if (device < 4)
+                if (dCS?.DS4Controller is DS4Device tempDev)
                 {
-                    DS4Device tempDev = dCS.DS4Controller;
-                    if (tempDev != null)
-                    {
-                        int discon = cfg.IdleDisconnectTimeout;
-                        int btCurrentIndex = btPollRateComboBox.SelectedIndex;
+                    int discon = cfg.IdleDisconnectTimeout;
+                    int btCurrentIndex = btPollRateComboBox.SelectedIndex;
 
-                        tempDev.queueEvent(() =>
+                    tempDev.queueEvent(() =>
+                    {
+                        tempDev.setIdleTimeout(discon);
+                        if (btCurrentIndex >= 0)
                         {
-                            tempDev.setIdleTimeout(discon);
-                            if (btCurrentIndex >= 0)
-                            {
-                                tempDev.setBTPollRate(btCurrentIndex);
-                            }
-                        });
-                    }
+                            tempDev.setBTPollRate(btCurrentIndex);
+                        }
+                    });
                 }
             }
 
@@ -2757,8 +2743,7 @@ namespace DS4Windows.Forms
             if (!loading)
             {
                 cfg.GyroTriggerTurns = gyroTriggerBehavior.Checked;
-                if (device < 4)
-                    dCS.touchPad?.ResetToggleGyroM();
+                dCS?.touchPad?.ResetToggleGyroM();
             }
         }
 
@@ -3042,7 +3027,7 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                if (device < 4)
+                if (dCS != null)
                 {
                     cfg.SetGyroMouseToggle(toggleGyroMCb.Checked, dCS.touchPad);
                 }
@@ -3205,10 +3190,7 @@ namespace DS4Windows.Forms
             if (loading == false)
             {
                 cfg.TrackballFriction = (double)trackFrictionNUD.Value;
-                if (device < 4)
-                {
-                    dCS.touchPad?.ResetTrackAccel(cfg.TrackballFriction);
-                }
+                dCS?.touchPad?.ResetTrackAccel(cfg.TrackballFriction);
             }
         }
 

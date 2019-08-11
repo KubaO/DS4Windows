@@ -36,7 +36,7 @@ namespace DS4Windows.Forms
             this.opt = opt;
             lbHoldForBatt.Text = lbHoldForProg.Text = lbHoldFor.Text;
             lbSecsBatt.Text = lbSecsBatt.Text = lbSecsBatt.Text;
-            lightBar = API.Bar(opt.device);
+            lightBar = opt.lightBar;
             cBProfiles.Items.Add(Properties.Resources.noneProfile);
             cBProfiles.SelectedIndex = 0;
             cBActions.SelectedIndex = 0;
