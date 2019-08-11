@@ -512,7 +512,7 @@
     <value>157, 17</value>
   </data>
   <data name="lbNotifications.Text" xml:space="preserve">
-    <value>Afficher les notifications</value>
+    <value>Afficher les Notifications</value>
   </data>
   <data name="cBoxNotifications.Items" xml:space="preserve">
     <value>Aucun</value>

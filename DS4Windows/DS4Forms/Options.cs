@@ -371,7 +371,7 @@ namespace DS4Windows.Forms
                 LoadProfile(device, false, Program.rootHub);
 
                 //devOutContType = Global.OutContType[device];
-                aux.outDevTypeTemp = Global.OutContType[device];
+                aux.outDevTypeTemp = dev.outputDevType;
 
                 if (dev.rainbow == 0)
                 {
@@ -444,7 +444,7 @@ namespace DS4Windows.Forms
                 enableTouchToggleCheckbox.Checked = dev.enableTouchToggle;
                 nUDIdleDisconnect.Value = Math.Round((decimal)(dev.idleDisconnectTimeout / 60d), 1);
                 cBIdleDisconnect.Checked = dev.idleDisconnectTimeout > 0;
-                numUDMouseSens.Value = dev.ButtonMouseSensitivity;
+                numUDMouseSens.Value = dev.buttonMouseSensitivity;
                 cBMouseAccel.Checked = dev.mouseAccel;
                 pBHoveredButton.Image = null;
 
@@ -661,13 +661,13 @@ namespace DS4Windows.Forms
                 rsSquStickCk.Checked = dev.squStickInfo.rsMode;
                 RoundnessNUpDown.Value = (decimal)dev.squStickInfo.roundness;
 
-                cBDinput.Checked = DinputOnly[device];
+                cBDinput.Checked = dev.dinputOnly;
                 olddinputcheck = cBDinput.Checked;
-                cbStartTouchpadOff.Checked = StartTouchpadOff[device];
-                rBTPControls.Checked = UseTPforControls[device];
-                rBTPMouse.Checked = !UseTPforControls[device];
-                rBSAMouse.Checked = UseSAforMouse[device];
-                rBSAControls.Checked = !UseSAforMouse[device];
+                cbStartTouchpadOff.Checked = dev.startTouchpadOff;
+                rBTPControls.Checked = dev.useTPforControls;
+                rBTPMouse.Checked = !dev.useTPforControls;
+                rBSAMouse.Checked = dev.useSAforMouse;
+                rBSAControls.Checked = !dev.useSAforMouse;
                 nUDLSCurve.Value = dev.lsCurve;
                 nUDRSCurve.Value = dev.rsCurve;
                 cBControllerInput.Checked = DS4Mapping;
@@ -675,7 +675,7 @@ namespace DS4Windows.Forms
                 trackFrictionNUD.Value = (decimal)dev.trackballFriction;
                 if (device < 4)
                 {
-                    Program.rootHub.touchPad[device]?.ResetTrackAccel(TrackballFriction[device]);
+                    Program.rootHub.touchPad[device]?.ResetTrackAccel(dev.trackballFriction);
                 }
 
                 for (int i = 0, arlen = cMGyroTriggers.Items.Count; i < arlen; i++)
@@ -688,7 +688,7 @@ namespace DS4Windows.Forms
                     ((ToolStripMenuItem)cMTouchDisableInvert.Items[i]).Checked = false;
                 }
 
-                string[] satriggers = SATriggers[device].Split(',');
+                string[] satriggers = dev.sATriggers.Split(',');
                 List<string> s = new List<string>();
                 int gyroTriggerCount = cMGyroTriggers.Items.Count;
                 for (int i = 0, satrigLen = satriggers.Length; i < satrigLen; i++)
@@ -719,7 +719,7 @@ namespace DS4Windows.Forms
                 btnGyroTriggers.Text = string.Join(", ", s);
                 s.Clear();
 
-                int[] touchDisInvTriggers = TouchDisInvertTriggers[device];
+                int[] touchDisInvTriggers = dev.touchDisInvertTriggers;
                 int touchDisableInvCount = cMTouchDisableInvert.Items.Count;
                 for (int i = 0, trigLen = touchDisInvTriggers.Length; i < trigLen; i++)
                 {
@@ -735,28 +735,28 @@ namespace DS4Windows.Forms
                 if (s.Count > 0)
                     touchpadDisInvertButton.Text = string.Join(", ", s);
 
-                nUDGyroSensitivity.Value = GyroSensitivity[device];
-                gyroTriggerBehavior.Checked = GyroTriggerTurns[device];
-                nUDGyroMouseVertScale.Value = GyroSensVerticalScale[device];
-                int invert = GyroInvert[device];
+                nUDGyroSensitivity.Value = dev.gyroSensitivity;
+                gyroTriggerBehavior.Checked = dev.gyroTriggerTurns;
+                nUDGyroMouseVertScale.Value = dev.gyroSensVerticalScale;
+                int invert = dev.gyroInvert;
                 cBGyroInvertX.Checked = (invert & 0x02) == 2;
                 cBGyroInvertY.Checked = (invert & 0x01) == 1;
                 if (s.Count > 0)
                     btnGyroTriggers.Text = string.Join(", ", s);
 
-                cBGyroSmooth.Checked = nUDGyroSmoothWeight.Enabled = GyroSmoothing[device];
-                nUDGyroSmoothWeight.Value = (decimal)(GyroSmoothingWeight[device]);
-                cBGyroMouseXAxis.SelectedIndex = GyroMouseHorizontalAxis[device];
-                triggerCondAndCombo.SelectedIndex = SATriggerCond[device] ? 0 : 1;
-                gyroMouseDzNUD.Value = GyroMouseDeadZone[device];
-                toggleGyroMCb.Checked = GyroMouseToggle[device];
+                cBGyroSmooth.Checked = nUDGyroSmoothWeight.Enabled = dev.gyroSmoothing;
+                nUDGyroSmoothWeight.Value = (decimal)(dev.gyroSmoothingWeight);
+                cBGyroMouseXAxis.SelectedIndex = dev.gyroMouseHorizontalAxis;
+                triggerCondAndCombo.SelectedIndex = dev.sATriggerCond ? 0 : 1;
+                gyroMouseDzNUD.Value = dev.gyroMouseDeadZone;
+                toggleGyroMCb.Checked = dev.gyroMouseToggle;
 
                 cBSteeringWheelEmulationAxis.SelectedIndex = (int) GetSASteeringWheelEmulationAxis(device);
 
                 int idxSASteeringWheelEmulationRange = cBSteeringWheelEmulationRange.Items.IndexOf(GetSASteeringWheelEmulationRange(device).ToString());
                 if (idxSASteeringWheelEmulationRange >= 0) cBSteeringWheelEmulationRange.SelectedIndex = idxSASteeringWheelEmulationRange;
 
-                OutContType tempOutType = Global.OutContType[device];
+                OutContType tempOutType = dev.outputDevType;
                 devOutContType = tempOutType;
                 switch(tempOutType)
                 {
@@ -914,7 +914,7 @@ namespace DS4Windows.Forms
         public void LoadActions(bool newp)
         {
             lVActions.Items.Clear();
-            List<string> pactions = ProfileActions[device];
+            List<string> pactions = dev.profileActions;
             foreach (SpecialAction action in GetActions())
             {
                 ListViewItem lvi = new ListViewItem(action.name);
@@ -1256,66 +1256,66 @@ namespace DS4Windows.Forms
         {
             pnlLowBattery.Visible = cBLightbyBattery.Checked;
             lbFull.Text = (cBLightbyBattery.Checked ? Properties.Resources.Full + ":": Properties.Resources.Color + ":");
-            MainColor[device] = new DS4Color((byte)tBRedBar.Value, (byte)tBGreenBar.Value, (byte)tBBlueBar.Value);
-            LowColor[device] = new DS4Color((byte)tBLowRedBar.Value, (byte)tBLowGreenBar.Value, (byte)tBLowBlueBar.Value);
-            ChargingColor[device] = new DS4Color(btnChargingColor.BackColor);
-            FlashType[device] = (byte)cBFlashType.SelectedIndex;
+            dev.mainColor = new DS4Color((byte)tBRedBar.Value, (byte)tBGreenBar.Value, (byte)tBBlueBar.Value);
+            dev.lowColor = new DS4Color((byte)tBLowRedBar.Value, (byte)tBLowGreenBar.Value, (byte)tBLowBlueBar.Value);
+            dev.chargingColor = new DS4Color(btnChargingColor.BackColor);
+            dev.flashType = (byte)cBFlashType.SelectedIndex;
             if (btnFlashColor.BackColor != main)
-                FlashColor[device] = new DS4Color(btnFlashColor.BackColor);
+                dev.flashColor = new DS4Color(btnFlashColor.BackColor);
             else
-                FlashColor[device] = new DS4Color(Color.Black);
+                dev.flashColor = new DS4Color(Color.Black);
 
-            BTPollRate[device] = btPollRateComboBox.SelectedIndex;
-            setLsOutCurveMode(device, lsOutCurveComboBox.SelectedIndex);
-            setRsOutCurveMode(device, rsOutCurveComboBox.SelectedIndex);
-            setL2OutCurveMode(device, cBL2OutputCurve.SelectedIndex);
-            setR2OutCurveMode(device, cBR2OutputCurve.SelectedIndex);
-            setSXOutCurveMode(device, cBSixaxisXOutputCurve.SelectedIndex);
-            setSZOutCurveMode(device, cBSixaxisZOutputCurve.SelectedIndex);
-            L2ModInfo[device].deadZone = (byte)Math.Round((nUDL2.Value * 255), 0);
-            R2ModInfo[device].deadZone = (byte)Math.Round((nUDR2.Value * 255), 0);
-            L2ModInfo[device].antiDeadZone = (int)(nUDL2AntiDead.Value * 100);
-            R2ModInfo[device].antiDeadZone = (int)(nUDR2AntiDead.Value * 100);
-            RumbleBoost[device] = (byte)nUDRumbleBoost.Value;
-            TouchSensitivity[device] = (byte)nUDTouch.Value;
-            TouchpadJitterCompensation[device] = cBTouchpadJitterCompensation.Checked;
-            LowerRCOn[device] = cBlowerRCOn.Checked;
-            ScrollSensitivity[device] = (int)nUDScroll.Value;
-            DoubleTap[device] = cBDoubleTap.Checked;
-            TapSensitivity[device] = (byte)nUDTap.Value;
+            dev.btPollRate = btPollRateComboBox.SelectedIndex;
+            dev.lsOutCurveMode = lsOutCurveComboBox.SelectedIndex;
+            dev.rsOutCurveMode = rsOutCurveComboBox.SelectedIndex;
+            dev.l2OutCurveMode = cBL2OutputCurve.SelectedIndex;
+            dev.r2OutCurveMode = cBR2OutputCurve.SelectedIndex;
+            dev.sxOutCurveMode = cBSixaxisXOutputCurve.SelectedIndex;
+            dev.szOutCurveMode = cBSixaxisZOutputCurve.SelectedIndex;
+            dev.l2ModInfo.deadZone = (byte)Math.Round((nUDL2.Value * 255), 0);
+            dev.r2ModInfo.deadZone = (byte)Math.Round((nUDR2.Value * 255), 0);
+            dev.l2ModInfo.antiDeadZone = (int)(nUDL2AntiDead.Value * 100);
+            dev.r2ModInfo.antiDeadZone = (int)(nUDR2AntiDead.Value * 100);
+            dev.rumbleBoost = (byte)nUDRumbleBoost.Value;
+            dev.touchSensitivity = (byte)nUDTouch.Value;
+            dev.touchpadJitterCompensation = cBTouchpadJitterCompensation.Checked;
+            dev.lowerRCOn = cBlowerRCOn.Checked;
+            dev.scrollSensitivity = (int)nUDScroll.Value;
+            dev.doubleTap = cBDoubleTap.Checked;
+            dev.tapSensitivity = (byte)nUDTap.Value;
 
             tempInt = touchpadInvertComboBox.SelectedIndex;
-            TouchpadInvert[device] = touchpadInvertToValue[tempInt];
+            dev.touchpadInvert = touchpadInvertToValue[tempInt];
 
-            IdleDisconnectTimeout[device] = (int)(nUDIdleDisconnect.Value * 60);
-            Rainbow[device] = (int)nUDRainbow.Value;
-            RSModInfo[device].deadZone = (int)Math.Round((nUDRS.Value * 127), 0);
-            LSModInfo[device].deadZone = (int)Math.Round((nUDLS.Value * 127), 0);
-            LSModInfo[device].antiDeadZone = (int)(nUDLSAntiDead.Value * 100);
-            RSModInfo[device].antiDeadZone = (int)(nUDRSAntiDead.Value * 100);
-            LSModInfo[device].maxZone = (int)(nUDLSMaxZone.Value * 100);
-            RSModInfo[device].maxZone = (int)(nUDRSMaxZone.Value * 100);
-            LSRotation[device] = (double)nUDLSRotation.Value * Math.PI / 180.0;
-            RSRotation[device] = (double)nUDRSRotation.Value * Math.PI / 180.0;
-            dev.ButtonMouseSensitivity = (int)numUDMouseSens.Value;
-            FlashAt[device] = (int)nUDflashLED.Value;
-            SXDeadzone[device] = (double)nUDSX.Value;
-            SZDeadzone[device] = (double)nUDSZ.Value;
-            SXMaxzone[device] = (double)nUDSixAxisXMaxZone.Value;
-            SZMaxzone[device] = (double)nUDSixAxisZMaxZone.Value;
-            SXAntiDeadzone[device] = (double)nUDSixaxisXAntiDead.Value;
-            SZAntiDeadzone[device] = (double)nUDSixaxisZAntiDead.Value;
-            SquStickInfo[device].lsMode = lsSquStickCk.Checked;
-            SquStickInfo[device].rsMode = rsSquStickCk.Checked;
-            SquStickInfo[device].roundness = (double)RoundnessNUpDown.Value;
-            MouseAccel[device] = cBMouseAccel.Checked;
-            DinputOnly[device] = cBDinput.Checked;
-            StartTouchpadOff[device] = cbStartTouchpadOff.Checked;
-            UseTPforControls[device] = rBTPControls.Checked;
-            UseSAforMouse[device] = rBSAMouse.Checked;
+            dev.idleDisconnectTimeout = (int)(nUDIdleDisconnect.Value * 60);
+            dev.rainbow = (int)nUDRainbow.Value;
+            dev.rsModInfo.deadZone = (int)Math.Round((nUDRS.Value * 127), 0);
+            dev.lsModInfo.deadZone = (int)Math.Round((nUDLS.Value * 127), 0);
+            dev.lsModInfo.antiDeadZone = (int)(nUDLSAntiDead.Value * 100);
+            dev.rsModInfo.antiDeadZone = (int)(nUDRSAntiDead.Value * 100);
+            dev.lsModInfo.maxZone = (int)(nUDLSMaxZone.Value * 100);
+            dev.rsModInfo.maxZone = (int)(nUDRSMaxZone.Value * 100);
+            dev.LSRotation = (double)nUDLSRotation.Value * Math.PI / 180.0;
+            dev.RSRotation = (double)nUDRSRotation.Value * Math.PI / 180.0;
+            dev.buttonMouseSensitivity = (int)numUDMouseSens.Value;
+            dev.flashAt = (int)nUDflashLED.Value;
+            dev.SXDeadzone = (double)nUDSX.Value;
+            dev.SZDeadzone = (double)nUDSZ.Value;
+            dev.SXMaxzone = (double)nUDSixAxisXMaxZone.Value;
+            dev.SZMaxzone = (double)nUDSixAxisZMaxZone.Value;
+            dev.SXAntiDeadzone = (double)nUDSixaxisXAntiDead.Value;
+            dev.SZAntiDeadzone = (double)nUDSixaxisZAntiDead.Value;
+            dev.squStickInfo.lsMode = lsSquStickCk.Checked;
+            dev.squStickInfo.rsMode = rsSquStickCk.Checked;
+            dev.squStickInfo.roundness = (double)RoundnessNUpDown.Value;
+            dev.mouseAccel = cBMouseAccel.Checked;
+            dev.dinputOnly = cBDinput.Checked;
+            dev.startTouchpadOff = cbStartTouchpadOff.Checked;
+            dev.useTPforControls = rBTPControls.Checked;
+            dev.useSAforMouse = rBSAMouse.Checked;
             DS4Mapping = cBControllerInput.Checked;
-            LSCurve[device] = (int)Math.Round(nUDLSCurve.Value, 0);
-            RSCurve[device] = (int)Math.Round(nUDRSCurve.Value, 0);
+            dev.lsCurve = (int)Math.Round(nUDLSCurve.Value, 0);
+            dev.rsCurve = (int)Math.Round(nUDRSCurve.Value, 0);
             List<string> pactions = new List<string>();
             foreach (ListViewItem lvi in lVActions.Items)
             {
@@ -1323,27 +1323,26 @@ namespace DS4Windows.Forms
                     pactions.Add(lvi.Text);
             }
 
-            ProfileActions[device] = pactions;
-            calculateProfileActionCount(device);
+            dev.profileActions = pactions;
             calculateProfileActionDicts(device);
             cacheProfileCustomsFlags(device);
             pnlTPMouse.Visible = rBTPMouse.Checked;
             pnlSAMouse.Visible = rBSAMouse.Checked;
             fLPTiltControls.Visible = rBSAControls.Checked;
             fLPTouchSwipe.Visible = rBTPControls.Checked;
-            TrackballMode[device] = trackballCk.Checked;
-            TrackballFriction[device] = (double)trackFrictionNUD.Value;
+            dev.trackballMode = trackballCk.Checked;
+            dev.trackballFriction = (double)trackFrictionNUD.Value;
             if (device < 4)
             {
-                Program.rootHub.touchPad[device]?.ResetTrackAccel(TrackballFriction[device]);
+                Program.rootHub.touchPad[device]?.ResetTrackAccel(dev.trackballFriction);
             }
 
-            GyroSensitivity[device] = (int)Math.Round(nUDGyroSensitivity.Value, 0);
-            GyroTriggerTurns[device] = gyroTriggerBehavior.Checked;
-            GyroSensVerticalScale[device] = (int)nUDGyroMouseVertScale.Value;
-            GyroSmoothing[device] = cBGyroSmooth.Checked;
-            GyroSmoothingWeight[device] = (double)nUDGyroSmoothWeight.Value;
-            GyroMouseHorizontalAxis[device] = cBGyroMouseXAxis.SelectedIndex;
+            dev.gyroSensitivity = (int)Math.Round(nUDGyroSensitivity.Value, 0);
+            dev.gyroTriggerTurns = gyroTriggerBehavior.Checked;
+            dev.gyroSensVerticalScale = (int)nUDGyroMouseVertScale.Value;
+            dev.gyroSmoothing = cBGyroSmooth.Checked;
+            dev.gyroSmoothingWeight = (double)nUDGyroSmoothWeight.Value;
+            dev.gyroMouseHorizontalAxis = cBGyroMouseXAxis.SelectedIndex;
             SetGyroMouseDeadZone(device, (int)gyroMouseDzNUD.Value, Program.rootHub);
             SetGyroMouseToggle(device, toggleGyroMCb.Checked, Program.rootHub);
 
@@ -1354,7 +1353,7 @@ namespace DS4Windows.Forms
             if (cBGyroInvertY.Checked)
                 invert += 1;
 
-            GyroInvert[device] = invert;
+            dev.gyroInvert = invert;
 
             List<int> ints = new List<int>();
             for (int i = 0, trigLen = cMGyroTriggers.Items.Count - 1; i < trigLen; i++)
@@ -1366,7 +1365,7 @@ namespace DS4Windows.Forms
             if (ints.Count == 0)
                 ints.Add(-1);
 
-            SATriggers[device] = string.Join(",", ints);
+            dev.sATriggers = string.Join(",", ints);
             SetSaTriggerCond(device, triggerCondAndCombo.SelectedItem.ToString().ToLower());
 
             ints.Clear();
@@ -1379,7 +1378,7 @@ namespace DS4Windows.Forms
             if (ints.Count == 0)
                 ints.Add(-1);
 
-            TouchDisInvertTriggers[device] = ints.ToArray();
+            dev.touchDisInvertTriggers = ints.ToArray();
 
             if (nUDRainbow.Value == 0) btnRainbow.Image = greyscale;
             else btnRainbow.Image = colored;
@@ -1393,9 +1392,9 @@ namespace DS4Windows.Forms
                 default: break;
             }
 
-            if (Global.outDevTypeTemp[device] != tempType)
+            if (dev.outputDevType != tempType)
             {
-                Global.OutContType[device] = tempType;
+                dev.outputDevType = tempType;
             }
         }
 
@@ -1448,7 +1447,7 @@ namespace DS4Windows.Forms
                 main = advColorDialog.Color;
                 btnLightBgImg = RecolorImage(btnLightBg, main);
                 btnLightbar.Refresh();
-                if (FlashColor[device].Equals(new DS4Color { red = 0, green = 0, blue = 0 }))
+                if (dev.flashColor.Equals(new DS4Color { red = 0, green = 0, blue = 0 }))
                     btnFlashColor.BackColor = main;
 
                 btnFlashColor.BackgroundImage = nUDRainbow.Enabled ? rainbowImg : null;
@@ -1492,7 +1491,7 @@ namespace DS4Windows.Forms
             if (device < 4)
                 DS4LightBar.forcelight[device] = false;
 
-            ChargingColor[device] = new DS4Color(chargingBackColor);
+            dev.chargingColor = new DS4Color(chargingBackColor);
         }
 
         private void advColorDialog_OnUpdateColor(Color color, EventArgs e)
@@ -1524,10 +1523,10 @@ namespace DS4Windows.Forms
                 main = Color.FromArgb((alphacolor > 205 ? 255 : (alphacolor + 50)), full);
                 btnLightBgImg = RecolorImage(btnLightBg, main);
                 btnLightbar.Refresh();
-                if (FlashColor[device].Equals(new DS4Color { red = 0, green = 0, blue = 0 }))
+                if (dev.flashColor.Equals(new DS4Color { red = 0, green = 0, blue = 0 }))
                     btnFlashColor.BackColor = main;
                 btnFlashColor.BackgroundImage = nUDRainbow.Enabled ? rainbowImg : null;
-                MainColor[device] = new DS4Color((byte)tBRedBar.Value, (byte)tBGreenBar.Value, (byte)tBBlueBar.Value);
+                dev.mainColor = new DS4Color((byte)tBRedBar.Value, (byte)tBGreenBar.Value, (byte)tBBlueBar.Value);
             }
             else if (type == 1)
             {
@@ -1535,7 +1534,7 @@ namespace DS4Windows.Forms
                 reg = Color.FromArgb(tBLowRedBar.Value, tBLowGreenBar.Value, tBLowBlueBar.Value);
                 full = HuetoRGB(reg.GetHue(), reg.GetBrightness(), reg);
                 lowColorChooserButton.BackColor = Color.FromArgb((alphacolor > 205 ? 255 : (alphacolor + 50)), full);
-                LowColor[device] = new DS4Color((byte)tBLowRedBar.Value, (byte)tBLowGreenBar.Value, (byte)tBLowBlueBar.Value);
+                dev.lowColor = new DS4Color((byte)tBLowRedBar.Value, (byte)tBLowGreenBar.Value, (byte)tBLowBlueBar.Value);
             }
 
             if (!saving && !loading && tb != null)
@@ -1576,7 +1575,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                RumbleBoost[device] = (byte)nUDRumbleBoost.Value;
+                dev.rumbleBoost = (byte)nUDRumbleBoost.Value;
                 byte h = (byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100));
                 byte l = (byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100));
                 bool hB = btnRumbleHeavyTest.Text == Properties.Resources.TestLText;
@@ -1625,23 +1624,23 @@ namespace DS4Windows.Forms
 
         private void numUDTouch_ValueChanged(object sender, EventArgs e)
         {
-            TouchSensitivity[device] = (byte)nUDTouch.Value;
+            dev.touchSensitivity = (byte)nUDTouch.Value;
         }
 
         private void numUDTap_ValueChanged(object sender, EventArgs e)
         {
-            TapSensitivity[device] = (byte)nUDTap.Value;
+            dev.tapSensitivity = (byte)nUDTap.Value;
         }
 
         private void numUDScroll_ValueChanged(object sender, EventArgs e)
         {
-            ScrollSensitivity[device] = (int)nUDScroll.Value;
+            dev.scrollSensitivity = (int)nUDScroll.Value;
         }
 
         private void ledAsBatteryIndicator_CheckedChanged(object sender, EventArgs e)
         {
             bool lightByBatteryChecked = cBLightbyBattery.Checked;
-            LedAsBatteryIndicator[device] = lightByBatteryChecked;
+            dev.ledAsBatteryIndicator = lightByBatteryChecked;
             pnlLowBattery.Visible = lightByBatteryChecked;
             //pnlFull.Location = new Point(pnlFull.Location.X, (lightByBatteryChecked ? (int)(dpix * 42) : (pnlFull.Location.Y + pnlLowBattery.Location.Y) / 2));
             lbFull.Text = (lightByBatteryChecked ? Properties.Resources.Full + ":" : Properties.Resources.Color + ":");
@@ -1649,22 +1648,22 @@ namespace DS4Windows.Forms
 
         private void lowerRCOffCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            LowerRCOn[device] = cBlowerRCOn.Checked;
+            dev.lowerRCOn = cBlowerRCOn.Checked;
         }
 
         private void touchpadJitterCompensation_CheckedChanged(object sender, EventArgs e)
         {
-            TouchpadJitterCompensation[device] = cBTouchpadJitterCompensation.Checked;
+            dev.touchpadJitterCompensation = cBTouchpadJitterCompensation.Checked;
         }
         
         private void flushHIDQueue_CheckedChanged(object sender, EventArgs e)
         {
-            FlushHIDQueue[device] = cBFlushHIDQueue.Checked;
+            dev.flushHIDQueue = cBFlushHIDQueue.Checked;
         }
 
         private void nUDIdleDisconnect_ValueChanged(object sender, EventArgs e)
         {
-            IdleDisconnectTimeout[device] = (int)(nUDIdleDisconnect.Value * 60);
+            dev.idleDisconnectTimeout = (int)(nUDIdleDisconnect.Value * 60);
         }
 
         private void cBIdleDisconnect_CheckedChanged(object sender, EventArgs e)
@@ -1751,7 +1750,7 @@ namespace DS4Windows.Forms
 
         private void cBDoubleTap_CheckedChanged(object sender, EventArgs e)
         {
-            DoubleTap[device] = cBDoubleTap.Checked;
+            dev.doubleTap = cBDoubleTap.Checked;
         }
 
         public void UpdateLists()
@@ -1911,7 +1910,7 @@ namespace DS4Windows.Forms
         private void numUDRainbow_ValueChanged(object sender, EventArgs e)
         {
             double tempRainbow = (double)nUDRainbow.Value;
-            Rainbow[device] = tempRainbow;
+            dev.rainbow = tempRainbow;
             if (tempRainbow <= 0.5)
             {
                 btnRainbow.Image = greyscale;
@@ -1953,7 +1952,7 @@ namespace DS4Windows.Forms
                 cBLightbyBattery.Text = Properties.Resources.ColorByBattery.Replace("*nl*", "\n");
             }
 
-            if (FlashColor[device].Equals(new DS4Color { red = 0, green = 0, blue = 0 }))
+            if (dev.flashColor.Equals(new DS4Color { red = 0, green = 0, blue = 0 }))
                 btnFlashColor.BackColor = main;
 
             btnFlashColor.BackgroundImage = nUDRainbow.Enabled ? rainbowImg : null;
@@ -2010,23 +2009,23 @@ namespace DS4Windows.Forms
 
         private void numUDL2_ValueChanged(object sender, EventArgs e)
         {
-            L2ModInfo[device].deadZone = (byte)(nUDL2.Value * 255);
+            dev.l2ModInfo.deadZone = (byte)(nUDL2.Value * 255);
         }
 
         private void numUDR2_ValueChanged(object sender, EventArgs e)
         {
-            R2ModInfo[device].deadZone = (byte)(nUDR2.Value * 255);
+            dev.r2ModInfo.deadZone = (byte)(nUDR2.Value * 255);
         }
 
         private void nUDSX_ValueChanged(object sender, EventArgs e)
         {
-            SXDeadzone[device] = (double)nUDSX.Value;
+            dev.SXDeadzone = (double)nUDSX.Value;
             pnlSATrack.Refresh();            
         }
 
         private void nUDSZ_ValueChanged(object sender, EventArgs e)
         {
-            SZDeadzone[device] = (double)nUDSZ.Value;
+            dev.SZDeadzone = (double)nUDSZ.Value;
             pnlSATrack.Refresh();
         }
 
@@ -2044,7 +2043,7 @@ namespace DS4Windows.Forms
         private void numUDRS_ValueChanged(object sender, EventArgs e)
         {
             nUDRS.Value = Math.Round(nUDRS.Value, 2);
-            RSModInfo[device].deadZone = (int)Math.Round((nUDRS.Value * 127),0);
+            dev.rsModInfo.deadZone = (int)Math.Round((nUDRS.Value * 127),0);
             pnlRSTrack.BackColor = nUDRS.Value >= 0 ? Color.White : Color.Red;
             pnlRSTrack.Refresh();
         }
@@ -2072,7 +2071,7 @@ namespace DS4Windows.Forms
         private void numUDLS_ValueChanged(object sender, EventArgs e)
         {
             nUDLS.Value = Math.Round(nUDLS.Value, 2);
-            LSModInfo[device].deadZone = (int)Math.Round((nUDLS.Value * 127), 0);
+            dev.lsModInfo.deadZone = (int)Math.Round((nUDLS.Value * 127), 0);
             pnlLSTrack.BackColor = nUDLS.Value >= 0 ? Color.White : Color.Red;
             pnlLSTrack.Refresh();
         }
@@ -2099,7 +2098,7 @@ namespace DS4Windows.Forms
 
         private void numUDMouseSens_ValueChanged(object sender, EventArgs e)
         {
-            dev.ButtonMouseSensitivity = (int)numUDMouseSens.Value;
+            dev.buttonMouseSensitivity = (int)numUDMouseSens.Value;
         }
 
         private void LightBar_MouseDown(object sender, MouseEventArgs e)
@@ -2123,12 +2122,12 @@ namespace DS4Windows.Forms
             if (nUDflashLED.Value % 10 != 0)
                 nUDflashLED.Value = Math.Round(nUDflashLED.Value / 10, 0) * 10;
 
-            FlashAt[device] = (int)nUDflashLED.Value;
+            dev.flashAt = (int)nUDflashLED.Value;
         }
 
         private void cBMouseAccel_CheckedChanged(object sender, EventArgs e)
         {
-            MouseAccel[device] = cBMouseAccel.Checked;
+            dev.mouseAccel = cBMouseAccel.Checked;
         }
         
         private void tabControls_SelectedIndexChanged(object sender, EventArgs e)
@@ -2185,7 +2184,7 @@ namespace DS4Windows.Forms
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 cBLaunchProgram.Checked = true;
-                LaunchProgram[device] = openFileDialog1.FileName;
+                dev.launchProgram = openFileDialog1.FileName;
                 pBProgram.Image = Icon.ExtractAssociatedIcon(openFileDialog1.FileName).ToBitmap();
                 btnBrowse.Text = Path.GetFileNameWithoutExtension(openFileDialog1.FileName);
             }
@@ -2195,7 +2194,7 @@ namespace DS4Windows.Forms
         {
             if (!cBLaunchProgram.Checked)
             {
-                LaunchProgram[device] = string.Empty;
+                dev.launchProgram = string.Empty;
                 pBProgram.Image = null;
                 btnBrowse.Text = Properties.Resources.Browse;
             }
@@ -2203,12 +2202,12 @@ namespace DS4Windows.Forms
 
         private void CBDinput_CheckedChanged(object sender, EventArgs e)
         {
-            DinputOnly[device] = cBDinput.Checked;
+            dev.dinputOnly = cBDinput.Checked;
         }
 
         private void cbStartTouchpadOff_CheckedChanged(object sender, EventArgs e)
         {
-            StartTouchpadOff[device] = cbStartTouchpadOff.Checked;
+            dev.startTouchpadOff = cbStartTouchpadOff.Checked;
         }
 
         private void Items_MouseHover(object sender, EventArgs e)
@@ -2285,7 +2284,7 @@ namespace DS4Windows.Forms
 
         private void cBTPforControls_CheckedChanged(object sender, EventArgs e)
         {
-            UseTPforControls[device] = rBTPControls.Checked;
+            dev.useTPforControls = rBTPControls.Checked;
             pnlTPMouse.Visible = rBTPMouse.Checked;
             fLPTouchSwipe.Visible = rBTPControls.Checked;
             if (rBTPControls.Checked && lBControls.Items.Count <= 33)
@@ -2338,7 +2337,6 @@ namespace DS4Windows.Forms
             {
                 RemoveAction(lVActions.SelectedItems[0].Text);
                 lVActions.Items.Remove(lVActions.SelectedItems[0]);
-                calculateProfileActionCount(device);
                 calculateProfileActionDicts(device);
                 cacheProfileCustomsFlags(device);
             }
@@ -2346,12 +2344,12 @@ namespace DS4Windows.Forms
 
         private void nUDLSCurve_ValueChanged(object sender, EventArgs e)
         {
-            LSCurve[device] = (int)Math.Round(nUDLSCurve.Value, 0);
+            dev.lsCurve = (int)Math.Round(nUDLSCurve.Value, 0);
         }
 
         private void nUDRSCurve_ValueChanged(object sender, EventArgs e)
         {
-            RSCurve[device] = (int)Math.Round(nUDRSCurve.Value, 0);
+            dev.rsCurve = (int)Math.Round(nUDRSCurve.Value, 0);
         }
         
         private void cMSPresets_Opened(object sender, EventArgs e)
@@ -2612,7 +2610,7 @@ namespace DS4Windows.Forms
 
         private void cBWhileCharging_SelectedIndexChanged(object sender, EventArgs e)
         {
-            ChargingType[device] = cBWhileCharging.SelectedIndex;
+            dev.chargingType = cBWhileCharging.SelectedIndex;
             btnChargingColor.Visible = cBWhileCharging.SelectedIndex == 3;
         }
 
@@ -2633,7 +2631,7 @@ namespace DS4Windows.Forms
                 else
                     btnFlashColor.BackColor = main;
 
-                FlashColor[device] = new DS4Color(advColorDialog.Color);
+                dev.flashColor = new DS4Color(advColorDialog.Color);
             }
 
             advColorDialog.OnUpdateColor -= advColorDialog_OnUpdateColor;
@@ -2644,7 +2642,7 @@ namespace DS4Windows.Forms
 
         private void useSAforMouse_CheckedChanged(object sender, EventArgs e)
         {
-            UseSAforMouse[device] = rBSAMouse.Checked;
+            dev.useSAforMouse = rBSAMouse.Checked;
             pnlSAMouse.Visible = rBSAMouse.Checked;
             fLPTiltControls.Visible = rBSAControls.Checked;
         }
@@ -2686,7 +2684,7 @@ namespace DS4Windows.Forms
                     s.Add(cMGyroTriggers.Items[gyroTriggerCount - 1].Text);
                 }
 
-                SATriggers[device] = string.Join(",", ints);
+                dev.sATriggers = string.Join(",", ints);
                 if (s.Count > 0)
                     btnGyroTriggers.Text = string.Join(", ", s);
             }
@@ -2701,7 +2699,7 @@ namespace DS4Windows.Forms
             if (cBGyroInvertY.Checked)
                 invert += 1;
 
-            GyroInvert[device] = invert;
+            dev.gyroInvert = invert;
         }
 
         private void btnLightbar_MouseHover(object sender, EventArgs e)
@@ -2711,22 +2709,22 @@ namespace DS4Windows.Forms
 
         private void nUDLSAntiDead_ValueChanged(object sender, EventArgs e)
         {
-            LSModInfo[device].antiDeadZone = (int)(nUDLSAntiDead.Value * 100);
+            dev.lsModInfo.antiDeadZone = (int)(nUDLSAntiDead.Value * 100);
         }
 
         private void nUDRSAntiDead_ValueChanged(object sender, EventArgs e)
         {
-            RSModInfo[device].antiDeadZone = (int)(nUDRSAntiDead.Value * 100);
+            dev.rsModInfo.antiDeadZone = (int)(nUDRSAntiDead.Value * 100);
         }
 
         private void nUDL2AntiDead_ValueChanged(object sender, EventArgs e)
         {
-            L2ModInfo[device].antiDeadZone = (int)(nUDL2AntiDead.Value * 100);
+            dev.l2ModInfo.antiDeadZone = (int)(nUDL2AntiDead.Value * 100);
         }
 
         private void nUDR2AntiDead_ValueChanged(object sender, EventArgs e)
         {
-            R2ModInfo[device].antiDeadZone = (int)(nUDR2AntiDead.Value * 100);
+            dev.r2ModInfo.antiDeadZone = (int)(nUDR2AntiDead.Value * 100);
         }
 
         private void lVActions_ItemCheck(object sender, ItemCheckEventArgs e)
@@ -2740,8 +2738,7 @@ namespace DS4Windows.Forms
                         pactions.Add(lvi.Text);
                 }
 
-                ProfileActions[device] = pactions;
-                calculateProfileActionCount(device);
+                dev.profileActions = pactions;
                 calculateProfileActionDicts(device);
                 cacheProfileCustomsFlags(device);
             }
@@ -2749,40 +2746,40 @@ namespace DS4Windows.Forms
 
         private void enableTouchToggleCheckbox_CheckedChanged(object sender, EventArgs e)
         {
-            EnableTouchToggle[device] = enableTouchToggleCheckbox.Checked;
+            dev.enableTouchToggle = enableTouchToggleCheckbox.Checked;
         }
 
         private void nUDRSMaxZone_ValueChanged(object sender, EventArgs e)
         {
-            RSModInfo[device].maxZone = (int)(nUDRSMaxZone.Value * 100);
+            dev.rsModInfo.maxZone = (int)(nUDRSMaxZone.Value * 100);
         }
 
         private void nUDLSMaxZone_ValueChanged(object sender, EventArgs e)
         {
-            LSModInfo[device].maxZone = (int)(nUDLSMaxZone.Value * 100);
+            dev.lsModInfo.maxZone = (int)(nUDLSMaxZone.Value * 100);
         }
 
         private void nUDL2Maxzone_ValueChanged(object sender, EventArgs e)
         {
-            L2ModInfo[device].maxZone = (int)(nUDL2Maxzone.Value * 100);
+            dev.l2ModInfo.maxZone = (int)(nUDL2Maxzone.Value * 100);
         }
 
         private void nUDR2Maxzone_ValueChanged(object sender, EventArgs e)
         {
-            R2ModInfo[device].maxZone = (int)(nUDR2Maxzone.Value * 100);
+            dev.r2ModInfo.maxZone = (int)(nUDR2Maxzone.Value * 100);
         }
 
         private void btPollRateComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             int currentIndex = btPollRateComboBox.SelectedIndex;
-            BTPollRate[device] = currentIndex;
+            dev.btPollRate = currentIndex;
         }
 
         private void nUDL2Sens_ValueChanged(object sender, EventArgs e)
         {
             if (!loading)
             {
-                L2Sens[device] = (double)nUDL2S.Value;
+                dev.l2Sens = (double)nUDL2S.Value;
             }
         }
 
@@ -2790,7 +2787,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                LSSens[device] = (double)nUDLSS.Value;
+                dev.LSSens = (double)nUDLSS.Value;
             }
         }
 
@@ -2798,7 +2795,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                R2Sens[device] = (double)nUDR2S.Value;
+                dev.r2Sens = (double)nUDR2S.Value;
             }
         }
 
@@ -2806,7 +2803,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                RSSens[device] = (double)nUDRSS.Value;
+                dev.RSSens = (double)nUDRSS.Value;
             }
         }
 
@@ -2814,7 +2811,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                SXSens[device] = (double)nUDSXS.Value;
+                dev.SXSens = (double)nUDSXS.Value;
             }
         }
 
@@ -2822,7 +2819,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                SZSens[device] = (double)nUDSZS.Value;
+                dev.SZSens = (double)nUDSZS.Value;
             }
         }
 
@@ -2836,7 +2833,7 @@ namespace DS4Windows.Forms
                     setLsOutCurveMode(device, lsOutCurveComboBox.SelectedIndex);
 
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (customIdx ? lsOutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (customIdx ? dev.lsOutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"LS - {lbCurveEditorURL.Text.Substring(5)}";
             }
         }
@@ -2850,7 +2847,7 @@ namespace DS4Windows.Forms
                     setRsOutCurveMode(device, rsOutCurveComboBox.SelectedIndex);
 
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (customIdx ? rsOutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (customIdx ? dev.rsOutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"RS - {lbCurveEditorURL.Text.Substring(5)}";
             }
         }
@@ -2861,7 +2858,7 @@ namespace DS4Windows.Forms
             if (customIdx)
             {
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (customIdx ? lsOutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (customIdx ? dev.lsOutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"LS - {lbCurveEditorURL.Text.Substring(5)}";
                 goto end;
             }
@@ -2870,7 +2867,7 @@ namespace DS4Windows.Forms
             if (customIdx)
             {
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (customIdx ? rsOutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (customIdx ? dev.rsOutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"RS - {lbCurveEditorURL.Text.Substring(5)}";
                 goto end;
             }
@@ -2879,7 +2876,7 @@ namespace DS4Windows.Forms
             if (customIdx)
             {
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? l2OutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? dev.l2OutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"L2 - {lbCurveEditorURL.Text.Substring(5)}";
                 goto end;
             }
@@ -2888,7 +2885,7 @@ namespace DS4Windows.Forms
             if (customIdx)
             {
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? r2OutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? dev.r2OutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"R2 - {lbCurveEditorURL.Text.Substring(5)}";
                 goto end;
             }
@@ -2897,7 +2894,7 @@ namespace DS4Windows.Forms
             if (customIdx)
             {
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? sxOutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? dev.sxOutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"SX - {lbCurveEditorURL.Text.Substring(5)}";
                 goto end;
             }
@@ -2906,7 +2903,7 @@ namespace DS4Windows.Forms
             if (customIdx)
             {
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? szOutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? dev.szOutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"SZ - {lbCurveEditorURL.Text.Substring(5)}";
                 goto end;
             }
@@ -2919,7 +2916,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                GyroTriggerTurns[device] = gyroTriggerBehavior.Checked;
+                dev.gyroTriggerTurns = gyroTriggerBehavior.Checked;
                 if (device < 4)
                     Program.rootHub.touchPad[device]?.ResetToggleGyroM();
             }
@@ -2929,7 +2926,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                GyroSensVerticalScale[device] = (int)nUDGyroMouseVertScale.Value;
+                dev.gyroSensVerticalScale = (int)nUDGyroMouseVertScale.Value;
             }
         }
 
@@ -2937,7 +2934,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                GyroSmoothingWeight[device] = (double)nUDGyroSmoothWeight.Value;
+                dev.gyroSmoothingWeight = (double)nUDGyroSmoothWeight.Value;
             }
         }
 
@@ -2947,7 +2944,7 @@ namespace DS4Windows.Forms
             nUDGyroSmoothWeight.Enabled = value;
             if (!loading)
             {
-                GyroSmoothing[device] = value;
+                dev.gyroSmoothing = value;
             }
         }
 
@@ -2955,7 +2952,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                LSRotation[device] = (double)nUDLSRotation.Value * Math.PI / 180.0;
+                dev.LSRotation = (double)nUDLSRotation.Value * Math.PI / 180.0;
             }
         }
 
@@ -2963,7 +2960,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                RSRotation[device] = (double)nUDRSRotation.Value * Math.PI / 180.0;
+                dev.RSRotation = (double)nUDRSRotation.Value * Math.PI / 180.0;
             }
         }
 
@@ -2972,7 +2969,7 @@ namespace DS4Windows.Forms
             if (!loading)
             {
                 tempInt = touchpadInvertToValue[touchpadInvertComboBox.SelectedIndex];
-                TouchpadInvert[device] = tempInt;
+                dev.touchpadInvert = tempInt;
             }
         }
 
@@ -2980,7 +2977,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                GyroMouseHorizontalAxis[device] = cBGyroMouseXAxis.SelectedIndex;
+                dev.gyroMouseHorizontalAxis = cBGyroMouseXAxis.SelectedIndex;
             }
         }
 
@@ -2988,7 +2985,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                SXMaxzone[device] = (double)nUDSixAxisXMaxZone.Value;
+                dev.SXMaxzone = (double)nUDSixAxisXMaxZone.Value;
             }
         }
 
@@ -2996,7 +2993,7 @@ namespace DS4Windows.Forms
         {
             if (!loading)
             {
-                SZMaxzone[device] = (double)nUDSixAxisZMaxZone.Value;
+                dev.SZMaxzone = (double)nUDSixAxisZMaxZone.Value;
             }
         }
 
@@ -3004,7 +3001,7 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                SXAntiDeadzone[device] = (double)nUDSixaxisXAntiDead.Value;
+                dev.SXAntiDeadzone = (double)nUDSixaxisXAntiDead.Value;
             }
         }
 
@@ -3012,7 +3009,7 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                SZAntiDeadzone[device] = (double)nUDSixaxisZAntiDead.Value;
+                dev.SZAntiDeadzone = (double)nUDSixaxisZAntiDead.Value;
             }
         }
 
@@ -3025,7 +3022,7 @@ namespace DS4Windows.Forms
                     setL2OutCurveMode(device, cBL2OutputCurve.SelectedIndex);
 
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? l2OutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? dev.l2OutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"L2 - {lbCurveEditorURL.Text.Substring(5)}";
             }
         }
@@ -3039,7 +3036,7 @@ namespace DS4Windows.Forms
                     setR2OutCurveMode(device, cBR2OutputCurve.SelectedIndex);
 
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? r2OutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? dev.r2OutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"R2 - {lbCurveEditorURL.Text.Substring(5)}";
             }
         }
@@ -3053,7 +3050,7 @@ namespace DS4Windows.Forms
                     setSXOutCurveMode(device, cBSixaxisXOutputCurve.SelectedIndex);
 
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? sxOutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? dev.sxOutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"SX - {lbCurveEditorURL.Text.Substring(5)}";
             }
         }
@@ -3067,7 +3064,7 @@ namespace DS4Windows.Forms
                     setSZOutCurveMode(device, cBSixaxisZOutputCurve.SelectedIndex);
 
                 tBCustomOutputCurve.Enabled = lbCurveEditorURL.Enabled = customIdx;
-                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? szOutBezierCurveObj[device].ToString() : "");
+                tBCustomOutputCurve.Text = (tBCustomOutputCurve.Enabled ? dev.szOutBezierCurveObj.ToString() : "");
                 lbCurveEditorURL.Text = $"SZ - {lbCurveEditorURL.Text.Substring(5)}";
             }
         }
@@ -3096,7 +3093,7 @@ namespace DS4Windows.Forms
                     s.Add("None");
                 }
 
-                TouchDisInvertTriggers[device] = ints.ToArray();
+                dev.touchDisInvertTriggers = ints.ToArray();
                 if (s.Count > 0)
                     touchpadDisInvertButton.Text = string.Join(", ", s);
             }
@@ -3117,7 +3114,7 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                TrackballMode[device] = trackballCk.Checked;
+                dev.trackballMode = trackballCk.Checked;
             }
         }
 
@@ -3125,7 +3122,7 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                SASteeringWheelEmulationRange[device] = Convert.ToInt32(cBSteeringWheelEmulationRange.Items[cBSteeringWheelEmulationRange.SelectedIndex].ToString());
+                dev.sASteeringWheelEmulationRange = Convert.ToInt32(cBSteeringWheelEmulationRange.Items[cBSteeringWheelEmulationRange.SelectedIndex].ToString());
             }
         }
 
@@ -3133,8 +3130,8 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                if (cBSteeringWheelEmulationAxis.SelectedIndex >= 0) SASteeringWheelEmulationAxis[device] = (SASteeringWheelEmulationAxisType) ((byte) cBSteeringWheelEmulationAxis.SelectedIndex);
-                else SASteeringWheelEmulationAxis[device] = SASteeringWheelEmulationAxisType.None;
+                if (cBSteeringWheelEmulationAxis.SelectedIndex >= 0) dev.sASteeringWheelEmulationAxis = (SASteeringWheelEmulationAxisType) ((byte) cBSteeringWheelEmulationAxis.SelectedIndex);
+                else dev.sASteeringWheelEmulationAxis = SASteeringWheelEmulationAxisType.None;
             }
         }
 
@@ -3217,7 +3214,7 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                SquStickInfo[device].lsMode = lsSquStickCk.Checked;
+                dev.squStickInfo.lsMode = lsSquStickCk.Checked;
             }
         }
 
@@ -3225,14 +3222,14 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                SquStickInfo[device].rsMode = rsSquStickCk.Checked;
+                dev.squStickInfo.rsMode = rsSquStickCk.Checked;
             }
         }
 
         private void RoundnessNUpDown_ValueChanged(object sender, EventArgs e) 
         {
             if (loading == false) {
-                SquStickInfo[device].roundness = (int)RoundnessNUpDown.Value;
+                dev.squStickInfo.roundness = (int)RoundnessNUpDown.Value;
             }
         }
 
@@ -3265,12 +3262,12 @@ namespace DS4Windows.Forms
             string customDefinition;
             switch (lbCurveEditorURL.Text.Substring(0, 2))
             {
-                case "LS": customDefinition = lsOutBezierCurveObj[device].ToString(); break;
-                case "RS": customDefinition = rsOutBezierCurveObj[device].ToString(); break;
-                case "L2": customDefinition = l2OutBezierCurveObj[device].ToString(); break;
-                case "R2": customDefinition = r2OutBezierCurveObj[device].ToString(); break;
-                case "SX": customDefinition = sxOutBezierCurveObj[device].ToString(); break;
-                case "SZ": customDefinition = szOutBezierCurveObj[device].ToString(); break;
+                case "LS": customDefinition = dev.lsOutBezierCurveObj.ToString(); break;
+                case "RS": customDefinition = dev.rsOutBezierCurveObj.ToString(); break;
+                case "L2": customDefinition = dev.l2OutBezierCurveObj.ToString(); break;
+                case "R2": customDefinition = dev.r2OutBezierCurveObj.ToString(); break;
+                case "SX": customDefinition = dev.sxOutBezierCurveObj.ToString(); break;
+                case "SZ": customDefinition = dev.szOutBezierCurveObj.ToString(); break;
                 default: customDefinition = String.Empty; break;
             }
 
@@ -3333,32 +3330,32 @@ namespace DS4Windows.Forms
                 {
                     case "LS":
                         if (lsOutCurveComboBox.SelectedIndex == lsOutCurveComboBox.Items.Count - 1)
-                            lsOutBezierCurveObj[device].InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.LSRS, true);
+                            dev.lsOutBezierCurveObj.InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.LSRS, true);
                         break;
 
                     case "RS":
                         if (rsOutCurveComboBox.SelectedIndex == rsOutCurveComboBox.Items.Count - 1)
-                            rsOutBezierCurveObj[device].InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.LSRS, true);
+                            dev.rsOutBezierCurveObj.InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.LSRS, true);
                         break;
 
                     case "L2":
                         if (cBL2OutputCurve.SelectedIndex == cBL2OutputCurve.Items.Count - 1)
-                            l2OutBezierCurveObj[device].InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.L2R2, true);
+                            dev.l2OutBezierCurveObj.InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.L2R2, true);
                         break;
 
                     case "R2":
                         if (cBR2OutputCurve.SelectedIndex == cBR2OutputCurve.Items.Count - 1)
-                            r2OutBezierCurveObj[device].InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.L2R2, true);
+                            dev.r2OutBezierCurveObj.InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.L2R2, true);
                         break;
 
                     case "SX":
                         if (cBSixaxisXOutputCurve.SelectedIndex == cBSixaxisXOutputCurve.Items.Count - 1)
-                            sxOutBezierCurveObj[device].InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.SA, true);
+                            dev.sxOutBezierCurveObj.InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.SA, true);
                         break;
 
                     case "SZ":
                         if (cBSixaxisZOutputCurve.SelectedIndex == cBSixaxisZOutputCurve.Items.Count - 1)
-                            szOutBezierCurveObj[device].InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.SA, true);
+                            dev.szOutBezierCurveObj.InitBezierCurve(tBCustomOutputCurve.Text, BezierCurve.AxisType.SA, true);
                         break;
                 }
             }
@@ -3368,10 +3365,10 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                TrackballFriction[device] = (double)trackFrictionNUD.Value;
+                dev.trackballFriction = (double)trackFrictionNUD.Value;
                 if (device < 4)
                 {
-                    Program.rootHub.touchPad[device]?.ResetTrackAccel(TrackballFriction[device]);
+                    Program.rootHub.touchPad[device]?.ResetTrackAccel(dev.trackballFriction);
                 }
             }
         }
@@ -3444,12 +3441,12 @@ namespace DS4Windows.Forms
         
         private void nUDGyroSensitivity_ValueChanged(object sender, EventArgs e)
         {
-            GyroSensitivity[device] = (int)Math.Round(nUDGyroSensitivity.Value, 0);
+            dev.gyroSensitivity = (int)Math.Round(nUDGyroSensitivity.Value, 0);
         }
 
         private void cBFlashType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            FlashType[device] = (byte)cBFlashType.SelectedIndex;
+            dev.flashType = (byte)cBFlashType.SelectedIndex;
         }
     }
 }

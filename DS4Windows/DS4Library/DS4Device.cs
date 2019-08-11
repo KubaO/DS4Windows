@@ -26,7 +26,7 @@ namespace DS4Windows
         {
             return new DS4Color(c);
         }
-        
+
         public DS4Color(Color c)
         {
             red = c.R;

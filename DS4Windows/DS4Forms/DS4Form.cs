@@ -2694,7 +2694,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
             CheckBox linkCb = (CheckBox)sender;
             int i = Convert.ToInt32(linkCb.Tag);
             bool check = linkCb.Checked;
-            Global.linkedProfileCheck[i] = check;
+            aux[i].linkedProfileCheck = check;
             DS4Device device = Program.rootHub.DS4Controllers[i];
             if (device != null && device.isSynced())
             {
@@ -2702,7 +2702,7 @@ Properties.Resources.DS4Update, MessageBoxButtons.YesNo, MessageBoxIcon.Question
                 {
                     if (device.isValidSerial())
                     {
-                        changeLinkedProfile(device.getMacAddress(), ProfilePath[i]);
+                        changeLinkedProfile(device.getMacAddress(), cfg[i].profilePath);
                     }
                 }
                 else

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 
 namespace DS4Windows
 {
@@ -7,7 +8,16 @@ namespace DS4Windows
         protected DateTime pastTime, firstTap, TimeofEnd;
         protected Touch firstTouch, secondTouch;
         private DS4State s = new DS4State();
-        protected int deviceNum;
+        private DeviceBackingStore cfg;
+        private int deviceNum_;
+        protected int deviceNum
+        {
+            get => deviceNum_;
+            set {
+                cfg = Global.cfg[value];
+                deviceNum_ = value;
+            }
+        }
         private DS4Device dev = null;
         private readonly MouseCursor cursor;
         private readonly MouseWheel wheel;
@@ -75,7 +85,7 @@ namespace DS4Windows
 
         public virtual void sixaxisMoved(DS4SixAxis sender, SixAxisEventArgs arg)
         {
-            if (Global.isUsingSAforMouse(deviceNum) && Global.getGyroSensitivity(deviceNum) > 0)
+            if (dev.isUsingSAforMouse && Global.getGyroSensitivity(deviceNum) > 0)
             {
                 s = dev.getCurrentStateRef();
 

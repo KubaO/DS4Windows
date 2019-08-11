@@ -4,8 +4,8 @@ namespace DS4Windows
 {
     public class SquareStickInfo
     {
-        public bool lsMode;
-        public bool rsMode;
+        public bool lsMode = false;
+        public bool rsMode = false;
         public double roundness = 5.0;
     }
 

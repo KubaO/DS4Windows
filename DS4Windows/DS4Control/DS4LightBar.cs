@@ -41,23 +41,24 @@ namespace DS4Windows
 
         public static void updateLightBar(DS4Device device, int deviceNum)
         {
+            var cfg = Global.cfg[deviceNum];
             DS4Color color;
             if (!defaultLight && !forcelight[deviceNum])
             {
-                if (getUseCustomLed(deviceNum))
+                if (cfg.useCustomColor)
                 {
-                    if (getLedAsBatteryIndicator(deviceNum))
+                    if (cfg.ledAsBatteryIndicator)
                     {
-                        ref DS4Color fullColor = ref getCustomColor(deviceNum);
-                        ref DS4Color lowColor = ref getLowColor(deviceNum);
+                        ref DS4Color fullColor = ref cfg.customColor;
+                        ref DS4Color lowColor = ref cfg.lowColor;
                         color = getTransitionedColor(ref lowColor, ref fullColor, device.getBattery());
                     }
                     else
-                        color = getCustomColor(deviceNum);
+                        color = cfg.customColor;
                 }
                 else
                 {
-                    double rainbow = getRainbow(deviceNum);
+                    double rainbow = cfg.getRainbow;
                     if (rainbow > 0)
                     {
                         // Display rainbow

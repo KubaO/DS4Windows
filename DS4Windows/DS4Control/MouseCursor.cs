@@ -4,10 +4,12 @@ namespace DS4Windows
 {
     class MouseCursor
     {
+        private DeviceBackingStore cfg;
         private readonly int deviceNumber;
         public MouseCursor(int deviceNum)
         {
             deviceNumber = deviceNum;
+            cfg = Global.cfg[deviceNum];
         }
 
         // Keep track of remainders when performing moves or we lose fractional parts.
@@ -240,7 +242,7 @@ namespace DS4Windows
             double normY = Math.Abs(Math.Sin(tempAngle));
             int signX = Math.Sign(dx);
             int signY = Math.Sign(dy);
-            double coefficient = Global.getTouchSensitivity(deviceNumber) * 0.01;
+            double coefficient = cfg.touchSensitivity * 0.01;
             bool jitterCompenstation = Global.getTouchpadJitterCompensation(deviceNumber);
 
             double xMotion = dx != 0 ?

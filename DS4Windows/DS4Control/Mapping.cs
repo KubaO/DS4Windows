@@ -1535,8 +1535,8 @@ namespace DS4Windows
                             if (extras[7] == 1)
                             {
                                 if (oldmouse[device] == -1)
-                                    oldmouse[device] = dev.ButtonMouseSensitivity;
-                                dev.ButtonMouseSensitivity = extras[8];
+                                    oldmouse[device] = dev.buttonMouseSensitivity;
+                                dev.buttonMouseSensitivity = extras[8];
                             }
                         }
                         catch { }
@@ -1547,7 +1547,7 @@ namespace DS4Windows
                         DS4LightBar.forcedFlash[device] = 0;
                         if (oldmouse[device] != -1)
                         {
-                            dev.ButtonMouseSensitivity = oldmouse[device];
+                            dev.buttonMouseSensitivity = oldmouse[device];
                             oldmouse[device] = -1;
                         }
 
@@ -2782,7 +2782,7 @@ namespace DS4Windows
                 deadzoneR = 3;
 
             double value = 0.0;
-            int speed = dev.ButtonMouseSensitivity;
+            int speed = dev.buttonMouseSensitivity;
             double root = 1.002;
             double divide = 10000d;
             //DateTime now = mousenow[mnum];

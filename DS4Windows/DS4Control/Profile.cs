@@ -66,7 +66,7 @@ namespace DS4Windows
         [XmlIgnore] public double LSRotation; // in radians
         [XmlIgnore] public double RSRotation; // in radians
 
-        [XmlElement("ButtonMouseSensitivity")] public X<int> buttonMouseSensitivity = 25;
+        [XmlElement("buttonMouseSensitivity")] public X<int> buttonMouseSensitivity = 25;
         [XmlElement("Rainbow")] public X<double> rainbow = 0;
 
         [XmlIgnore] public StickDeadZoneInfo lsModInfo, rsModInfo;
