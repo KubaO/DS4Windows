@@ -1414,14 +1414,11 @@ namespace DS4Windows
                             p = dcs.Norm.Extras;
 
                         string[] extraS = p.Split(',');
-                        int extrasSLen = extraS.Length;
-                        int[] extras = new int[extrasSLen];
-                        for (int i = 0; i < extrasSLen; i++)
-                        {
-                            int b;
-                            if (int.TryParse(extraS[i], out b))
-                                extras[i] = b;
-                        }
+                        int[] extras = extraS.Select(s => {
+                            int b = 0;
+                            int.TryParse(s, out b);
+                            return b;
+                        }).ToArray();
 
                         held = true;
                         try
@@ -2167,7 +2164,7 @@ namespace DS4Windows
                                     getCustomMacros(device).Remove(action.trigger[0]);
                                 if (getCustomKey(device, action.trigger[0]) != 0)
                                     getCustomMacros(device).Remove(action.trigger[0]);*/
-                                    string[] dets = action.details.Split(',');
+                                string[] dets = action.details.Split(',');
                                 DS4Device d = ctrl.DS4Controller;
                                 //cus
 
@@ -2222,8 +2219,8 @@ namespace DS4Windows
                                     }
                                 }
 
-                                int type = 0;
-                                string macro = "";
+                                string macro = null;
+                                int type;
                                 if (tappedOnce) //single tap
                                 {
                                     if (action.typeID == SpecialAction.ActionTypeId.MultiAction)
@@ -2244,7 +2241,7 @@ namespace DS4Windows
 
                                     if ((DateTime.UtcNow - action.TimeofEnd) > TimeSpan.FromMilliseconds(150))
                                     {
-                                        if (macro != "")
+                                        if (!String.IsNullOrEmpty(macro))
                                             PlayMacro(macroControl, macro, DS4Controls.None, DS4KeyType.None);
 
                                         tappedOnce = false;
@@ -2270,7 +2267,7 @@ namespace DS4Windows
                                         }
                                     }
 
-                                    if (macro != "")
+                                    if (!String.IsNullOrEmpty(macro))
                                         PlayMacro(macroControl, macro, DS4Controls.None, DS4KeyType.None);
 
                                     firstTouch = false;
@@ -2294,7 +2291,7 @@ namespace DS4Windows
                                         }
                                     }
 
-                                    if (macro != "")
+                                    if (!String.IsNullOrEmpty(macro))
                                         PlayMacro(macroControl, macro, DS4Controls.None, DS4KeyType.None);
 
                                     secondtouchbegin = false;
@@ -2409,20 +2406,10 @@ namespace DS4Windows
             }
             else
             {
-                string[] skeys;
-                int[] keys;
-                if (!string.IsNullOrEmpty(macro))
-                {
-                    skeys = macro.Split('/');
-                    keys = new int[skeys.Length];
-                }
-                else
-                {
-                    skeys = new string[0];
-                    keys = new int[0];
-                }
-                for (int i = 0; i < keys.Length; i++)
-                    keys[i] = int.Parse(skeys[i]);
+                if (macro == null) macro = string.Empty;
+                string[] skeys = macro.Split('/');
+                int[] keys = skeys.Select(s => int.Parse(s)).ToArray();
+
                 bool[] keydown = new bool[286];
                 if (control == DS4Controls.None || !macrodone[DS4ControltoInt(control)])
                 {
@@ -3509,40 +3496,41 @@ namespace DS4Windows
             else if (controlType == DS4StateFieldMapping.ControlType.GyroDir) {
                 bool sOff = cfg.UseSAforMouse;
 
+                var gyroDirs = fieldMapping.gyrodirs[controlNum];
                 switch (control)
                 {
                     case DS4Controls.GyroXPos:
                     {
-                        if (sOff == false && fieldMapping.gyrodirs[controlNum] > 0)
+                        if (!sOff && gyroDirs > 0)
                         {
-                            if (alt) result = (byte)Math.Min(255, 127 + fieldMapping.gyrodirs[controlNum]); else result = (byte)Math.Max(0, 127 - fieldMapping.gyrodirs[controlNum]);
+                            result = Util.ClampByte(127 + (alt ? gyroDirs : -gyroDirs));
                         }
                         else result = falseVal;
                         break;
                     }
                     case DS4Controls.GyroXNeg:
                     {
-                        if (sOff == false && fieldMapping.gyrodirs[controlNum] < 0)
+                        if (!sOff && gyroDirs < 0)
                         {
-                            if (alt) result = (byte)Math.Min(255, 127 + -fieldMapping.gyrodirs[controlNum]); else result = (byte)Math.Max(0, 127 - -fieldMapping.gyrodirs[controlNum]);
+                            result = Util.ClampByte(127 + (alt ? -gyroDirs : gyroDirs));
                         }
                         else result = falseVal;
                         break;
                     }
                     case DS4Controls.GyroZPos:
                     {
-                        if (sOff == false && fieldMapping.gyrodirs[controlNum] > 0)
+                        if (!sOff && gyroDirs > 0)
                         {
-                            if (alt) result = (byte)Math.Min(255, 127 + fieldMapping.gyrodirs[controlNum]); else result = (byte)Math.Max(0, 127 - fieldMapping.gyrodirs[controlNum]);
+                            result = Util.ClampByte(127 + (alt ? gyroDirs : -gyroDirs));
                         }
                         else return falseVal;
                         break;
                     }
                     case DS4Controls.GyroZNeg:
                     {
-                        if (sOff == false && fieldMapping.gyrodirs[controlNum] < 0)
+                        if (!sOff && gyroDirs < 0)
                         {
-                            if (alt) result = (byte)Math.Min(255, 127 + -fieldMapping.gyrodirs[controlNum]); else result = (byte)Math.Max(0, 127 - -fieldMapping.gyrodirs[controlNum]);
+                            result = Util.ClampByte(127 + (alt ? -gyroDirs : +gyroDirs));
                         }
                         else result = falseVal;
                         break;
@@ -3650,7 +3638,7 @@ namespace DS4Windows
                     {
                         if (!sOff && -eState.AccelX > SXD * 10)
                         {
-                            if (alt) result = (byte)Math.Min(255, 127 + SXSens * -eState.AccelX); else result = (byte)Math.Max(0, 127 - SXSens * -eState.AccelX);
+                            result = Util.ClampByte(127 + (alt ? SXSens * -eState.AccelX : -SXSens * -eState.AccelX));
                         }
                         else result = falseVal;
                         break;
@@ -3659,7 +3647,7 @@ namespace DS4Windows
                     {
                         if (!sOff && -eState.AccelX < -SXD * 10)
                         {
-                            if (alt) result = (byte)Math.Min(255, 127 + SXSens * eState.AccelX); else result = (byte)Math.Max(0, 127 - SXSens * eState.AccelX);
+                            result = Util.ClampByte(127 + (alt ? SXSens * eState.AccelX : -SXSens * eState.AccelX));
                         }
                         else result = falseVal;
                         break;
@@ -3668,7 +3656,7 @@ namespace DS4Windows
                     {
                         if (!sOff && eState.AccelZ > SZD * 10)
                         {
-                            if (alt) result = (byte)Math.Min(255, 127 + SZSens * eState.AccelZ); else result = (byte)Math.Max(0, 127 - SZSens * eState.AccelZ);
+                            result = Util.ClampByte(127 + (alt ? SZSens * eState.AccelZ : -SZSens * eState.AccelZ));
                         }
                         else return falseVal;
                         break;
@@ -3677,7 +3665,7 @@ namespace DS4Windows
                     {
                         if (!sOff && eState.AccelZ < -SZD * 10)
                         {
-                            if (alt) result = (byte)Math.Min(255, 127 + SZSens * -eState.AccelZ); else result = (byte)Math.Max(0, 127 - SZSens * -eState.AccelZ);
+                            result = Util.ClampByte(127 + (alt ? SZSens * -eState.AccelZ : -SZSens * -eState.AccelZ));
                         }
                         else result = falseVal;
                         break;

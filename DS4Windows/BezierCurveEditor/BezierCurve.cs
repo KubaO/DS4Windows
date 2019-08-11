@@ -33,6 +33,7 @@
 * 
 */
 using System;
+using System.Linq;
 
 namespace DS4Windows
 {
@@ -85,7 +86,7 @@ namespace DS4Windows
             set
             {
                 // Set bezier curve defintion from a string value (4 comma separated decimals). If any of the string values are invalid then set curve as linear "zero" curve
-                string[] bezierDef = value.Split(new Char[] { ',' }, 4);
+                string[] bezierDef = value.Split(new char[] {','}, 4);
                 if (bezierDef.Length < 4 || !Double.TryParse(bezierDef[0], out mX1) || !Double.TryParse(bezierDef[1], out mY1) || !Double.TryParse(bezierDef[2], out mX2) || !Double.TryParse(bezierDef[3], out mY2) )
                     mX1 = mY1 = mX2 = mY2 = 0;
             }

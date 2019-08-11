@@ -2527,8 +2527,7 @@ namespace DS4Windows
             else if (type == "BatteryCheck")
             {
                 typeID = ActionTypeId.BatteryCheck;
-                string[] dets = details.Split('|');
-                this.details = string.Join(",", dets);
+                this.details = details.Replace('|', ',');
             }
             else if (type == "MultiAction")
             {
@@ -2538,13 +2537,12 @@ namespace DS4Windows
             else if (type == "XboxGameDVR")
             {
                 this.typeID = ActionTypeId.XboxGameDVR;
-                string[] dets = details.Split(',');
+                string[] dets = details.Split(',').Take(4).ToArray();
                 List<string> macros = new List<string>();
-                //string dets = "";
-                int typeT = 0;
-                for (int i = 0; i < 3; i++)
+                foreach (string det in dets)
                 {
-                    if (int.TryParse(dets[i], out typeT))
+                    int typeT = 0;
+                    if (int.TryParse(det, out typeT))
                     {
                         switch (typeT)
                         {

@@ -193,8 +193,8 @@ namespace DS4Windows
                 Thread.SpinWait(500);
             threadComEvent.Close();
 
-            if (ipcClassNameMMA != null) ipcClassNameMMA.Dispose();
-            if (ipcClassNameMMF != null) ipcClassNameMMF.Dispose();
+            ipcClassNameMMA?.Dispose();
+            ipcClassNameMMF?.Dispose();
         }
 
         private static void createControlService()
@@ -228,7 +228,7 @@ namespace DS4Windows
                     // That form is created in another thread, so we need some thread sync magic.
                     if (!exitComThread)
                     {
-                        ds4form?.Invoke(new SetFormVisableDelegate(ThreadFormVisable), ds4form);
+                        ds4form?.Invoke(new SetFormVisibleDelegate(ThreadFormVisible), ds4form);
                     }
                 }
             }
@@ -239,8 +239,8 @@ namespace DS4Windows
         /// that created the form, which is nice. 
         /// </summary>
         /// <param name="frm"></param>
-        private delegate void SetFormVisableDelegate(Form frm);
-        private static void ThreadFormVisable(Form frm)
+        private delegate void SetFormVisibleDelegate(Form frm);
+        private static void ThreadFormVisible(Form frm)
         {
             if (frm is Forms.DS4Form)
             {
@@ -293,8 +293,8 @@ namespace DS4Windows
             }
             finally
             {
-                if (mma != null) mma.Dispose();
-                if (mmf != null) mmf.Dispose();
+                mma?.Dispose();
+                mmf?.Dispose();
             }
 
             return null;

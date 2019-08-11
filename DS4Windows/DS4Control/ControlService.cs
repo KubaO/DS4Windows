@@ -112,8 +112,7 @@ namespace DS4Windows
                 string stringMac = d.getMacAddress();
                 if (!string.IsNullOrEmpty(stringMac))
                 {
-                    stringMac = string.Join("", stringMac.Split(':'));
-                    //stringMac = stringMac.Replace(":", "").Trim();
+                    stringMac = stringMac.Replace(":", string.Empty).Trim();
                     meta.PadMacAddress = System.Net.NetworkInformation.PhysicalAddress.Parse(stringMac);
                     isValidSerial = d.isValidSerial();
                 }
@@ -389,18 +388,12 @@ namespace DS4Windows
 
         private void stopViGEm()
         {
-            if (tempThread != null)
-            {
-                tempThread.Interrupt();
-                tempThread.Join();
-                tempThread = null;
-            }
+            tempThread?.Interrupt();
+            tempThread?.Join();
+            tempThread = null;
 
-            if (vigemTestClient != null)
-            {
-                vigemTestClient.Dispose();
-                vigemTestClient = null;
-            }
+            vigemTestClient?.Dispose();
+            vigemTestClient = null;
         }
 
         internal SynchronizationContext uiContext = null;
@@ -649,24 +642,23 @@ namespace DS4Windows
     {
         internal void Stop()
         {
-            DS4Device tempDevice = DS4Controller;
-            if (tempDevice != null)
+            if (DS4Controller != null)
             {
-                if ((API.Config.DisconnectBTAtStop && !tempDevice.isCharging()) || ctlSvc.suspending)
+                if ((API.Config.DisconnectBTAtStop && !DS4Controller.isCharging()) || ctlSvc.suspending)
                 {
-                    if (tempDevice.getConnectionType() == ConnectionType.BT)
+                    if (DS4Controller.getConnectionType() == ConnectionType.BT)
                     {
-                        tempDevice.StopUpdate();
-                        tempDevice.DisconnectBT(true);
+                        DS4Controller.StopUpdate();
+                        DS4Controller.DisconnectBT(true);
                     }
-                    else if (tempDevice.getConnectionType() == ConnectionType.SONYWA)
+                    else if (DS4Controller.getConnectionType() == ConnectionType.SONYWA)
                     {
-                        tempDevice.StopUpdate();
-                        tempDevice.DisconnectDongle(true);
+                        DS4Controller.StopUpdate();
+                        DS4Controller.DisconnectDongle(true);
                     }
                     else
                     {
-                        tempDevice.StopUpdate();
+                        DS4Controller.StopUpdate();
                     }
                 }
                 else
@@ -675,9 +667,9 @@ namespace DS4Windows
                     lightBar.forcedFlash = 0;
                     DS4LightBar.defaultLight = true;
                     lightBar.updateLightBar(DS4Controller);
-                    tempDevice.IsRemoved = true;
-                    tempDevice.StopUpdate();
-                    DS4Devices.RemoveDevice(tempDevice);
+                    DS4Controller.IsRemoved = true;
+                    DS4Controller.StopUpdate();
+                    DS4Devices.RemoveDevice(DS4Controller);
                     Thread.Sleep(50);
                 }
 
@@ -708,19 +700,8 @@ namespace DS4Windows
                     if (device.isDisconnectingStatus())
                         continue;
 
-                    if (((Func<bool>) delegate {
-                        foreach (var dCS in ctlSvcs)
-                        {
-                            if (dCS.DS4Controller != null &&
-                                dCS.DS4Controller.getMacAddress() == device.getMacAddress())
-                                return true;
-                        }
-
-                        return false;
-                    })())
-                    {
+                    if (ctlSvcs.Any(d => d?.DS4Controller?.getMacAddress() == device.getMacAddress()))
                         continue;
-                    }
 
                     foreach (DeviceControlService dCS in ctlSvcs)
                     {
@@ -1608,17 +1589,11 @@ namespace DS4Windows
 
         // sets the rumble adjusted with rumble boost. Method more used for
         // report handling. Avoid constant checking for a device.
-        public void SetDevRumble(DS4Device device,
-            byte heavyMotor, byte lightMotor)
+        public void SetDevRumble(DS4Device device, byte heavyMotor, byte lightMotor)
         {
             byte boost = cfg.RumbleBoost;
-            uint lightBoosted = ((uint)lightMotor * (uint)boost) / 100;
-            if (lightBoosted > 255)
-                lightBoosted = 255;
-            uint heavyBoosted = ((uint)heavyMotor * (uint)boost) / 100;
-            if (heavyBoosted > 255)
-                heavyBoosted = 255;
-
+            byte lightBoosted = Util.ClampByte(((uint)lightMotor * (uint)boost) / 100U);
+            byte heavyBoosted = Util.ClampByte(((uint)heavyMotor * (uint)boost) / 100U);
             device.setRumble((byte)lightBoosted, (byte)heavyBoosted);
         }
 

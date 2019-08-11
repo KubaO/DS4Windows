@@ -211,10 +211,10 @@ namespace DS4Windows
                     if (arg.touches[0].hwY - firstTouch.hwY < -300) swipeUp = true;
                 }
 
-                swipeUpB = (byte)Math.Min(255, Math.Max(0, (firstTouch.hwY - arg.touches[0].hwY) * 1.5f));
-                swipeDownB = (byte)Math.Min(255, Math.Max(0, (arg.touches[0].hwY - firstTouch.hwY) * 1.5f));
-                swipeLeftB = (byte)Math.Min(255, Math.Max(0, firstTouch.hwX - arg.touches[0].hwX));
-                swipeRightB = (byte)Math.Min(255, Math.Max(0, arg.touches[0].hwX - firstTouch.hwX));
+                swipeUpB = (byte)Util.Clamp((firstTouch.hwY - arg.touches[0].hwY) * 1.5f, 0f, 255f);
+                swipeDownB = (byte)Util.Clamp((arg.touches[0].hwY - firstTouch.hwY) * 1.5f, 0f, 255f);
+                swipeLeftB = (byte)Util.Clamp( firstTouch.hwX - arg.touches[0].hwX, 0, 255);
+                swipeRightB = (byte)Util.Clamp(arg.touches[0].hwX - firstTouch.hwX, 0, 255);
             }
 
             if (Math.Abs(firstTouch.hwY - arg.touches[0].hwY) < 50 && arg.touches.Length == 2)

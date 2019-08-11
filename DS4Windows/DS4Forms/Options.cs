@@ -1404,8 +1404,8 @@ namespace DS4Windows.Forms
             if (!loading)
             {
                 cfg.RumbleBoost = (byte)nUDRumbleBoost.Value;
-                byte h = (byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100));
-                byte l = (byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100));
+                byte h = Util.ClampByte(255 * nUDRumbleBoost.Value / 100);
+                byte l = Util.ClampByte(255 * nUDRumbleBoost.Value / 100);
                 bool hB = btnRumbleHeavyTest.Text == Properties.Resources.TestLText;
                 bool lB = btnRumbleLightTest.Text == Properties.Resources.TestLText;
                 dCS.setRumble((byte)(hB ? h : 0), (byte)(lB ? l : 0));
@@ -1421,7 +1421,7 @@ namespace DS4Windows.Forms
             {
                 if (((Button)sender).Text == Properties.Resources.TestHText)
                 {
-                    tempDCS.setRumble((byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100)), d.RightLightFastRumble);
+                    tempDCS.setRumble(Util.ClampByte(255 * nUDRumbleBoost.Value / 100), d.RightLightFastRumble);
                     ((Button)sender).Text = Properties.Resources.StopHText;
                 }
                 else
@@ -1441,7 +1441,7 @@ namespace DS4Windows.Forms
             {
                 if (((Button)sender).Text == Properties.Resources.TestLText)
                 {
-                    tempDCS.setRumble(d.LeftHeavySlowRumble, (byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100)));
+                    tempDCS.setRumble(d.LeftHeavySlowRumble, Util.ClampByte(255 * nUDRumbleBoost.Value / 100));
                     ((Button)sender).Text = Properties.Resources.StopLText;
                 }
                 else

@@ -166,8 +166,32 @@ namespace DS4Windows
         {
             // API like .Net Core's Math.Clamp
             if (val.CompareTo(min) < 0) return min;
-            else if (val.CompareTo(max) > 0) return max;
-            else return val;
+            if (val.CompareTo(max) > 0) return max;
+            return val;
+        }
+        public static byte ClampByte(this int val)
+        {
+            if (val < byte.MinValue) return byte.MinValue;
+            if (val > byte.MaxValue) return byte.MaxValue;
+            return (byte)val;
+        }
+        public static byte ClampByte(this uint val)
+        {
+            if (val < byte.MinValue) return byte.MinValue;
+            if (val > byte.MaxValue) return byte.MaxValue;
+            return (byte)val;
+        }
+        public static byte ClampByte(this decimal val)
+        {
+            if (val < byte.MinValue) return byte.MinValue;
+            if (val > byte.MaxValue) return byte.MaxValue;
+            return (byte)Math.Round(val);
+        }
+        public static byte ClampByte(this double val)
+        {
+            if (val < byte.MinValue) return byte.MinValue;
+            if (val > byte.MaxValue) return byte.MaxValue;
+            return (byte)Math.Round(val);
         }
 
         public struct Clamped<T> : IComparable, IComparable<T>, IEquatable<T>
@@ -180,14 +204,14 @@ namespace DS4Windows
             {
                 if (min.CompareTo(max) > 0)
                     throw new ArgumentException($"{min} must be less or equal to {max}", "min");
-                _value = Util.Clamp(o, min, max);
+                _value = o.Clamp(min, max);
                 _min = min;
                 _max = max;
             }
 
             void set(T o)
             {
-                _value = Util.Clamp(o, _min, _max);
+                _value = o.Clamp(_min, _max);
             }
 
             T get() => _value;
@@ -198,9 +222,7 @@ namespace DS4Windows
             public int CompareTo(object o)
             {
                 if (o != null && !(o is T)) throw
-                    new ArgumentException(
-                        String.Format("Object must be of type {0}", typeof(T).ToString()),
-                        "o");
+                    new ArgumentException($"Object must be of type {typeof(T).ToString()}", "o");
                 return _value.CompareTo((T)o);
             }
 
@@ -219,6 +241,8 @@ namespace DS4Windows
             private T MaxValue { get => _max; }
         }
 
+#if false
+        // Unused
         struct Lazy<T> where T : struct
         {
             private T? value;
@@ -246,6 +270,7 @@ namespace DS4Windows
                 this.init = init;
             }
         }
+#endif
 
         private static byte applyRatio(byte b1, byte b2, double r)
         {
