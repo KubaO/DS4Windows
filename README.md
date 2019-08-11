@@ -1,5 +1,29 @@
 # DS4Windows
 
+## kubao branch (WIP)
+
+Goals: clean up the architecture, wipe duplicate code, and improve performance, and get
+rid of verbosity (50% code size reduction with better maintainability).
+
+Yes, the goal is to slash code by 50% by refactoring code to get rid of most duplication.
+There's a lot of copypasta here. Convenient copypasta, true, four-hundred-and-eighty-three
+lines per file, each with its own kitchen sink and bidet*.
+
+Performance improvement aims are:
+
+1. Better locality of reference - per-device settings are in larger per-device objects,
+   not separate arrays with per-device values.
+
+2. Removal of per-device indirection in the form of *foo[devIndex]*. All of those
+   accesses are moved to within the per-device object, and the extra layer of indirection
+   is gone.
+
+3. Removal of string-based lookups. Enums are a thing.
+
+
+
+## Upstream ##
+
 Like those other ds4tools, but sexier.
 
 DS4Windows is an extract anywhere program that allows you to get the best
@@ -8,6 +32,7 @@ more games are accessible.
 
 This project is a fork of the work of Jays2Kings. You can find the old project
 website at [ds4windows.com](http://ds4windows.com).
+
 
 ## Downloads
 
