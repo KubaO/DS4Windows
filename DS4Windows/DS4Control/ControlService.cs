@@ -1252,9 +1252,9 @@ namespace DS4Windows
                     lag = false;
                     inWarnMonitor = false;
                     aux.UseDInputOnly = true;
-                    uiContext?.Post(new SendOrPostCallback((state) => {
+                    uiContext?.Post((state) => {
                         OnControllerRemoved(this, devIndex);
-                    }), null);
+                    }, null);
                     //Thread.Sleep(XINPUT_UNPLUG_SETTLE_TIME);
                 }
             }
@@ -1275,9 +1275,9 @@ namespace DS4Windows
             string devError = tempString = device.error;
             if (!string.IsNullOrEmpty(devError))
             {
-                uiContext?.Post(new SendOrPostCallback(delegate(object state) {
+                uiContext?.Post(delegate(object state) {
                     LogDebug(devError);
-                }), null);
+                }, null);
             }
 
             if (inWarnMonitor)
@@ -1286,16 +1286,16 @@ namespace DS4Windows
                 if (!lag && device.Latency >= flashWhenLateAt)
                 {
                     lag = true;
-                    uiContext?.Post(new SendOrPostCallback(delegate(object state) {
+                    uiContext?.Post(delegate(object state) {
                         LagFlashWarning(true);
-                    }), null);
+                    }, null);
                 }
                 else if (lag && device.Latency < flashWhenLateAt)
                 {
                     lag = false;
-                    uiContext?.Post(new SendOrPostCallback(delegate(object state) {
+                    uiContext?.Post(delegate(object state) {
                         LagFlashWarning(false);
-                    }), null);
+                    }, null);
                 }
             }
             else
@@ -1315,17 +1315,17 @@ namespace DS4Windows
             if (device.firstReport && device.IsAlive())
             {
                 device.firstReport = false;
-                uiContext?.Post(new SendOrPostCallback(delegate(object state) {
+                uiContext?.Post(delegate (object state) {
                     OnDeviceStatusChanged(this, devIndex);
-                }), null);
+                }, null);
             }
             else if (pState.Battery != cState.Battery || device.oldCharging != device.isCharging())
             {
                 byte tempBattery = currentBattery = cState.Battery;
                 bool tempCharging = charging = device.isCharging();
-                uiContext?.Post(new SendOrPostCallback(delegate(object state) {
+                uiContext?.Post(delegate(object state) {
                     OnBatteryStatusChange(this, devIndex, tempBattery, tempCharging);
-                }), null);
+                }, null);
             }
 
             if (cfg.EnableTouchToggle)
