@@ -27,19 +27,34 @@ namespace DS4Windows
 
     public class API
     {
-        // That's our interface to the outside world
-        protected static Global global = new Global();
-        public static IGlobalConfig Config = global;
+        // That's our interface to the outside 
+        private static AppState app = new AppState();
+        static GlobalConfig config = new GlobalConfig();
+        public static IGlobalConfig Config = config;
         public static IDeviceConfig Cfg(int index) => Config.Cfg(index);
         public static IDeviceAuxiliaryConfig Aux(int index) => Config.Aux(index);
 
-        public static bool IsAdministrator { get => global.IsAdministrator; }
+        public static bool IsAdministrator { get => app.IsAdministrator; }
 
         public static bool IsViGEmBusInstalled() => DeviceDetection.IsViGEmBusInstalled();
         public string VigemBusVersion { get; } = DeviceDetection.ViGEmBusVersion();
 
-        public static void FindConfigLocation() => global.FindConfigLocation();
-        public static void SetCulture(string culture) => global.SetCulture(culture);
+        public static string ExePath { get => AppState.ExePath; }
+        static bool ExePathNeedsAdmin { get => app.ExePathNeedsAdmin; }
+
+        public static void FindConfigLocation() => app.FindConfigLocation();
+        public static void SetCulture(string culture) => AppState.SetCulture(culture);
+
+        // TODO: These are private since we don't want to expose them if not needed
+        static string ProfilePath { get => app.ProfilePath; }
+        static string ActionsPath { get => app.ActionsPath; }
+        static string LinkedProfilesPath { get => app.LinkedProfilesPath; }
+        static string ControllerConfigsPath { get => app.ControllerConfigsPath; }
+
+        static bool IsFirstRun { get => app.IsFirstRun; }
+        static bool MultiSaveSpots { get => app.MultiSaveSpots; }
+        static bool RunHotPLug { get => app.RunHotPlug; }
+
     }
 
     public interface IGlobalConfig
@@ -73,20 +88,11 @@ namespace DS4Windows
         bool UseCustomSteamFolder { get; set; }
         string CustomSteamFolder { get; set; }
 
-		string ProfilePath { get; set; }
-		string ActionsPath { get; set; }
-		string LinkedProfilesPath { get; set; }
-		string ControllerConfigsPath { get; set; }
 		Dictionary<string, string> LinkedProfiles { get; set; }
 
-		string ExePath { get; }
-        bool ExePathNeedsAdmin { get; }
 		string AppDataPath { get; }
 		bool AppDataPathNeedsAdmin { get; }
 		string AppDataPPath { get; set; }
-		bool IsFirstRun { get; }
-		bool MultiSaveSpots { get; set; }
-		bool RunHotPLug { get; set; }
 
         bool VigemInstalled { get; }
 		string VigemBusVersion { get; }
@@ -94,10 +100,12 @@ namespace DS4Windows
         List<SpecialAction> Actions { get; }
         SpecialAction ActionByName(string name);
         SpecialAction ActionByIndex(int index);
-        int LookupActionIndex(string name);
+        int LookupActionIndexOf(string name);
+        void SaveAction(string name, string controls, int mode, string details, bool edt, string extras = "");
 
-        X360Controls[] DefaultButtonMapping { get;  }
-        DS4Controls[] ReverseX360ButtonMapping { get; }
+        // These are in AppState
+        //X360Controls[] DefaultButtonMapping { get;  }
+        //DS4Controls[] ReverseX360ButtonMapping { get; }
     }
 
     public interface IDeviceAuxiliaryConfig
@@ -109,6 +117,8 @@ namespace DS4Windows
         bool LinkedProfileCheck { get; set; } // applies between this and successor profile
         bool TouchpadActive { get; set; }
     }
+
+    public enum SATriggerCondType { Or = 0, And = 1 };
 
     public interface IDeviceConfig
     {
@@ -137,7 +147,6 @@ namespace DS4Windows
 
         bool EnableTouchToggle { get; set; }
         byte TouchSensitivity { get; set; }
-        bool TouchActive { get; set; }
         bool TouchpadJitterCompensation { get; set; }
         int TouchpadInvert { get; set; }
         bool StartTouchpadOff { get; set; } 
@@ -154,8 +163,10 @@ namespace DS4Windows
         bool GyroSmoothing { get; set; }
         double GyroSmoothingWeight { get; set; }
         int GyroMouseHorizontalAxis { get; set; }
-        int GyroMouseDeadZone { get; set; }
-        bool GyroMouseToggle { get; set; }
+        int GyroMouseDeadZone { get; }
+        bool GyroMouseToggle { get; }
+        void SetGyroMouseDeadZone(int value, ControlService control);
+        void SetGyroMouseToggle(bool value, ControlService control);
 
         int ButtonMouseSensitivity { get; set; }
         bool MouseAccel { get; set; }
@@ -165,7 +176,8 @@ namespace DS4Windows
 
         bool UseSAForMouse { get; set; }
         string SATriggers { get; set; }
-        bool SATriggerCond { get; set; }
+
+        SATriggerCondType SATriggerCond { get; set; }
         SASteeringWheelEmulationAxisType SASteeringWheelEmulationAxis { get; set; } 
         int SASteeringWheelEmulationRange { get; set; }
 
@@ -181,10 +193,11 @@ namespace DS4Windows
         OutContType OutputDevType { get; set; }
         bool DistanceProfiles { get; set; }
 
+        // FIXME: This needs an actually usable interface
         List<string> ProfileActions { get; set; }
         SpecialAction ProfileActionByName(string name);
         SpecialAction ProfileActionByIndex(int index);
-        int LookupProfileActionIndex(string name);
+        int LookupProfileActionIndexOf(string name);
 
         List<DS4ControlSettings> DS4CSettings { get; }
         void UpdateDS4CSetting(string buttonName, bool shift, object action, string exts, DS4KeyType kt, int trigger = 0);
@@ -196,9 +209,8 @@ namespace DS4Windows
         string GetDS4Extra(string buttonName, bool shift);
         int GetDS4STrigger(string buttonName);
         int GetDS4STrigger(DS4Controls control);
-        List<DS4ControlSettings> GetDS4CSettings();
         DS4ControlSettings GetDS4CSetting(string control);
-        DS4ControlSettings EetDS4CSetting(DS4Controls control);
+        DS4ControlSettings GetDS4CSetting(DS4Controls control);
         bool HasCustomActions { get; }
         bool HasCustomExtras { get; }
     }
@@ -210,7 +222,7 @@ namespace DS4Windows
         int AntiDeadZone { get; set; }
         int MaxZone { get; set; }
         int OutCurvePreset { get; set; }
-        BezierCurve OutBezierCurve { get; set; }
+        BezierCurve OutBezierCurve { get; }
     }
 
     public interface IStickConfig
@@ -222,7 +234,7 @@ namespace DS4Windows
         double Rotation { get; set; }
         int Curve { get; set; }
         int OutCurvePreset { get; set; }
-        BezierCurve OutBezierCurve { get; set; }
+        BezierCurve OutBezierCurve { get; }
     }
 
     public interface IGyroConfig
@@ -232,7 +244,7 @@ namespace DS4Windows
         double AntiDeadZone { get; set; }
         double MaxZone { get; set; }
         int OutCurvePreset { get; set; }
-        BezierCurve OutBezierCurve { get; set; }
+        BezierCurve OutBezierCurve { get; }
     }
 
     public interface ISquareStickConfig

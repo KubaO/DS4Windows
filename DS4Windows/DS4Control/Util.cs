@@ -214,5 +214,33 @@ namespace DS4Windows
             private T MinValue { get => _min; }
             private T MaxValue { get => _max; }
         }
+
+        struct Lazy<T> where T : struct
+        {
+            private T? value;
+            private Func<T> init;
+            public static implicit operator T(Lazy<T> o) => o.get();
+            public static implicit operator Lazy<T>(Func<T> init) => new Lazy<T>(init);
+            T get() => value ?? (T)(value = init());
+            public Lazy(Func<T> init)
+            {
+                value = null;
+                this.init = init;
+            }
+        }
+
+        struct LazyObj<T> where T : class
+        {
+            private T value;
+            private Func<T> init;
+            public static implicit operator T(LazyObj<T> o) => o.get();
+            public static implicit operator LazyObj<T>(Func<T> init) => new LazyObj<T>(init);
+            T get() => value ?? (value = init());
+            public LazyObj(Func<T> init)
+            {
+                value = null;
+                this.init = init;
+            }
+        }
     }
 }
