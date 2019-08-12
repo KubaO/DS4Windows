@@ -57,7 +57,7 @@ namespace DS4Windows
                     {
                         DS4Color fullColor = cfg.CustomColor;
                         DS4Color lowColor = cfg.LowColor;
-                        color = Util.getTransitionedColor(ref lowColor, ref fullColor, device.getBattery());
+                        color = Util.getTransitionedColor(ref lowColor, ref fullColor, device.Battery);
                     }
                     else
                         color = cfg.CustomColor;
@@ -72,7 +72,7 @@ namespace DS4Windows
                         if (now >= oldnow + TimeSpan.FromMilliseconds(10)) //update by the millisecond that way it's a smooth transtion
                         {
                             oldnow = now;
-                            if (device.isCharging())
+                            if (device.IsCharging)
                                 counter -= 1.5 * 3 / rainbow;
                             else
                                 counter += 1.5 * 3 / rainbow;
@@ -84,7 +84,7 @@ namespace DS4Windows
                             counter = 0;
 
                         if (cfg.LedAsBatteryIndicator)
-                            color = HuetoRGB((float)counter % 360, (byte)(device.getBattery() * 2.55));
+                            color = HuetoRGB((float)counter % 360, (byte)(device.Battery * 2.55));
                         else
                             color = HuetoRGB((float)counter % 360, 255);
 
@@ -93,7 +93,7 @@ namespace DS4Windows
                     {
                         DS4Color fullColor = cfg.MainColor;
                         DS4Color lowColor = cfg.LowColor;
-                        color = Util.getTransitionedColor(ref lowColor, ref fullColor, device.getBattery());
+                        color = Util.getTransitionedColor(ref lowColor, ref fullColor, device.Battery);
                     }
                     else
                     {
@@ -101,7 +101,7 @@ namespace DS4Windows
                     }
                 }
 
-                if (device.getBattery() <= cfg.FlashBatteryAt && !defaultLight && !device.isCharging())
+                if (device.Battery <= cfg.FlashBatteryAt && !defaultLight && !device.IsCharging)
                 {
                     DS4Color flashColor = cfg.FlashColor;
                     if (!(flashColor.red == 0 &&
@@ -159,7 +159,7 @@ namespace DS4Windows
 
                 int idleDisconnectTimeout = cfg.IdleDisconnectTimeout;
                 if (idleDisconnectTimeout > 0 && cfg.LedAsBatteryIndicator &&
-                    (!device.isCharging() || device.getBattery() >= 100))
+                    (!device.IsCharging || device.Battery >= 100))
                 {
                     //Fade lightbar by idle time
                     TimeSpan timeratio = new TimeSpan(DateTime.UtcNow.Ticks - device.lastActive.Ticks);
@@ -180,7 +180,7 @@ namespace DS4Windows
                         
                 }
 
-                if (device.isCharging() && device.getBattery() < 100)
+                if (device.IsCharging && device.Battery < 100)
                 {
                     switch (cfg.ChargingType)
                     {
@@ -258,7 +258,7 @@ namespace DS4Windows
                 color = new DS4Color(0, 0, 0);
             else
             {
-                if (device.getConnectionType() == ConnectionType.BT)
+                if (device.ConnectionType == ConnectionType.BT)
                     color = new DS4Color(32, 64, 64);
                 else
                     color = new DS4Color(0, 0, 0);
@@ -269,9 +269,9 @@ namespace DS4Windows
             if (distanceprofile && !defaultLight)
             {
                 // Thing I did for Distance
-                float rumble = device.getLeftHeavySlowRumble() / 2.55f;
+                float rumble = device.LeftHeavySlowRumble / 2.55f;
                 byte max = Max(color.red, Max(color.green, color.blue));
-                if (device.getLeftHeavySlowRumble() > 100)
+                if (device.LeftHeavySlowRumble > 100)
                 {
                     DS4Color maxCol = new DS4Color(max, max, 0);
                     DS4Color redCol = new DS4Color(255, 0, 0);
@@ -285,7 +285,7 @@ namespace DS4Windows
                     DS4Color tempCol = Util.getTransitionedColor(ref maxCol,
                         ref redCol, 39.6078f);
                     color = Util.getTransitionedColor(ref color, ref tempCol,
-                        device.getLeftHeavySlowRumble());
+                        device.LeftHeavySlowRumble);
                 }
                     
             }
@@ -302,18 +302,18 @@ namespace DS4Windows
                     haptics.LightBarFlashDurationOff = haptics.LightBarFlashDurationOn = (byte)(25 - forcedFlash);
                     haptics.LightBarExplicitlyOff = true;
                 }
-                else if (device.getBattery() <= cfg.FlashBatteryAt && cfg.FlashType == 0 && !defaultLight && !device.isCharging())
+                else if (device.Battery <= cfg.FlashBatteryAt && cfg.FlashType == 0 && !defaultLight && !device.IsCharging)
                 {
-                    int level = device.getBattery() / 10;
+                    int level = device.Battery / 10;
                     if (level >= 10)
                         level = 10; // all values of >~100% are rendered the same
 
                     haptics.LightBarFlashDurationOn = BatteryIndicatorDurations[level, 0];
                     haptics.LightBarFlashDurationOff = BatteryIndicatorDurations[level, 1];
                 }
-                else if (distanceprofile && device.getLeftHeavySlowRumble() > 155) //also part of Distance
+                else if (distanceprofile && device.LeftHeavySlowRumble > 155) //also part of Distance
                 {
-                    haptics.LightBarFlashDurationOff = haptics.LightBarFlashDurationOn = (byte)((-device.getLeftHeavySlowRumble() + 265));
+                    haptics.LightBarFlashDurationOff = haptics.LightBarFlashDurationOn = (byte)((-device.LeftHeavySlowRumble + 265));
                     haptics.LightBarExplicitlyOff = true;
                 }
                 else
@@ -328,7 +328,7 @@ namespace DS4Windows
                 haptics.LightBarExplicitlyOff = true;
             }
 
-            byte tempLightBarOnDuration = device.getLightBarOnDuration();
+            byte tempLightBarOnDuration = device.LightBarOnDuration;
             if (tempLightBarOnDuration != haptics.LightBarFlashDurationOn && tempLightBarOnDuration != 1 && haptics.LightBarFlashDurationOn == 0)
                 haptics.LightBarFlashDurationOff = haptics.LightBarFlashDurationOn = 1;
 

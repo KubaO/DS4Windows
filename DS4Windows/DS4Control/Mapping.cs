@@ -1099,7 +1099,7 @@ namespace DS4Windows
                 }
             }
 
-            bool sOff = /*tempBool =*/ cfg.UseSAforMouse;
+            bool sOff = cfg.UseSAforMouse;
             if (sOff == false) {
                 var sx = cfg.SX;
                 var sz = cfg.SZ;
@@ -1279,22 +1279,17 @@ namespace DS4Windows
 
         private bool ShiftTrigger2(int trigger, DS4State cState, DS4StateExposed eState, Mouse tp)
         {
-            bool result = false;
-            if (trigger == 0)
-            {
-                result = false;
-            }
-            else if (trigger < 26)
+            if (trigger > 0 && trigger < 26)
             {
                 DS4Controls ds = shiftTriggerMapping[trigger];
-                result = getBoolMapping2(ds, cState, eState, tp);
+                return getBoolMapping2(ds, cState, eState, tp);
             }
             else if (trigger == 26)
             {
-                result = cState.Touch1Finger;
+                return cState.Touch1Finger;
             }
 
-            return result;
+            return false;
         }
 
         /// <summary>
@@ -1352,11 +1347,7 @@ namespace DS4Windows
                     if ((regE || shiftE) && getBoolActionMapping2(dcs.Control, cState, eState, tp))
                     {
                         usingExtra = dcs.Control;
-                        string p;
-                        if (shiftE)
-                            p = dcs.Shift.Extras;
-                        else
-                            p = dcs.Norm.Extras;
+                        string p = (shiftE) ? dcs.Shift.Extras : dcs.Norm.Extras;
 
                         string[] extraS = p.Split(',');
                         int[] extras = extraS.Select(s => {
@@ -1965,11 +1956,11 @@ namespace DS4Windows
                                 actionFound = true;
 
                                 DS4Device d = ctrl.DS4Controller;
-                                bool synced = /*tempBool =*/ d.isSynced();
-                                if (synced && !d.isCharging())
+                                bool synced = d.IsSynced;
+                                if (synced && !d.IsCharging)
                                 {
-                                    ConnectionType deviceConn = d.getConnectionType();
-                                    bool exclusive = /*tempBool =*/ d.isExclusive();
+                                    ConnectionType deviceConn = d.ConnectionType;
+                                    bool exclusive = d.IsExclusive;
                                     if (deviceConn == ConnectionType.BT)
                                     {
                                         d.DisconnectBT();
@@ -2592,7 +2583,7 @@ namespace DS4Windows
             int controlNum = (int)control;
             DS4StateFieldMapping.ControlType controlType = DS4StateFieldMapping.mappedType[controlNum];
             //long timeElapsed = ctrl.DS4Controller.getLastTimeElapsed();
-            double timeElapsed = ctrl.DS4Controller.lastTimeElapsedDouble;
+            double timeElapsed = ctrl.DS4Controller.LastTimeElapsedDouble;
             //double mouseOffset = 0.025;
             double tempMouseOffsetX = 0.0, tempMouseOffsetY = 0.0;
 
@@ -3899,7 +3890,7 @@ namespace DS4Windows
                 }
 
                 // Do nothing if connection is active but the actual DS4 controller is still missing or not yet synchronized
-                if (!controller.Synced)
+                if (!controller.IsSynced)
                     return 0;
 
                 gyroAccelX = exposedState.AccelX;

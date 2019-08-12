@@ -109,11 +109,10 @@ namespace DS4Windows
             bool isValidSerial = false;
             if (true || d.isValidSerial())
             {
-                string stringMac = d.getMacAddress();
-                if (!string.IsNullOrEmpty(stringMac))
+                string mac = d.MacAddressStripped;
+                if (!string.IsNullOrEmpty(mac))
                 {
-                    stringMac = stringMac.Replace(":", string.Empty).Trim();
-                    meta.PadMacAddress = System.Net.NetworkInformation.PhysicalAddress.Parse(stringMac);
+                    meta.PadMacAddress = System.Net.NetworkInformation.PhysicalAddress.Parse(mac);
                     isValidSerial = d.isValidSerial();
                 }
             }
@@ -125,28 +124,28 @@ namespace DS4Windows
             }
             else
             {
-                if (d.isSynced() || d.IsAlive())
+                if (d.IsSynced || d.IsAlive)
                     meta.PadState = DsState.Connected;
                 else
                     meta.PadState = DsState.Reserved;
             }
 
-            meta.ConnectionType = (d.getConnectionType() == ConnectionType.USB) ? DsConnection.Usb : DsConnection.Bluetooth;
+            meta.ConnectionType = (d.ConnectionType == ConnectionType.USB) ? DsConnection.Usb : DsConnection.Bluetooth;
             meta.IsActive = !d.isDS4Idle();
 
-            if (d.isCharging() && d.getBattery() >= 100)
+            if (d.IsCharging && d.Battery >= 100)
                 meta.BatteryStatus = DsBattery.Charged;
             else
             {
-                if (d.getBattery() >= 95)
+                if (d.Battery >= 95)
                     meta.BatteryStatus = DsBattery.Full;
-                else if (d.getBattery() >= 70)
+                else if (d.Battery >= 70)
                     meta.BatteryStatus = DsBattery.High;
-                else if (d.getBattery() >= 50)
+                else if (d.Battery >= 50)
                     meta.BatteryStatus = DsBattery.Medium;
-                else if (d.getBattery() >= 20)
+                else if (d.Battery >= 20)
                     meta.BatteryStatus = DsBattery.Low;
-                else if (d.getBattery() >= 5)
+                else if (d.Battery >= 5)
                     meta.BatteryStatus = DsBattery.Dying;
                 else
                     meta.BatteryStatus = DsBattery.None;
@@ -365,9 +364,9 @@ namespace DS4Windows
 
         internal void WarnExclusiveModeFailure(DS4Device device)
         {
-            if (DS4Devices.isExclusiveMode && !device.isExclusive())
+            if (DS4Devices.isExclusiveMode && !device.IsExclusive)
             {
-                string message = Properties.Resources.CouldNotOpenDS4.Replace("*Mac address*", device.getMacAddress()) + " " +
+                string message = Properties.Resources.CouldNotOpenDS4.Replace("*Mac address*", device.MacAddress) + " " +
                     Properties.Resources.QuitOtherPrograms;
                 LogDebug(message, true);
                 AppLogger.LogToTray(message, true);
@@ -488,7 +487,7 @@ namespace DS4Windows
         internal void Start(DS4Device device, bool showlog)
         {
             if (showlog)
-                LogDebug(Properties.Resources.FoundController + device.getMacAddress() + " (" + device.getConnectionType() + ")");
+                LogDebug(Properties.Resources.FoundController + device.MacAddress + " (" + device.ConnectionType + ")");
 
             Task task = new Task(() => {
                 Thread.Sleep(5);
@@ -508,9 +507,9 @@ namespace DS4Windows
 
             if (!aux.UseTempProfile)
             {
-                if (device.isValidSerial() && API.Config.ContainsLinkedProfile(device.getMacAddress()))
+                if (device.isValidSerial() && API.Config.ContainsLinkedProfile(device.MacAddress))
                 {
-                    cfg.ProfilePath = API.Config.GetLinkedProfile(device.getMacAddress());
+                    cfg.ProfilePath = API.Config.GetLinkedProfile(device.MacAddress);
                 }
                 else
                 {
@@ -522,7 +521,7 @@ namespace DS4Windows
 
             device.LightBarColor = cfg.MainColor;
 
-            if (!cfg.DInputOnly && device.isSynced())
+            if (!cfg.DInputOnly && device.IsSynced)
             {
                 aux.UseDInputOnly = false;
 
@@ -644,14 +643,14 @@ namespace DS4Windows
         {
             if (DS4Controller != null)
             {
-                if ((API.Config.DisconnectBTAtStop && !DS4Controller.isCharging()) || ctlSvc.suspending)
+                if ((API.Config.DisconnectBTAtStop && !DS4Controller.IsCharging) || ctlSvc.suspending)
                 {
-                    if (DS4Controller.getConnectionType() == ConnectionType.BT)
+                    if (DS4Controller.ConnectionType == ConnectionType.BT)
                     {
                         DS4Controller.StopUpdate();
                         DS4Controller.DisconnectBT(true);
                     }
-                    else if (DS4Controller.getConnectionType() == ConnectionType.SONYWA)
+                    else if (DS4Controller.ConnectionType == ConnectionType.SONYWA)
                     {
                         DS4Controller.StopUpdate();
                         DS4Controller.DisconnectDongle(true);
@@ -697,10 +696,10 @@ namespace DS4Windows
 
                 foreach (DS4Device device in devices)
                 {
-                    if (device.isDisconnectingStatus())
+                    if (device.IsDisconnecting)
                         continue;
 
-                    if (ctlSvcs.Any(d => d?.DS4Controller?.getMacAddress() == device.getMacAddress()))
+                    if (ctlSvcs.Any(d => d?.DS4Controller?.MacAddress == device.MacAddress))
                         continue;
 
                     foreach (DeviceControlService dCS in ctlSvcs)
@@ -720,7 +719,7 @@ namespace DS4Windows
         {
             if (DS4Controller == null)
             {
-                LogDebug(Properties.Resources.FoundController + device.getMacAddress() + " (" + device.getConnectionType() + ")");
+                LogDebug($"{Properties.Resources.FoundController}{device.MacAddress} ({device.ConnectionType})");
                 Task task = new Task(() => {
                     Thread.Sleep(5);
                     WarnExclusiveModeFailure(device);
@@ -737,9 +736,9 @@ namespace DS4Windows
 
                 if (!aux.UseTempProfile)
                 {
-                    if (device.isValidSerial() && API.Config.ContainsLinkedProfile(device.getMacAddress()))
+                    if (device.isValidSerial() && API.Config.ContainsLinkedProfile(device.MacAddress))
                     {
-                        cfg.ProfilePath = API.Config.GetLinkedProfile(device.getMacAddress());
+                        cfg.ProfilePath = API.Config.GetLinkedProfile(device.MacAddress);
                     }
                     else
                     {
@@ -767,7 +766,7 @@ namespace DS4Windows
                     device.Report += tempEvnt;
                 }
 
-                if (!cfg.DInputOnly && device.isSynced())
+                if (!cfg.DInputOnly && device.IsSynced)
                 {
                     aux.UseDInputOnly = false;
                     OutContType contType = cfg.OutputDevType;
@@ -942,8 +941,8 @@ namespace DS4Windows
 
         private void CheckProfileOptions(DS4Device device, bool startUp = false)
         {
-            device.setIdleTimeout(cfg.IdleDisconnectTimeout);
-            device.setBTPollRate(cfg.BTPollRate);
+            device.IdleTimeout = cfg.IdleDisconnectTimeout;
+            device.BTPollRate = cfg.BTPollRate;
             touchPad.ResetTrackAccel(cfg.TrackballFriction);
 
             if (!startUp)
@@ -1008,126 +1007,68 @@ namespace DS4Windows
             //Log.LogToTray("Touchpad mode for " + device.MacAddress + " is now " + tmode.ToString());
         }
 
+#if false
         public string getDS4ControllerInfo()
         {
             DS4Device d = DS4Controller;
-            if (d != null)
-            {
-                if (!d.IsAlive())
-                {
-                    return Properties.Resources.Connecting;
-                }
+            if (d == null) return string.Empty;
+            if (!d.IsAlive) return Properties.Resources.Connecting;
 
-                string battery;
-                if (d.isCharging())
-                {
-                    if (d.getBattery() >= 100)
-                        battery = Properties.Resources.Charged;
-                    else
-                        battery = Properties.Resources.Charging.Replace("*number*", d.getBattery().ToString());
-                }
-                else
-                {
-                    battery = Properties.Resources.Battery.Replace("*number*", d.getBattery().ToString());
-                }
-
-                return d.getMacAddress() + " (" + d.getConnectionType() + "), " + battery;
-                //return d.MacAddress + " (" + d.ConnectionType + "), Battery is " + battery + ", Touchpad in " + modeSwitcher[index].ToString();
-            }
+            string battery;
+            if (d.IsCharging && d.Battery >= 100)
+                battery = Properties.Resources.Charged;
+            else if (d.IsCharging)
+                battery = Properties.Resources.Charging.Replace("*number*", d.Battery.ToString());
             else
-                return string.Empty;
+                battery = Properties.Resources.Battery.Replace("*number*", d.Battery.ToString());
+
+            return $"{d.MacAddress} ({d.ConnectionType}), {battery}"; // +", Touchpad in {modeSwitcher[index].ToString()}";
         }
+#endif
 
         public string getDS4MacAddress()
         {
             DS4Device d = DS4Controller;
-            if (d != null)
-            {
-                if (!d.IsAlive())
-                {
-                    return Properties.Resources.Connecting;
-                }
-
-                return d.getMacAddress();
-            }
-            else
-                return string.Empty;
+            if (d == null) return string.Empty;
+            if (!d.IsAlive) return Properties.Resources.Connecting;
+            return d.MacAddress;
         }
 
         public string getShortDS4ControllerInfo()
         {
-            DS4Device d = DS4Controller;
-            if (d != null)
-            {
-                string battery;
-                if (!d.IsAlive())
-                    battery = "...";
-
-                if (d.isCharging())
-                {
-                    if (d.getBattery() >= 100)
-                        battery = Properties.Resources.Full;
-                    else
-                        battery = d.getBattery() + "%+";
-                }
-                else
-                {
-                    battery = d.getBattery() + "%";
-                }
-
-                return (d.getConnectionType() + " " + battery);
-            }
-            else
-                return Properties.Resources.NoneText;
+            string battery = getRawBattery();
+            if (battery != null) return ($"{DS4Controller.ConnectionType} {battery}");
+            return Properties.Resources.NoneText;
         }
 
         public string getDS4Battery()
         {
+            return getRawBattery() ?? Properties.Resources.NA;
+        }
+
+        private string getRawBattery()
+        {
             DS4Device d = DS4Controller;
-            if (d != null)
-            {
-                string battery;
-                if (!d.IsAlive())
-                    battery = "...";
-
-                if (d.isCharging())
-                {
-                    if (d.getBattery() >= 100)
-                        battery = Properties.Resources.Full;
-                    else
-                        battery = d.getBattery() + "%+";
-                }
-                else
-                {
-                    battery = d.getBattery() + "%";
-                }
-
-                return battery;
-            }
-            else
-                return Properties.Resources.NA;
+            if (d == null) return null;
+            if (d.IsCharging && d.Battery >= 100) return Properties.Resources.Full;
+            if (d.IsCharging) return $"{d.Battery}%+";
+            if (d.IsAlive) return $"{d.Battery}%";
+            return "...";
         }
 
         public string getDS4Status()
         {
-            DS4Device d = DS4Controller;
-            if (d != null)
-            {
-                return d.getConnectionType() + "";
-            }
-            else
-                return Properties.Resources.NoneText;
+            return DS4Controller?.ConnectionType.ToString() ?? Properties.Resources.NoneText;
         }
 
         protected void On_SerialChange(object sender, EventArgs e)
         {
             DS4Device device = (DS4Device) sender;
             Debug.Assert(DS4Controller == null || device == DS4Controller);
-
-            if (DS4Controller != null)
+            if (DS4Controller != null) 
             {
                 // FIXME: this check may be unnecessary
-                OnDeviceSerialChange(this, devIndex, device.getMacAddress());
+                OnDeviceSerialChange(this, devIndex, device.MacAddress);
             }
         }
 
@@ -1135,13 +1076,10 @@ namespace DS4Windows
         {
             DS4Device device = (DS4Device) sender;
             Debug.Assert(DS4Controller == null || device == DS4Controller);
-
             if (DS4Controller != null)
             {
                 // FIXME: this check may be unnecessary
-                bool synced = device.isSynced();
-
-                if (!synced)
+                if (!device.IsSynced)
                 {
                     if (!aux.UseDInputOnly)
                     {
@@ -1226,8 +1164,8 @@ namespace DS4Windows
                     }).Wait();
 
                     string removed = Properties.Resources.ControllerWasRemoved.Replace("*Mac address*", (devIndex + 1).ToString());
-                    if (device.getBattery() <= 20 &&
-                        device.getConnectionType() == ConnectionType.BT && !device.isCharging())
+                    if (device.Battery <= 20 &&
+                        device.ConnectionType == ConnectionType.BT && !device.IsCharging)
                     {
                         removed += ". " + Properties.Resources.ChargeController;
                     }
@@ -1246,7 +1184,7 @@ namespace DS4Windows
                     */
 
                     device.IsRemoved = true;
-                    device.Synced = false;
+                    device.IsSynced = false;
                     DS4Controller = null;
                     touchPad = null;
                     lag = false;
@@ -1264,7 +1202,6 @@ namespace DS4Windows
         public bool inWarnMonitor;
         private byte currentBattery = 0;
         private bool charging = false;
-        private string tempString = string.Empty;
 
         // Called every time a new input report has arrived
         protected virtual void On_Report(DS4Device device, EventArgs e)
@@ -1272,7 +1209,7 @@ namespace DS4Windows
             if (cfg.FlushHIDQueue)
                 device.FlushHID();
 
-            string devError = tempString = device.error;
+            string devError = device.error;
             if (!string.IsNullOrEmpty(devError))
             {
                 uiContext?.Post(delegate(object state) {
@@ -1312,18 +1249,18 @@ namespace DS4Windows
             //device.getPreviousState(PreviousState[ind]);
             //DS4State pState = PreviousState[ind];
 
-            if (device.firstReport && device.IsAlive())
+            if (device.firstReport && device.IsAlive)
             {
                 device.firstReport = false;
                 uiContext?.Post(delegate (object state) {
                     OnDeviceStatusChanged(this, devIndex);
                 }, null);
             }
-            else if (pState.Battery != cState.Battery || device.oldCharging != device.isCharging())
+            else if (pState.Battery != cState.Battery || device.oldCharging != device.IsCharging)
             {
                 byte tempBattery = currentBattery = cState.Battery;
-                bool tempCharging = charging = device.isCharging();
-                uiContext?.Post(delegate(object state) {
+                bool tempCharging = charging = device.IsCharging;
+                uiContext?.Post(delegate (object state) {
                     OnBatteryStatusChange(this, devIndex, tempBattery, tempCharging);
                 }, null);
             }
@@ -1424,71 +1361,68 @@ namespace DS4Windows
             DS4State cState = CurrentState;
             DS4StateExposed eState = ExposedState;
             Mouse tp = touchPad;
-            DS4Controls result = DS4Controls.None;
-
             if (DS4Controller != null)
             {
                 if (Mapping.getBoolButtonMapping(cState.Cross))
-                    result = DS4Controls.Cross;
-                else if (Mapping.getBoolButtonMapping(cState.Circle))
-                    result = DS4Controls.Circle;
-                else if (Mapping.getBoolButtonMapping(cState.Triangle))
-                    result = DS4Controls.Triangle;
-                else if (Mapping.getBoolButtonMapping(cState.Square))
-                    result = DS4Controls.Square;
-                else if (Mapping.getBoolButtonMapping(cState.L1))
-                    result = DS4Controls.L1;
-                else if (Mapping.getBoolTriggerMapping(cState.L2))
-                    result = DS4Controls.L2;
-                else if (Mapping.getBoolButtonMapping(cState.L3))
-                    result = DS4Controls.L3;
-                else if (Mapping.getBoolButtonMapping(cState.R1))
-                    result = DS4Controls.R1;
-                else if (Mapping.getBoolTriggerMapping(cState.R2))
-                    result = DS4Controls.R2;
-                else if (Mapping.getBoolButtonMapping(cState.R3))
-                    result = DS4Controls.R3;
-                else if (Mapping.getBoolButtonMapping(cState.DpadUp))
-                    result = DS4Controls.DpadUp;
-                else if (Mapping.getBoolButtonMapping(cState.DpadDown))
-                    result = DS4Controls.DpadDown;
-                else if (Mapping.getBoolButtonMapping(cState.DpadLeft))
-                    result = DS4Controls.DpadLeft;
-                else if (Mapping.getBoolButtonMapping(cState.DpadRight))
-                    result = DS4Controls.DpadRight;
-                else if (Mapping.getBoolButtonMapping(cState.Share))
-                    result = DS4Controls.Share;
-                else if (Mapping.getBoolButtonMapping(cState.Options))
-                    result = DS4Controls.Options;
-                else if (Mapping.getBoolButtonMapping(cState.PS))
-                    result = DS4Controls.PS;
-                else if (Mapping.getBoolAxisDirMapping(cState.LX, true))
-                    result = DS4Controls.LXPos;
-                else if (Mapping.getBoolAxisDirMapping(cState.LX, false))
-                    result = DS4Controls.LXNeg;
-                else if (Mapping.getBoolAxisDirMapping(cState.LY, true))
-                    result = DS4Controls.LYPos;
-                else if (Mapping.getBoolAxisDirMapping(cState.LY, false))
-                    result = DS4Controls.LYNeg;
-                else if (Mapping.getBoolAxisDirMapping(cState.RX, true))
-                    result = DS4Controls.RXPos;
-                else if (Mapping.getBoolAxisDirMapping(cState.RX, false))
-                    result = DS4Controls.RXNeg;
-                else if (Mapping.getBoolAxisDirMapping(cState.RY, true))
-                    result = DS4Controls.RYPos;
-                else if (Mapping.getBoolAxisDirMapping(cState.RY, false))
-                    result = DS4Controls.RYNeg;
-                else if (Mapping.getBoolTouchMapping(tp.leftDown))
-                    result = DS4Controls.TouchLeft;
-                else if (Mapping.getBoolTouchMapping(tp.rightDown))
-                    result = DS4Controls.TouchRight;
-                else if (Mapping.getBoolTouchMapping(tp.multiDown))
-                    result = DS4Controls.TouchMulti;
-                else if (Mapping.getBoolTouchMapping(tp.upperDown))
-                    result = DS4Controls.TouchUpper;
+                    return DS4Controls.Cross;
+                if (Mapping.getBoolButtonMapping(cState.Circle))
+                    return DS4Controls.Circle;
+                if (Mapping.getBoolButtonMapping(cState.Triangle))
+                    return DS4Controls.Triangle;
+                if (Mapping.getBoolButtonMapping(cState.Square))
+                    return DS4Controls.Square;
+                if (Mapping.getBoolButtonMapping(cState.L1))
+                    return DS4Controls.L1;
+                if (Mapping.getBoolTriggerMapping(cState.L2))
+                    return DS4Controls.L2;
+                if (Mapping.getBoolButtonMapping(cState.L3))
+                    return DS4Controls.L3;
+                if (Mapping.getBoolButtonMapping(cState.R1))
+                    return DS4Controls.R1;
+                if (Mapping.getBoolTriggerMapping(cState.R2))
+                    return DS4Controls.R2;
+                if (Mapping.getBoolButtonMapping(cState.R3))
+                    return DS4Controls.R3;
+                if (Mapping.getBoolButtonMapping(cState.DpadUp))
+                    return DS4Controls.DpadUp;
+                if (Mapping.getBoolButtonMapping(cState.DpadDown))
+                    return DS4Controls.DpadDown;
+                if (Mapping.getBoolButtonMapping(cState.DpadLeft))
+                    return DS4Controls.DpadLeft;
+                if (Mapping.getBoolButtonMapping(cState.DpadRight))
+                    return DS4Controls.DpadRight;
+                if (Mapping.getBoolButtonMapping(cState.Share))
+                    return DS4Controls.Share;
+                if (Mapping.getBoolButtonMapping(cState.Options))
+                    return DS4Controls.Options;
+                if (Mapping.getBoolButtonMapping(cState.PS))
+                    return DS4Controls.PS;
+                if (Mapping.getBoolAxisDirMapping(cState.LX, true))
+                    return DS4Controls.LXPos;
+                if (Mapping.getBoolAxisDirMapping(cState.LX, false))
+                    return DS4Controls.LXNeg;
+                if (Mapping.getBoolAxisDirMapping(cState.LY, true))
+                    return DS4Controls.LYPos;
+                if (Mapping.getBoolAxisDirMapping(cState.LY, false))
+                    return DS4Controls.LYNeg;
+                if (Mapping.getBoolAxisDirMapping(cState.RX, true))
+                    return DS4Controls.RXPos;
+                if (Mapping.getBoolAxisDirMapping(cState.RX, false))
+                    return DS4Controls.RXNeg;
+                if (Mapping.getBoolAxisDirMapping(cState.RY, true))
+                    return DS4Controls.RYPos;
+                if (Mapping.getBoolAxisDirMapping(cState.RY, false))
+                    return DS4Controls.RYNeg;
+                if (Mapping.getBoolTouchMapping(tp.leftDown))
+                    return DS4Controls.TouchLeft;
+                if (Mapping.getBoolTouchMapping(tp.rightDown))
+                    return DS4Controls.TouchRight;
+                if (Mapping.getBoolTouchMapping(tp.multiDown))
+                    return DS4Controls.TouchMulti;
+                if (Mapping.getBoolTouchMapping(tp.upperDown))
+                    return DS4Controls.TouchUpper;
             }
-
-            return result;
+            return DS4Controls.None;
         }
 
         public bool touchreleased = true;

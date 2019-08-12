@@ -167,7 +167,7 @@ namespace DS4Windows
         private DS4Audio micAudio = null;
         public DateTime lastActive = DateTime.UtcNow;
         public DateTime firstActive = DateTime.UtcNow;
-        private bool charging;
+        private bool _isCharging;
         private int warnInterval = WARN_INTERVAL_USB;
         public int getWarnInterval()
         {
@@ -186,15 +186,7 @@ namespace DS4Windows
 
         public DateTime wheelPrevRecalibrateTime;
 
-        private int wheelRecalibrateActiveState = 0;
-        public int WheelRecalibrateActiveState
-        {
-            get { return wheelRecalibrateActiveState; }
-            set
-            {
-                wheelRecalibrateActiveState = value;
-            }
-        }
+        public int WheelRecalibrateActiveState { get; set; } // set in Mapping.cs
 
         public enum WheelCalibrationPoint
         {
@@ -222,181 +214,47 @@ namespace DS4Windows
         public ReportHandler<EventArgs> MotionEvent = null;
 
         public HidDevice HidDevice => hDevice;
-        public bool IsExclusive => HidDevice.IsExclusive;
-        public bool isExclusive()
-        {
-            return HidDevice.IsExclusive;
-        }
-
-        private bool isDisconnecting = false;
-        public bool IsDisconnecting
-        {
-            get { return isDisconnecting; }
-            private set
-            {
-                this.isDisconnecting = value;
-            }
-        }
-
-        public bool isDisconnectingStatus()
-        {
-            return this.isDisconnecting;
-        }
-
-        private bool isRemoving = false;
-        public bool IsRemoving
-        {
-            get { return isRemoving; }
-            set
-            {
-                this.isRemoving = value;
-            }
-        }
-
-        private bool isRemoved = false;
-        public bool IsRemoved
-        {
-            get { return isRemoved; }
-            set
-            {
-                this.isRemoved = value;
-            }
-        }
-
+        public bool IsExclusive { get => HidDevice.IsExclusive; }
+        public bool IsDisconnecting { get; private set; }
+        public bool IsRemoving { get; set; } // set in ControlService
+        public bool IsRemoved { get; set; } // set in ControlService
         public object removeLocker = new object();
-
-        public string MacAddress =>  Mac;
-        public string getMacAddress()
-        {
-            return this.Mac;
-        }
-
-        public ConnectionType ConnectionType => conType;
-        public ConnectionType getConnectionType()
-        {
-            return this.conType;
-        }
-
+        public string MacAddress { get => Mac.Trim();  }
+        public string MacAddressStripped { get => MacAddress.Replace(":", ""); }
+        public ConnectionType ConnectionType { get => conType; }
         // behavior only active when > 0
-        private int idleTimeout = 0;
-        public int IdleTimeout
-        {
-            get { return idleTimeout; }
-            set
-            {
-                idleTimeout = value;
-            }
-        }
-
-        public int getIdleTimeout()
-        {
-            return idleTimeout;
-        }
-
-        public void setIdleTimeout(int value)
-        {
-            if (idleTimeout != value)
-            {
-                idleTimeout = value;
-            }
-        }
-
-        public int Battery => battery;
-        public int getBattery()
-        {
-            return battery;
-        }
-
-        public bool Charging => charging;
-        public bool isCharging()
-        {
-            return charging;
-        }
-
-        private long lastTimeElapsed = 0;
-        public long getLastTimeElapsed()
-        {
-            return lastTimeElapsed;
-        }
-
-        public double lastTimeElapsedDouble = 0.0;
-        public double getLastTimeElapsedDouble()
-        {
-            return lastTimeElapsedDouble;
-        }
-
+        public int IdleTimeout { get; set; }
+        public int Battery { get => battery; }
+        public bool IsCharging { get => _isCharging; }
+        public long LastTimeElapsed { get; private set; }
+        public double LastTimeElapsedDouble { get; private set; }
         public byte RightLightFastRumble
         {
-            get { return currentHap.RumbleMotorStrengthRightLightFast; }
-            set
-            {
-                if (currentHap.RumbleMotorStrengthRightLightFast != value)
-                    currentHap.RumbleMotorStrengthRightLightFast = value;
-            }
+            get => currentHap.RumbleMotorStrengthRightLightFast;
+            set => currentHap.RumbleMotorStrengthRightLightFast = value;
         }
 
         public byte LeftHeavySlowRumble
         {
-            get { return currentHap.RumbleMotorStrengthLeftHeavySlow; }
-            set
-            {
-                if (currentHap.RumbleMotorStrengthLeftHeavySlow != value)
-                    currentHap.RumbleMotorStrengthLeftHeavySlow = value;
-            }
-        }
-
-        public byte getLeftHeavySlowRumble()
-        {
-            return currentHap.RumbleMotorStrengthLeftHeavySlow;
+            get => currentHap.RumbleMotorStrengthLeftHeavySlow;
+            set => currentHap.RumbleMotorStrengthLeftHeavySlow = value;
         }
 
         public DS4Color LightBarColor
         {
-            get { return currentHap.LightBarColor; }
-            set
-            {
-                if (currentHap.LightBarColor.red != value.red || currentHap.LightBarColor.green != value.green || currentHap.LightBarColor.blue != value.blue)
-                {
-                    currentHap.LightBarColor = value;
-                }
-            }
+            get => currentHap.LightBarColor;
+            set => currentHap.LightBarColor = value;
         }
 
-        public byte getLightBarOnDuration()
-        {
-            return currentHap.LightBarFlashDurationOn;
-        }
+        public byte LightBarOnDuration { get => currentHap.LightBarFlashDurationOn;  }
 
         // Specify the poll rate interval used for the DS4 hardware when
         // connected via Bluetooth
         private int btPollRate = 0;
-        public int BTPollRate
-        {
-            get { return btPollRate; }
-            set
-            {
-                if (btPollRate != value && value >= 0 && value <= 16)
-                {
-                    btPollRate = value;
-                }
-            }
-        }
+        public int BTPollRate { get => btPollRate; set => Util.Clamp(value, 0, 16); }
 
-        public int getBTPollRate()
-        {
-            return btPollRate;
-        }
-
-        public void setBTPollRate(int value)
-        {
-            if (btPollRate != value && value >= 0 && value <= 16)
-            {
-                btPollRate = value;
-            }
-        }
-
-        public DS4Touchpad Touchpad { get { return touchpad; } }
-        public DS4SixAxis SixAxis { get { return sixAxis; } }
+        public DS4Touchpad Touchpad { get => touchpad; }
+        public DS4SixAxis SixAxis { get => sixAxis; }
 
         public static ConnectionType HidConnectionType(HidDevice hidDevice)
         {
@@ -412,22 +270,18 @@ namespace DS4Windows
             {
                 result = ConnectionType.BT;
             }
-
             return result;
         }
 
         private Queue<Action> eventQueue = new Queue<Action>();
         private object eventQueueLock = new object();
 
-        private Thread timeoutCheckThread = null;
-        private bool timeoutExecuted = false;
-        private bool timeoutEvent = false;
+        private Thread timeoutCheckThread;
+        private bool timeoutExecuted;
+        private bool timeoutEvent;
         private bool runCalib;
-        private bool hasInputEvts = false;
-        public bool ShouldRunCalib()
-        {
-            return runCalib;
-        }
+        private bool hasInputEvts;
+        public bool ShouldRunCalib { get => runCalib;  }
 
         public DS4Device(HidDevice hidDevice)
         {
@@ -461,7 +315,7 @@ namespace DS4Windows
                         RAIJU_TE_AUDIO_SEARCHNAME);
                     }
 
-                    synced = true;
+                    IsSynced = true;
                 }
                 else
                 {
@@ -469,7 +323,7 @@ namespace DS4Windows
                     audio = new DS4Audio(searchName: SONYWA_AUDIO_SEARCHNAME);
                     micAudio = new DS4Audio(DS4Library.CoreAudio.DataFlow.Capture,
                         SONYWA_AUDIO_SEARCHNAME);
-                    runCalib = synced = isValidSerial();
+                    runCalib = IsSynced = isValidSerial();
                 }
             }
             else
@@ -479,7 +333,7 @@ namespace DS4Windows
                 outputReport = new byte[BT_OUTPUT_REPORT_LENGTH];
                 outReportBuffer = new byte[BT_OUTPUT_REPORT_LENGTH];
                 warnInterval = WARN_INTERVAL_BT;
-                synced = isValidSerial();
+                IsSynced = isValidSerial();
             }
 
             touchpad = new DS4Touchpad();
@@ -711,30 +565,11 @@ namespace DS4Windows
         }
 
         /** Is the device alive and receiving valid sensor input reports? */
-        public bool IsAlive()
-        {
-            return priorInputReport30 != 0xff;
-        }
+        public bool IsAlive { get => priorInputReport30 != 0xff; }
 
         private byte priorInputReport30 = 0xff;
 
-        private bool synced = false;
-        public bool Synced
-        {
-            get { return synced; }
-            set
-            {
-                if (synced != value)
-                {
-                    synced = value;
-                }
-            }
-        }
-
-        public bool isSynced()
-        {
-            return synced;
-        }
+        public bool IsSynced { get; set; } // set in ControlService.cs
 
         public double Latency = 0.0;
         public string error;
@@ -790,7 +625,7 @@ namespace DS4Windows
 
                 while (!exitInputThread)
                 {
-                    oldCharging = charging;
+                    oldCharging = _isCharging;
                     currerror = string.Empty;
 
                     if (tempLatencyCount >= 20)
@@ -799,8 +634,8 @@ namespace DS4Windows
                         tempLatencyCount--;
                     }
 
-                    latencySum += this.lastTimeElapsed;
-                    latencyQueue.Enqueue(this.lastTimeElapsed);
+                    latencySum += LastTimeElapsed;
+                    latencyQueue.Enqueue(LastTimeElapsed);
                     tempLatencyCount++;
 
                     //Latency = latencyQueue.Average();
@@ -855,7 +690,7 @@ namespace DS4Windows
 
                             sendOutputReport(true, true); // Kick Windows into noticing the disconnection.
                             StopOutputUpdate();
-                            isDisconnecting = true;
+                            IsDisconnecting = true;
                             Removal?.Invoke(this, EventArgs.Empty);
 
                             timeoutExecuted = true;
@@ -882,7 +717,7 @@ namespace DS4Windows
                             }
 
                             StopOutputUpdate();
-                            isDisconnecting = true;
+                            IsDisconnecting = true;
                             Removal?.Invoke(this, EventArgs.Empty);
 
                             timeoutExecuted = true;
@@ -893,8 +728,8 @@ namespace DS4Windows
                     curTimeDouble = sw.Elapsed.TotalMilliseconds;
                     curtime = sw.ElapsedMilliseconds;
 
-                    lastTimeElapsed = curtime - oldtime;
-                    lastTimeElapsedDouble = (curTimeDouble - oldTimeDouble);
+                    LastTimeElapsed = curtime - oldtime;
+                    LastTimeElapsedDouble = (curTimeDouble - oldTimeDouble);
 
                     oldtime = curtime;
                     oldTimeDouble = curTimeDouble;
@@ -956,8 +791,8 @@ namespace DS4Windows
                     cState.FrameCounter = (byte)(tempByte >> 2);
 
                     tempByte = inputReport[30];
-                    charging = (tempByte & 0x10) != 0;
-                    maxBatteryValue = charging ? BATTERY_MAX_USB : BATTERY_MAX;
+                    _isCharging = (tempByte & 0x10) != 0;
+                    maxBatteryValue = _isCharging ? BATTERY_MAX_USB : BATTERY_MAX;
                     tempBattery = (tempByte & 0x0f) * 100 / maxBatteryValue;
                     battery = Math.Min((byte)tempBattery, (byte)100);
                     cState.Battery = (byte)battery;
@@ -1056,11 +891,11 @@ namespace DS4Windows
                     if (conType == ConnectionType.SONYWA)
                     {
                         bool controllerSynced = inputReport[31] == 0;
-                        if (controllerSynced != synced)
+                        if (controllerSynced != IsSynced)
                         {
-                            runCalib = synced = controllerSynced;
+                            runCalib = IsSynced = controllerSynced;
                             SyncChange?.Invoke(this, EventArgs.Empty);
-                            if (synced)
+                            if (IsSynced)
                             {
                                 forceWrite = true;
                             }
@@ -1074,12 +909,12 @@ namespace DS4Windows
                     ds4InactiveFrame = cState.FrameCounter == pState.FrameCounter;
                     if (!ds4InactiveFrame)
                     {
-                        isRemoved = false;
+                        IsRemoved = false;
                     }
 
                     if (conType == ConnectionType.USB)
                     {
-                        if (idleTimeout == 0)
+                        if (IdleTimeout == 0)
                         {
                             lastActive = utcNow;
                         }
@@ -1095,13 +930,13 @@ namespace DS4Windows
                     else
                     {
                         bool shouldDisconnect = false;
-                        if (!isRemoved && idleTimeout > 0)
+                        if (!IsRemoved && IdleTimeout > 0)
                         {
                             idleInput = isDS4Idle();
                             if (idleInput)
                             {
-                                DateTime timeout = lastActive + TimeSpan.FromSeconds(idleTimeout);
-                                if (!charging)
+                                DateTime timeout = lastActive + TimeSpan.FromSeconds(IdleTimeout);
+                                if (!_isCharging)
                                     shouldDisconnect = utcNow >= timeout;
                             }
                             else
@@ -1133,9 +968,9 @@ namespace DS4Windows
                         }
                     }
 
-                    if (conType == ConnectionType.BT && oldCharging != charging)
+                    if (conType == ConnectionType.BT && oldCharging != _isCharging)
                     {
-                        if (API.Config.QuickCharge && charging)
+                        if (API.Config.QuickCharge && _isCharging)
                         {
                             DisconnectBT(true);
                             timeoutExecuted = true;
@@ -1421,7 +1256,7 @@ namespace DS4Windows
 
             if (result && remove)
             {
-                isDisconnecting = true;
+                IsDisconnecting = true;
 
                 Removal?.Invoke(this, EventArgs.Empty);
 
@@ -1430,7 +1265,7 @@ namespace DS4Windows
             }
             else if (result && !remove)
             {
-                isRemoved = true;
+                IsRemoved = true;
             }
 
             return result;

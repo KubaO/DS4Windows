@@ -1350,9 +1350,8 @@ namespace DS4Windows
             if (xinputChange && devIndex < 4)
             {
                 DS4Device tempDevice = control.DS4Controller;
-                bool exists = (tempDevice != null);
-                bool synced = exists ? tempDevice.isSynced() : false;
-                bool isAlive = exists ? tempDevice.IsAlive() : false;
+                bool synced = tempDevice?.IsSynced ?? false;
+                bool isAlive = tempDevice?.IsAlive ?? false;
                 if (DInputOnly != oldUseDInputOnly)
                 {
                     if (DInputOnly)
@@ -1377,11 +1376,11 @@ namespace DS4Windows
             // options to device instance
             if (postLoadTransfer && devIndex < 4) { 
                 DS4Device tempDev = control.DS4Controller;
-                if (tempDev != null && tempDev.isSynced()) {
+                if (tempDev?.IsSynced ?? false) {
                     tempDev.queueEvent(() =>
                     {
-                        tempDev.setIdleTimeout(IdleDisconnectTimeout);
-                        tempDev.setBTPollRate(BTPollRate);
+                        tempDev.IdleTimeout = IdleDisconnectTimeout;
+                        tempDev.BTPollRate = BTPollRate;
                         if (xinputStatus && xinputPlug)
                         {
                             OutputDevice tempOutDev = control.outputDevice;
@@ -2320,7 +2319,7 @@ namespace DS4Windows
                 XmlDocument xmlDoc = new XmlDocument();
                 xmlDoc.Load(API.ControllerConfigsPath);
 
-                XmlNode node = xmlDoc.SelectSingleNode("/Controllers/Controller[@Mac=\"" + device.getMacAddress() + "\"]");
+                XmlNode node = xmlDoc.SelectSingleNode("/Controllers/Controller[@Mac=\"{device.MacAddress}\"]");
                 if (node != null)
                 {
                     Int32 intValue;
@@ -2381,12 +2380,12 @@ namespace DS4Windows
                 XmlDocument xmlDoc = new XmlDocument();
                 xmlDoc.Load(API.ControllerConfigsPath);
 
-                XmlNode node = xmlDoc.SelectSingleNode("/Controllers/Controller[@Mac=\"" + device.getMacAddress() + "\"]");
+                XmlNode node = xmlDoc.SelectSingleNode("/Controllers/Controller[@Mac=\"{device.MacAddress}\"]");
                 if (node == null)
                 {
                     XmlNode xmlControllersNode = xmlDoc.SelectSingleNode("/Controllers");
                     XmlElement el = xmlDoc.CreateElement("Controller");
-                    el.SetAttribute("Mac", device.getMacAddress());
+                    el.SetAttribute("Mac", device.MacAddress);
 
                     el.AppendChild(xmlDoc.CreateElement("wheelCenterPoint"));
                     el.AppendChild(xmlDoc.CreateElement("wheel90DegPointLeft"));

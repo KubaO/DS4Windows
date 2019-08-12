@@ -1472,18 +1472,11 @@ namespace DS4Windows.Forms
                 if (device != null)
                 {
                     Pads[devIndex].Text = serial;
-                    if (device.isSynced())
+                    linkedProfileCB[devIndex].Enabled = device.IsSynced;
+ 
+                    if (device.isValidSerial() && Config.ContainsLinkedProfile(device.MacAddress))
                     {
-                        linkedProfileCB[devIndex].Enabled = true;
-                    }
-                    else
-                    {
-                        linkedProfileCB[devIndex].Enabled = false;
-                    }
-
-                    if (device.isValidSerial() && Config.ContainsLinkedProfile(device.getMacAddress()))
-                    {
-                        cfg.ProfilePath = Config.GetLinkedProfile(device.getMacAddress());
+                        cfg.ProfilePath = Config.GetLinkedProfile(device.MacAddress);
                         int profileIndex = cbs[devIndex].FindString(cfg.ProfilePath);
                         if (profileIndex >= 0)
                         {
@@ -1606,12 +1599,12 @@ namespace DS4Windows.Forms
             DS4Device d = dCS.DS4Controller;
             if (d != null)
             {
-                if (e.Button == MouseButtons.Right && dCS.getDS4Status() == "BT" && !d.Charging)
+                if (e.Button == MouseButtons.Right && dCS.getDS4Status() == "BT" && !d.IsCharging)
                 {
                     d.DisconnectBT();
                 }
                 else if (e.Button == MouseButtons.Right &&
-                    dCS.getDS4Status() == "SONYWA" && !d.Charging)
+                    dCS.getDS4Status() == "SONYWA" && !d.IsCharging)
                 {
                     d.DisconnectDongle();
                 }
@@ -1952,9 +1945,9 @@ namespace DS4Windows.Forms
                     if (linkedProfileCB[tdevice].Checked)
                     {
                         DS4Device device = dCS.DS4Controller;
-                        if (device != null && device.isValidSerial())
+                        if (device?.isValidSerial() ?? false)
                         {
-                            Config.SetLinkedProfile(device.getMacAddress(), cfg.ProfilePath);
+                            Config.SetLinkedProfile(device.MacAddress, cfg.ProfilePath);
                             Config.SaveLinkedProfiles();
                         }
                     }
@@ -2679,18 +2672,18 @@ namespace DS4Windows.Forms
             bool check = linkCb.Checked;
             aux.LinkedProfileCheck = check;
             DS4Device device = Program.RootHub(i).DS4Controller;
-            if (device != null && device.isSynced())
+            if (device?.IsSynced ?? false)
             {
                 if (check)
                 {
                     if (device.isValidSerial())
                     {
-                        Config.SetLinkedProfile(device.getMacAddress(), cfg.ProfilePath);
+                        Config.SetLinkedProfile(device.MacAddress, cfg.ProfilePath);
                     }
                 }
                 else
                 {
-                    Config.RemoveLinkedProfile(device.getMacAddress());
+                    Config.RemoveLinkedProfile(device.MacAddress);
                     cfg.ProfilePath = cfg.OlderProfilePath;
                     int profileIndex = cbs[i].FindString(cfg.ProfilePath);
                     if (profileIndex >= 0)
@@ -2764,11 +2757,11 @@ namespace DS4Windows.Forms
             DS4Device d = Program.RootHub(i).DS4Controller;
             if (d != null)
             {
-                if (d.ConnectionType == ConnectionType.BT && !d.Charging)
+                if (d.ConnectionType == ConnectionType.BT && !d.IsCharging)
                 {
                     d.DisconnectBT();
                 }
-                else if (d.ConnectionType == ConnectionType.SONYWA && !d.Charging)
+                else if (d.ConnectionType == ConnectionType.SONYWA && !d.IsCharging)
                 {
                     d.DisconnectDongle();
                 }
