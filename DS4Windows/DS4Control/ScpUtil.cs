@@ -46,6 +46,7 @@ namespace DS4Windows
                         ActionType = ActionType.Macro;
                     else
                         ActionType = ActionType.Default;
+                    action = value;
                 }
             }
             public string Extras;
@@ -64,8 +65,8 @@ namespace DS4Windows
 
         public void Reset()
         {
-            Norm = default(Sub);
-            Shift = default(Sub);
+            Norm = default;
+            Shift = default;
         }
 
         public ref Sub GetSub(bool shift)
@@ -244,8 +245,7 @@ namespace DS4Windows
 
         public static DS4Controls GetDS4ControlsByName(string key)
         {
-            DS4Controls ds4c;
-            if (Enum.TryParse(key, true, out ds4c))
+            if (Enum.TryParse(key, true, out DS4Controls ds4c))
                 return ds4c;
 
             bool bnShift = key.StartsWith("bnShift");
@@ -311,8 +311,7 @@ namespace DS4Windows
 
         public static X360Controls GetX360ControlsByName(string key)
         {
-            X360Controls x3c;
-            if (Enum.TryParse(key, true, out x3c))
+            if (Enum.TryParse(key, true, out X360Controls x3c))
                 return x3c;
 
             switch (key)
@@ -419,8 +418,7 @@ namespace DS4Windows
         public static event EventHandler<EventArgs> ControllerStatusChange; // called when a controller is added/removed/battery or touchpad mode changes/etc.
         public static void ControllerStatusChanged(object sender)
         {
-            if (ControllerStatusChange != null)
-                ControllerStatusChange(sender, EventArgs.Empty);
+            ControllerStatusChange?.Invoke(sender, EventArgs.Empty);
         }
 
         public static event EventHandler<BatteryReportArgs> BatteryStatusChange;
@@ -477,7 +475,7 @@ namespace DS4Windows
         public int DeadZone { get; set; } = 0;  // Trigger deadzone is expressed in axis units
         public int AntiDeadZone { get; set; } = 0;
         public int MaxZone { get; set; } = 100;
-        public BezierPreset OutCurvePreset { get; set; } = default(BezierPreset);
+        public BezierPreset OutCurvePreset { get; set; } = default;
         public BezierCurve OutBezierCurve { get; } = new BezierCurve(BezierCurve.L2R2Range);
     }
 
@@ -489,7 +487,7 @@ namespace DS4Windows
         public int MaxZone { get; set; } = 0;
         public double Rotation { get; set; } = 0.0;
         public int Curve { get; set; } = 0;
-        public BezierPreset OutCurvePreset { get; set; } = default(BezierPreset);
+        public BezierPreset OutCurvePreset { get; set; } = default;
         public BezierCurve OutBezierCurve { get; } = new BezierCurve(BezierCurve.LSRSRange);
     }
 
@@ -499,7 +497,7 @@ namespace DS4Windows
         public double DeadZone { get; set; } = 0.25;
         public double MaxZone { get; set; } = 1.0;
         public double AntiDeadZone { get; set; } = 0.0;
-        public BezierPreset OutCurvePreset { get; set; } = default(BezierPreset);
+        public BezierPreset OutCurvePreset { get; set; } = default;
         public BezierCurve OutBezierCurve { get; } = new BezierCurve(BezierCurve.SARange);
     }
 
@@ -659,14 +657,12 @@ namespace DS4Windows
 
         public SpecialAction GetProfileAction(string name)
         {
-            SpecialAction sA;
-            return profileActionDict.TryGetValue(name, out sA) ? sA : null;
+            return profileActionDict.TryGetValue(name, out var sA) ? sA : null;
         }
 
         public int GetProfileActionIndexOf(string name)
         {
-            int index;
-            return profileActionIndexDict.TryGetValue(name, out index) ? index : -1;
+            return profileActionIndexDict.TryGetValue(name, out var index) ? index : -1;
         }
 
         public List<DS4ControlSettings> DS4CSettings { get; } = new List<DS4ControlSettings>();
@@ -743,7 +739,7 @@ namespace DS4Windows
             => GetDS4CSetting(buttonName)?.GetSub(shift).Extras;
 
         public DS4KeyType GetDS4KeyType(string buttonName, bool shift)
-            => GetDS4CSetting(buttonName)?.GetSub(shift).KeyType ?? default(DS4KeyType);
+            => GetDS4CSetting(buttonName)?.GetSub(shift).KeyType ?? default;
 
         public int GetDS4STrigger(string buttonName)
             => GetDS4CSetting(buttonName)?.Shift.ShiftTrigger ?? 0;
@@ -755,10 +751,10 @@ namespace DS4Windows
         // so few items that lookup can be done via linear search in an array.
         private static BiDictionary<string, SATriggerCondType> saTriggerCondDict =
             new Func<BiDictionary<string, SATriggerCondType>>(() => {
-                var dict = new BiDictionary<string, SATriggerCondType>();
-                dict["and"] = SATriggerCondType.And;
-                dict["or"] = SATriggerCondType.Or;
-                return dict;
+                return new BiDictionary<string, SATriggerCondType> {
+                    ["and"] = SATriggerCondType.And,
+                    ["or"] = SATriggerCondType.Or
+                };
             })();
 
         private static string saTriggerCond(SATriggerCondType value) =>
@@ -774,15 +770,15 @@ namespace DS4Windows
 
         private static BiDictionary<string, BezierPreset> outputCurveDict =
             new Func<BiDictionary<string, BezierPreset>>(() => {
-                var dict = new BiDictionary<string, BezierPreset>();
-                dict["linear"] = BezierPreset.Linear;
-                dict["enhanced-precision"] = BezierPreset.EnhancedPrecision;
-                dict["quadratic"] = BezierPreset.Quadric;
-                dict["cubic"] = BezierPreset.Cubic;
-                dict["easeout-quad"] = BezierPreset.EaseOutQuad;
-                dict["easeout-cubic"] = BezierPreset.EaseOutCubic;
-                dict["custom"] = BezierPreset.Custom;
-                return dict;
+                return new BiDictionary<string, BezierPreset> {
+                    ["linear"] = BezierPreset.Linear,
+                    ["enhanced-precision"] = BezierPreset.EnhancedPrecision,
+                    ["quadratic"] = BezierPreset.Quadric,
+                    ["cubic"] = BezierPreset.Cubic,
+                    ["easeout-quad"] = BezierPreset.EaseOutQuad,
+                    ["easeout-cubic"] = BezierPreset.EaseOutCubic,
+                    ["custom"] = BezierPreset.Custom
+                };
             })();
 
         private string outputCurve(BezierPreset preset) =>
@@ -796,7 +792,7 @@ namespace DS4Windows
             switch (id)
             {
                 case OutContType.None:
-                case OutContType.X360: return "X360";;
+                case OutContType.X360: return "X360";
                 case OutContType.DS4: return "DS4";
                 default: return "X360";
             }
@@ -807,8 +803,8 @@ namespace DS4Windows
             switch (name)
             {
                 case "None":
-                case "X360": return OutContType.X360; break;
-                case "DS4": return OutContType.DS4; break;
+                case "X360": return OutContType.X360;
+                case "DS4": return OutContType.DS4;
                 default: return OutContType.X360;
             }
         }
@@ -840,8 +836,7 @@ namespace DS4Windows
             public bool? LoadBool(string path)
             {
                 XmlNode Item = Xdoc.SelectSingleNode($"/{rootname}/{path}");
-                bool result;
-                if (Item == null || !bool.TryParse(Item.InnerText, out result))
+                if (Item == null || !bool.TryParse(Item.InnerText, out var result))
                 {
                     missingSetting = true;
                     return null;
@@ -851,8 +846,7 @@ namespace DS4Windows
             public byte? LoadByte(string path)
             {
                 XmlNode Item = Xdoc.SelectSingleNode($"/{rootname}/{path}");
-                byte result;
-                if (Item == null || !byte.TryParse(Item.InnerText, out result))
+                if (Item == null || !byte.TryParse(Item.InnerText, out var result))
                 {
                     missingSetting = true;
                     return null;
@@ -862,8 +856,7 @@ namespace DS4Windows
             public int? LoadInt(string path)
             {
                 XmlNode Item = Xdoc.SelectSingleNode($"/{rootname}/{path}");
-                int result;
-                if (Item == null || !int.TryParse(Item.InnerText, out result))
+                if (Item == null || !int.TryParse(Item.InnerText, out var result))
                 {
                     missingSetting = true;
                     return null;
@@ -873,8 +866,7 @@ namespace DS4Windows
             public double? LoadDouble(string path)
             {
                 XmlNode Item = Xdoc.SelectSingleNode($"/{rootname}/{path}");
-                double result;
-                if (Item == null || !double.TryParse(Item.InnerText, out result))
+                if (Item == null || !double.TryParse(Item.InnerText, out var result))
                 {
                     missingSetting = true;
                     return null;
@@ -885,8 +877,7 @@ namespace DS4Windows
             public DateTime? LoadDateTime(string path)
             {
                 XmlNode Item = Xdoc.SelectSingleNode($"/{rootname}/{path}");
-                DateTime result;
-                if (Item == null || !DateTime.TryParse(Item.InnerText, out result))
+                if (Item == null || !DateTime.TryParse(Item.InnerText, out var result))
                 {
                     missingSetting = true;
                     return null;
@@ -915,8 +906,7 @@ namespace DS4Windows
             public SASteeringWheelEmulationAxisType? LoadSASWEmulationAxis(string path)
             {
                 XmlNode Item = Xdoc.SelectSingleNode($"/{rootname}/{path}");
-                SASteeringWheelEmulationAxisType result;
-                if (Item == null || !SASteeringWheelEmulationAxisType.TryParse(Item.InnerText, out result))
+                if (Item == null || !Enum.TryParse(Item.InnerText, out SASteeringWheelEmulationAxisType result))
                 {
                     missingSetting = true;
                     return null;
@@ -943,8 +933,7 @@ namespace DS4Windows
 
             public double? ParseDouble(string text)
             {
-                double result;
-                if (text == null || !double.TryParse(text, out result)) {
+                if (text == null || !double.TryParse(text, out var result)) {
                     missingSetting = true;
                     return null;
                 }
@@ -952,8 +941,7 @@ namespace DS4Windows
             }
             public double ParseSensitivity(string[] texts, int index, double min)
             {
-                double result;
-                if (texts.Length <= index || !double.TryParse(texts[index], out result) || result < min) {
+                if (texts.Length <= index || !double.TryParse(texts[index], out var result) || result < min) {
                     missingSetting = true;
                     return 1.0;
                 }
@@ -961,8 +949,7 @@ namespace DS4Windows
             }
             public bool? ParseBool(string[] texts, int index)
             {
-                bool result;
-                if (texts.Length <= index || !bool.TryParse(texts[index], out result))
+                if (texts.Length <= index || !bool.TryParse(texts[index], out var result))
                 {
                     missingSetting = true;
                     return null;
@@ -971,8 +958,7 @@ namespace DS4Windows
             }
             public int? ParseInt(string[] texts, int index)
             {
-                int result;
-                if (texts.Length <= index || !int.TryParse(texts[index], out result))
+                if (texts.Length <= index || !int.TryParse(texts[index], out var result))
                 {
                     missingSetting = true;
                     return null;
@@ -1032,9 +1018,6 @@ namespace DS4Windows
         {
             if (string.IsNullOrEmpty(profilePath))
                 profilePath = $"{API.AppDataPath}\\Profiles\\{this.ProfilePath}.xml";
-
-            bool xinputPlug = false;
-            bool xinputStatus = false;
 
             bool missingSetting = false;
             bool loaded = false;
@@ -1236,8 +1219,7 @@ namespace DS4Windows
 
                 foreach (XmlElement item in ldr.ChildNodes($"{pathPrefix}/Key"))
                 {
-                    ushort wvk;
-                    if (ushort.TryParse(item.InnerText, out wvk)) {
+                    if (ushort.TryParse(item.InnerText, out var wvk)) {
                         int shiftT = isShift ? shiftM : 0;
                         if (isShift && item.HasAttribute("Trigger"))
                             int.TryParse(item.Attributes["Trigger"].Value, out shiftT);
@@ -1468,7 +1450,8 @@ namespace DS4Windows
 
         private class XmlNodeControl
         {
-            public XmlElement Key, Macro, KeyType, Button, Extras;
+            // TODO: this perhaps could be simplified not to use introspection
+            public XmlElement Key, Macro, KeyType, Button, Extras; // Assigned to in the code below
             XmlElement[] Elements;
             public XmlNodeControl(XmlDocument doc)
             {
@@ -1504,8 +1487,7 @@ namespace DS4Windows
         {
             //IDeviceAuxiliaryConfig aux = API.Aux(devIndex);
 
-            Saver svr = new Saver();
-            svr.doc = Xdoc;
+            Saver svr = new Saver {doc = Xdoc};
 
             XmlNode Node;
             XmlNode xmlControls = Xdoc.SelectSingleNode("/DS4Windows/Control");
@@ -1623,8 +1605,8 @@ namespace DS4Windows
 
             svr.Append("OutputContDevice", outContDevice(OutputDevType));
 
-              XmlNode NodeControl = Xdoc.CreateElement("Control");
-              var N = new XmlNodeControl(Xdoc);
+            XmlNode NodeControl = Xdoc.CreateElement("Control");
+            var N = new XmlNodeControl(Xdoc);
 
             XmlNode NodeShiftControl = Xdoc.CreateElement( "ShiftControl");
             var NS = new XmlNodeControl(Xdoc);
@@ -1764,14 +1746,13 @@ namespace DS4Windows
         public void RemoveLinkedProfile(string serial)
             => linkedProfiles.Remove(keyMorph(serial));
 
-        private List<SpecialAction> actions;
+        private List<SpecialAction> actions; // BUG: the actions are not initialized!! (my doing - KO)
         private Dictionary<string, SpecialAction> actionsDict;
         public List<SpecialAction> Actions { get => actions; }
 
         public SpecialAction ActionByName(string name)
         {
-            SpecialAction sA;
-            if (!actionsDict.TryGetValue(name, out sA))
+            if (!actionsDict.TryGetValue(name, out var sA))
                 return new SpecialAction();
             return sA;
         }
@@ -1851,19 +1832,20 @@ namespace DS4Windows
                 var Xdoc = new XmlDocument();
                 ldr.Xdoc = Xdoc;
                 ldr.rootname = "Profile";
-                XmlNode Item;
                 Xdoc.Load(API.ProfileExePath);
                 var def = new GlobalConfig();
 
                 UseExclusiveMode = ldr.LoadBool("useExclusiveMode") ?? def.UseExclusiveMode;
                 StartMinimized = ldr.LoadBool("startMinimized") ?? def.StartMinimized;
                 MinToTaskbar = ldr.LoadBool("minimizeToTaskbar") ?? def.MinToTaskbar;
-                Size formSize = new Size();
-                formSize.Width = ldr.LoadInt("formWidth") ?? def.FormSize.Width;
-                formSize.Height = ldr.LoadInt("formHeight") ?? def.FormSize.Height;
-                Point formLoc = new Point();
-                formLoc.X = Math.Max(ldr.LoadInt("formLocationX") ?? def.FormLocation.X, 0);
-                formLoc.Y = Math.Max(ldr.LoadInt("formLocationY") ?? def.FormLocation.Y, 0);
+                Size formSize = new Size {
+                    Width = ldr.LoadInt("formWidth") ?? def.FormSize.Width,
+                    Height = ldr.LoadInt("formHeight") ?? def.FormSize.Height
+                };
+                Point formLoc = new Point {
+                    X = Math.Max(ldr.LoadInt("formLocationX") ?? def.FormLocation.X, 0),
+                    Y = Math.Max(ldr.LoadInt("formLocationY") ?? def.FormLocation.Y, 0)
+                };
                 FormSize = formSize;
                 FormLocation = formLoc;
 
@@ -2138,16 +2120,14 @@ namespace DS4Windows
                     }
                     else if (type == "DisconnectBT")
                     {
-                        double doub;
-                        if (double.TryParse(details, out doub))
+                        if (double.TryParse(details, out var doub))
                             actions.Add(new SpecialAction(name, controls, type, "", doub));
                         else
                             actions.Add(new SpecialAction(name, controls, type, ""));
                     }
                     else if (type == "BatteryCheck")
                     {
-                        double doub;
-                        if (double.TryParse(details.Split('|')[0], out doub))
+                        if (double.TryParse(details.Split('|')[0], out var doub))
                             actions.Add(new SpecialAction(name, controls, type, details, doub));
                         else if (double.TryParse(details.Split(',')[0], out doub))
                             actions.Add(new SpecialAction(name, controls, type, details, doub));
@@ -2156,11 +2136,10 @@ namespace DS4Windows
                     }
                     else if (type == "Program")
                     {
-                        double doub;
                         if (x.ChildNodes[3] != null)
                         {
                             extras = x.ChildNodes[3].InnerText;
-                            if (double.TryParse(x.ChildNodes[4].InnerText, out doub))
+                            if (double.TryParse(x.ChildNodes[4].InnerText, out var doub))
                                 actions.Add(new SpecialAction(name, controls, type, details, doub, extras));
                             else
                                 actions.Add(new SpecialAction(name, controls, type, details, 0, extras));
@@ -2176,8 +2155,7 @@ namespace DS4Windows
                     }
                     else if (type == "SASteeringWheelEmulationCalibrate")
                     {
-                        double doub;
-                        if (double.TryParse(details, out doub))
+                        if (double.TryParse(details, out var doub))
                             actions.Add(new SpecialAction(name, controls, type, "", doub));
                         else
                             actions.Add(new SpecialAction(name, controls, type, ""));
@@ -2322,8 +2300,7 @@ namespace DS4Windows
                 XmlNode node = xmlDoc.SelectSingleNode("/Controllers/Controller[@Mac=\"{device.MacAddress}\"]");
                 if (node != null)
                 {
-                    Int32 intValue;
-                    if (Int32.TryParse(node["wheelCenterPoint"].InnerText.Split(',')[0], out intValue)) device.wheelCenterPoint.X = intValue;
+                    if (Int32.TryParse(node["wheelCenterPoint"].InnerText.Split(',')[0], out var intValue)) device.wheelCenterPoint.X = intValue;
                     if (Int32.TryParse(node["wheelCenterPoint"].InnerText.Split(',')[1], out intValue)) device.wheelCenterPoint.Y = intValue;
                     if (Int32.TryParse(node["wheel90DegPointLeft"].InnerText.Split(',')[0], out intValue)) device.wheel90DegPointLeft.X = intValue;
                     if (Int32.TryParse(node["wheel90DegPointLeft"].InnerText.Split(',')[1], out intValue)) device.wheel90DegPointLeft.Y = intValue;
@@ -2512,8 +2489,7 @@ namespace DS4Windows
                 string[] macs = details.Split('/');
                 foreach (string s in macs)
                 {
-                    int v;
-                    if (int.TryParse(s, out v))
+                    if (int.TryParse(s, out var v))
                         macro.Add(v);
                 }
                 if (extras.Contains("Scan Code"))
@@ -2540,8 +2516,7 @@ namespace DS4Windows
                 List<string> macros = new List<string>();
                 foreach (string det in dets)
                 {
-                    int typeT = 0;
-                    if (int.TryParse(det, out typeT))
+                    if (int.TryParse(det, out var typeT))
                     {
                         switch (typeT)
                         {

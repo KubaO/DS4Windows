@@ -69,10 +69,10 @@ namespace DS4Windows
 
         // These values are established by empiricism with tests (tradeoff:
         // performance VS precision)
-        private static int    NEWTON_ITERATIONS = 4;
-        private static double NEWTON_MIN_SLOPE = 0.001;
-        private static double SUBDIVISION_PRECISION = 0.0000001;
-        private static int    SUBDIVISION_MAX_ITERATIONS = 10;
+        private const int    NEWTON_ITERATIONS = 4;
+        private const double NEWTON_MIN_SLOPE = 0.001;
+        private const double SUBDIVISION_PRECISION = 0.0000001;
+        private const int    SUBDIVISION_MAX_ITERATIONS = 10;
 
         private double mX1 = 0, mY1 = 0, mX2 = 0, mY2 = 0; 
         // Bezier curve definition (0, 0, 0, 0 = Linear. 99, 99, 0, 0 = Pre-defined hard-coded EnhancedPrecision curve)
@@ -131,6 +131,8 @@ namespace DS4Windows
                         Init(CustomDefinition);
                         break; // Custom output curve
                 }
+
+                preset = value;
             }
         }
 

@@ -160,7 +160,7 @@ namespace DS4Windows
             }
         }
 
-        private DS4SquareStick outSqrStk = new DS4SquareStick();
+        private readonly DS4SquareStick outSqrStk = new DS4SquareStick();
         public SyntheticState deviceState = new SyntheticState();
         public DS4StateFieldMapping fieldMapping = new DS4StateFieldMapping();
         public DS4StateFieldMapping outputFieldMapping = new DS4StateFieldMapping();
@@ -177,7 +177,7 @@ namespace DS4Windows
 
         //mapcustom
         public static bool[] pressedonce = new bool[261], macrodone = new bool[38];
-        static bool[] macroControl = new bool[25];
+        static readonly bool[] macroControl = new bool[25];
         static uint macroCount = 0;
 
         //actions
@@ -191,14 +191,15 @@ namespace DS4Windows
         public int untriggerindex = -1;
         public DateTime oldnowKeyAct = DateTime.MinValue;
 
-        private static DS4Controls[] shiftTriggerMapping = new DS4Controls[26] { DS4Controls.None, DS4Controls.Cross, DS4Controls.Circle, DS4Controls.Square,
+        private static readonly DS4Controls[] shiftTriggerMapping = new DS4Controls[26] { DS4Controls.None, DS4Controls.Cross, DS4Controls.Circle, DS4Controls.Square,
             DS4Controls.Triangle, DS4Controls.Options, DS4Controls.Share, DS4Controls.DpadUp, DS4Controls.DpadDown,
             DS4Controls.DpadLeft, DS4Controls.DpadRight, DS4Controls.PS, DS4Controls.L1, DS4Controls.R1, DS4Controls.L2,
             DS4Controls.R2, DS4Controls.L3, DS4Controls.R3, DS4Controls.TouchLeft, DS4Controls.TouchUpper, DS4Controls.TouchMulti,
             DS4Controls.TouchRight, DS4Controls.GyroZNeg, DS4Controls.GyroZPos, DS4Controls.GyroXPos, DS4Controls.GyroXNeg,
         };
 
-        private static int[] ds4ControlMapping = new int[38] { 0, // DS4Control.None
+        // TODO: Why can't the mapping use the enum value??
+        private static readonly int[] ds4ControlMapping = new int[38] { 0, // DS4Control.None
             16, // DS4Controls.LXNeg
             20, // DS4Controls.LXPos
             17, // DS4Controls.LYNeg
@@ -358,8 +359,7 @@ namespace DS4Windows
                 UInt16 kvpKey = kvp.Key;
                 SyntheticState.KeyPresses kvpValue = kvp.Value;
 
-                SyntheticState.KeyPresses gkp;
-                if (globalState.keyPresses.TryGetValue(kvpKey, out gkp))
+                if (globalState.keyPresses.TryGetValue(kvpKey, out var gkp))
                 {
                     gkp.current.vkCount += kvpValue.current.vkCount - kvpValue.previous.vkCount;
                     gkp.current.scanCodeCount += kvpValue.current.scanCodeCount - kvpValue.previous.scanCodeCount;
@@ -369,8 +369,7 @@ namespace DS4Windows
                 }
                 else
                 {
-                    gkp = new SyntheticState.KeyPresses();
-                    gkp.current = kvpValue.current;
+                    gkp = new SyntheticState.KeyPresses { current = kvpValue.current };
                     globalState.keyPresses[kvpKey] = gkp;
                 }
                 if (gkp.current.toggleCount != 0 && gkp.previous.toggleCount == 0 && gkp.current.toggle)
@@ -1304,8 +1303,6 @@ namespace DS4Windows
             /* TODO: This method is slow sauce. Find ways to speed up action execution */
             double tempMouseDeltaX = 0.0;
             double tempMouseDeltaY = 0.0;
-            int mouseDeltaX = 0;
-            int mouseDeltaY = 0;
 
             cState.calculateStickAngles();
             fieldMapping.populateFieldMapping(cState, eState, tp);
@@ -1351,8 +1348,7 @@ namespace DS4Windows
 
                         string[] extraS = p.Split(',');
                         int[] extras = extraS.Select(s => {
-                            int b = 0;
-                            int.TryParse(s, out b);
+                            int.TryParse(s, out var b);
                             return b;
                         }).ToArray();
 
@@ -1417,8 +1413,7 @@ namespace DS4Windows
                         ushort value = Convert.ToUInt16(action);
                         if (getBoolActionMapping2(dcs.Control, cState, eState, tp))
                         {
-                            SyntheticState.KeyPresses kp;
-                            if (!deviceState.keyPresses.TryGetValue(value, out kp))
+                            if (!deviceState.keyPresses.TryGetValue(value, out var kp))
                                 deviceState.keyPresses[value] = kp = new SyntheticState.KeyPresses();
 
                             if (keyType.HasFlag(DS4KeyType.ScanCode))
@@ -1710,7 +1705,7 @@ namespace DS4Windows
             }
 
             calculateFinalMouseMovement(ref tempMouseDeltaX, ref tempMouseDeltaY,
-                out mouseDeltaX, out mouseDeltaY);
+                out var mouseDeltaX, out var mouseDeltaY);
             if (mouseDeltaX != 0 || mouseDeltaY != 0)
             {
                 InputMethods.MoveCursorBy(mouseDeltaX, mouseDeltaY);
@@ -1932,12 +1927,10 @@ namespace DS4Windows
                                 {
                                     actionDone[index] = true;
                                     untriggerindex = index;
-                                    ushort key;
-                                    ushort.TryParse(action.details, out key);
+                                    ushort.TryParse(action.details, out var key);
                                     if (uTriggerCount == 0)
                                     {
-                                        SyntheticState.KeyPresses kp;
-                                        if (!deviceState.keyPresses.TryGetValue(key, out kp))
+                                        if (!deviceState.keyPresses.TryGetValue(key, out var kp))
                                             deviceState.keyPresses[key] = kp = new SyntheticState.KeyPresses();
                                         if (action.keyType.HasFlag(DS4KeyType.ScanCode))
                                             kp.current.scanCodeCount++;
@@ -2077,8 +2070,7 @@ namespace DS4Windows
                                 {
                                     actionDone[index] = true;
                                     untriggerindex = -1;
-                                    ushort key;
-                                    ushort.TryParse(action.details, out key);
+                                    ushort.TryParse(action.details, out var key);
                                     if (action.keyType.HasFlag(DS4KeyType.ScanCode))
                                         InputMethods.performSCKeyRelease(key);
                                     else
@@ -2332,8 +2324,7 @@ namespace DS4Windows
                 if (!string.IsNullOrEmpty(macro))
                 {
                     skeys = macro.Split('/');
-                    ushort delay;
-                    if (ushort.TryParse(skeys[skeys.Length - 1], out delay) && delay > 300)
+                    if (ushort.TryParse(skeys[skeys.Length - 1], out var delay) && delay > 300)
                         wait = delay - 300;
                 }
                 AltTabSwapping(wait);

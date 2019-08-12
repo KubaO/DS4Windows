@@ -34,10 +34,6 @@ namespace DS4Windows
         private DS4State TempState;
         public DS4StateExposed ExposedState;
 
-        bool buttonsdown = false;
-        bool held;
-
-        int oldmouse = -1;
         public OutputDevice outputDevice = null;
 
 #if false
@@ -188,9 +184,7 @@ namespace DS4Windows
                     lock (busThrLck)
                         Monitor.Wait(busThrLck);
                 }
-            });
-            tempThread.Priority = ThreadPriority.Normal;
-            tempThread.IsBackground = true;
+            }) {Priority = ThreadPriority.Normal, IsBackground = true};
             tempThread.Start();
             //while (_udpServer == null)
             //{
@@ -200,10 +194,11 @@ namespace DS4Windows
             if (DeviceDetection.IsHidGuardianInstalled())
             {
                 ProcessStartInfo startInfo =
-                    new ProcessStartInfo($"{API.ExePath}\\HidGuardHelper.exe");
-                startInfo.Verb = "runas";
-                startInfo.Arguments = Process.GetCurrentProcess().Id.ToString();
-                startInfo.WorkingDirectory = API.ExePath;
+                    new ProcessStartInfo($"{API.ExePath}\\HidGuardHelper.exe") {
+                        Verb = "runas",
+                        Arguments = Process.GetCurrentProcess().Id.ToString(),
+                        WorkingDirectory = API.ExePath
+                    };
                 try
                 {
                     Process tempProc = Process.Start(startInfo);
@@ -375,9 +370,10 @@ namespace DS4Windows
 
         private void startViGEm()
         {
-            tempThread = new Thread(() => { try { vigemTestClient = new ViGEmClient(); } catch { } });
-            tempThread.Priority = ThreadPriority.AboveNormal;
-            tempThread.IsBackground = true;
+            tempThread = new Thread(() => {
+                try { vigemTestClient = new ViGEmClient(); }
+                catch { }
+            }) {Priority = ThreadPriority.AboveNormal, IsBackground = true};
             tempThread.Start();
             while (tempThread.IsAlive)
             {
@@ -562,17 +558,18 @@ namespace DS4Windows
                 this.On_Report(sender, e);
             };
 
-            var tempIdx = devIndex;
-            DS4Device.ReportHandler<EventArgs> tempEvnt = (sender, args) => {
+            void tempEvent(DS4Device sender, EventArgs args)
+            {
                 DualShockPadMeta padDetail = new DualShockPadMeta();
                 GetPadDetail(ref padDetail);
                 ctlSvc._udpServer.NewReportIncoming(ref padDetail, this.CurrentState, this.udpOutBuffer);
-            };
-            device.MotionEvent = tempEvnt;
+            }
+
+            device.MotionEvent = tempEvent;
 
             if (ctlSvc._udpServer != null)
             {
-                device.Report += tempEvnt;
+                device.Report += tempEvent;
             }
 
             TouchPadOn(device);
@@ -754,11 +751,13 @@ namespace DS4Windows
                     this.On_Report(sender, e);
                 };
 
-                DS4Device.ReportHandler<EventArgs> tempEvnt = (sender, args) => {
+                void tempEvnt(DS4Device sender, EventArgs args)
+                {
                     DualShockPadMeta padDetail = new DualShockPadMeta();
                     GetPadDetail(ref padDetail);
                     ctlSvc._udpServer.NewReportIncoming(ref padDetail, this.CurrentState, this.udpOutBuffer);
-                };
+                }
+
                 device.MotionEvent = tempEvnt;
 
                 if (ctlSvc._udpServer != null)
@@ -1503,8 +1502,7 @@ namespace DS4Windows
 
         public virtual void OnDebug(object sender, DebugEventArgs args)
         {
-            if (Debug != null)
-                Debug(this, args);
+            Debug?.Invoke(this, args);
         }
     }
 

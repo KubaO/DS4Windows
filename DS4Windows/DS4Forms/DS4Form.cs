@@ -120,13 +120,14 @@ namespace DS4Windows.Forms
             InitializeComponent();
             advColorDialog = new AdvancedColorDialog();
 
-            this.languagePackComboBox1 = new DS4Forms.LanguagePackComboBox();
-            this.languagePackComboBox1.AutoValidate = System.Windows.Forms.AutoValidate.Disable;
-            this.languagePackComboBox1.BackColor = System.Drawing.SystemColors.Window;
-            this.languagePackComboBox1.CausesValidation = false;
-            this.languagePackComboBox1.Name = "languagePackComboBox1";
-            this.languagePackComboBox1.SelectedValueChanged += new System.EventHandler(this.languagePackComboBox1_SelectedValueChanged);
-            this.langPanel.Controls.Add(languagePackComboBox1);
+            languagePackComboBox1 = new DS4Forms.LanguagePackComboBox {
+                AutoValidate = System.Windows.Forms.AutoValidate.Disable,
+                BackColor = System.Drawing.SystemColors.Window,
+                CausesValidation = false,
+                Name = "languagePackComboBox1"
+            };
+            languagePackComboBox1.SelectedValueChanged += languagePackComboBox1_SelectedValueChanged;
+            langPanel.Controls.Add(languagePackComboBox1);
 
             bnEditC1.Tag = 0;
             bnEditC2.Tag = 1;
@@ -444,19 +445,16 @@ namespace DS4Windows.Forms
 
             Thread timerThread = new Thread(() =>
             {
-                hotkeysTimer = new NonFormTimer();
+                hotkeysTimer = new NonFormTimer() {AutoReset = false};
                 //hotkeysTimer.Elapsed += Hotkeys;
-                hotkeysTimer.AutoReset = false;
                 if (Config.SwipeProfiles)
                 {
                     ChangeHotkeysStatus(true);
                     //hotkeysTimer.Start();
                 }
 
-                autoProfilesTimer = new NonFormTimer();
+                autoProfilesTimer = new NonFormTimer {Interval = 1000, AutoReset = false};
                 //autoProfilesTimer.Elapsed += CheckAutoProfiles;
-                autoProfilesTimer.Interval = 1000;
-                autoProfilesTimer.AutoReset = false;
 
                 LoadP();
 
@@ -464,9 +462,7 @@ namespace DS4Windows.Forms
                 {
                     cBSwipeProfiles.Checked = Config.SwipeProfiles;
                 }));
-            });
-            timerThread.IsBackground = true;
-            timerThread.Priority = ThreadPriority.Lowest;
+            }) { IsBackground = true, Priority = ThreadPriority.Lowest };
             timerThread.Start();
         }
 
@@ -599,8 +595,7 @@ namespace DS4Windows.Forms
             }
 
             IntPtr hProcess = IntPtr.Zero;
-            uint lpdwProcessId = 0;
-            GetWindowThreadProcessId(hWnd, out lpdwProcessId);
+            GetWindowThreadProcessId(hWnd, out var lpdwProcessId);
 
             if (autoProfileTimerCheck)
             {
@@ -761,14 +756,13 @@ namespace DS4Windows.Forms
 
         private void CheckAutoProfiles(object sender, EventArgs e)
         {
-            string topProcessName, topWindowTitle;
             string[] newProfileName = new string[4] { String.Empty, String.Empty, String.Empty, String.Empty };
             bool turnOffDS4WinApp = false;
             ProgramPathItem matchingProgramPathItem = null;
 
             autoProfilesTimer.Stop();
 
-            if (GetTopWindowName(out topProcessName, out topWindowTitle, true))
+            if (GetTopWindowName(out var topProcessName, out var topWindowTitle, true))
             {
                 // Find a profile match based on autoprofile program path and wnd title list.
                 // The same program may set different profiles for each of the controllers, so we need an array of newProfileName[controllerIdx] values.
@@ -918,8 +912,7 @@ namespace DS4Windows.Forms
 
                 item = doc.SelectSingleNode($"/Programs/Program[{nodeIdx}]/TurnOff");
 
-                bool turnOff;
-                if (item != null && bool.TryParse(item.InnerText, out turnOff))
+                if (item != null && bool.TryParse(item.InnerText, out var turnOff))
                     turnOffTempProfiles.Add(turnOff);
                 else
                     turnOffTempProfiles.Add(false);
@@ -1080,11 +1073,12 @@ namespace DS4Windows.Forms
         public void RefreshAutoProfilesPage()
         {
             tabAutoProfiles.Controls.Clear();
-            WinProgs WP = new WinProgs(profilenames.ToArray(), this);
-            WP.TopLevel = false;
-            WP.FormBorderStyle = FormBorderStyle.None;
-            WP.Visible = true;
-            WP.Dock = DockStyle.Fill;
+            WinProgs WP = new WinProgs(profilenames.ToArray(), this) {
+                TopLevel = false,
+                FormBorderStyle = FormBorderStyle.None,
+                Visible = true,
+                Dock = DockStyle.Fill
+            };
             tabAutoProfiles.Controls.Add(WP);
         }
 
@@ -1705,11 +1699,12 @@ namespace DS4Windows.Forms
             if (lBProfiles.SelectedIndex >= 0)
             {
                 filename = lBProfiles.SelectedItem.ToString();
-                DupBox MTB = new DupBox(filename, this);
-                MTB.TopLevel = false;
-                MTB.Dock = DockStyle.Top;
-                MTB.Visible = true;
-                MTB.FormBorderStyle = FormBorderStyle.None;
+                DupBox MTB = new DupBox(filename, this) {
+                    TopLevel = false,
+                    Dock = DockStyle.Top,
+                    Visible = true,
+                    FormBorderStyle = FormBorderStyle.None
+                };
                 tabProfiles.Controls.Add(MTB);
                 lBProfiles.SendToBack();
                 toolStrip1.SendToBack();
@@ -1769,12 +1764,12 @@ namespace DS4Windows.Forms
             else
                 tSTBProfile.Text = "<" + Properties.Resources.TypeProfileName + ">";
 
-            opt = new Options(this);
-            opt.Icon = this.Icon;
-            opt.TopLevel = false;
-            opt.Dock = DockStyle.Fill;
-            opt.FormBorderStyle = FormBorderStyle.None;
-
+            opt = new Options(this) {
+                Icon = this.Icon,
+                TopLevel = false,
+                Dock = DockStyle.Fill,
+                FormBorderStyle = FormBorderStyle.None
+            };
             tabProfiles.Controls.Add(opt);
             optPop = true;
             //opt.Dock = DockStyle.Fill;
@@ -2016,13 +2011,14 @@ namespace DS4Windows.Forms
 
         private void llbHelp_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Hotkeys hotkeysForm = new Hotkeys();
-            hotkeysForm.Icon = this.Icon;
-            hotkeysForm.Text = llbHelp.Text;
+            Hotkeys hotkeysForm = new Hotkeys() {
+                Icon = this.Icon,
+                Text = llbHelp.Text
+            };
             hotkeysForm.ShowDialog();
         }
 
-        private void StartWindowsCheckBox_CheckedChanged(object sender, EventArgs e)
+    private void StartWindowsCheckBox_CheckedChanged(object sender, EventArgs e)
         {
             bool isChecked = StartWindowsCheckBox.Checked;
             if (isChecked && !File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.Startup) + "\\DS4Windows.lnk"))
@@ -2105,18 +2101,13 @@ namespace DS4Windows.Forms
 
         private void Items_MouseHover(object sender, EventArgs e)
         {
-            string hoverText = Properties.Resources.HoverOverItems;
-            string temp = "";
-            if (hoverTextDict.TryGetValue((Control)sender, out temp))
+            lbLastMessage.Text = Properties.Resources.HoverOverItems;
+            lbLastMessage.ForeColor = SystemColors.GrayText;
+            if (hoverTextDict.TryGetValue((Control) sender, out var hoverText))
             {
-                hoverText = temp;
-            }
-
-            lbLastMessage.Text = hoverText;
-            if (hoverText != Properties.Resources.HoverOverItems)
+                lbLastMessage.Text = hoverText;
                 lbLastMessage.ForeColor = Color.Black;
-            else
-                lbLastMessage.ForeColor = SystemColors.GrayText;
+            }
         }
 
         private void lBProfiles_MouseDown(object sender, MouseEventArgs e)
@@ -2398,7 +2389,6 @@ namespace DS4Windows.Forms
             });
         }
 
-        bool tempBool = false;
         private void ScpForm_Closing(object sender, FormClosingEventArgs e)
         {
             if (optPop)
@@ -2408,9 +2398,8 @@ namespace DS4Windows.Forms
                 return;
             }
 
-            bool closeMini = tempBool = cBCloseMini.Checked;
+            bool closeMini = cBCloseMini.Checked;
             bool userClosing = e.CloseReason == CloseReason.UserClosing;
-            DS4Device d = null;
             //in case user accidentally clicks on the close button whilst "Close Minimizes" checkbox is unchecked
             if (userClosing && !closeMini && !contextclose)
             {
@@ -2579,7 +2568,7 @@ namespace DS4Windows.Forms
         {
             if (sender is Color)
             {
-                Color color = (Color)sender;
+                var color = (Color)sender;
                 DS4Color dcolor = new DS4Color(color);
                 Console.WriteLine(dcolor);
                 curCustomLedLightBar.forcedColor = dcolor;
@@ -2698,12 +2687,13 @@ namespace DS4Windows.Forms
 
         private void exportLogTxtBtn_Click(object sender, EventArgs e)
         {
-            SaveFileDialog dialog = new SaveFileDialog();
-            dialog.AddExtension = true;
-            dialog.DefaultExt = ".txt";
-            dialog.Filter = "Text Documents (*.txt)|*.txt";
-            dialog.Title = "Select Export File";
-            dialog.InitialDirectory = API.AppDataPath;
+            SaveFileDialog dialog = new SaveFileDialog {
+                AddExtension = true,
+                DefaultExt = ".txt",
+                Filter = "Text Documents (*.txt)|*.txt",
+                Title = "Select Export File",
+                InitialDirectory = API.AppDataPath
+            };
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 string outputFile = dialog.FileName;

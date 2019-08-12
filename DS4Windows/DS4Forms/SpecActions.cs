@@ -60,9 +60,8 @@ namespace DS4Windows.Forms
                 loadingAction = false;
             }
 
-            advColorDialog = new AdvancedColorDialog();
-            advColorDialog.FullOpen = true;
-            advColorDialog.OnUpdateColor += new AdvancedColorDialog.ColorUpdateHandler(this.advColorDialog_OnUpdateColor);
+            advColorDialog = new AdvancedColorDialog { FullOpen = true };
+            advColorDialog.OnUpdateColor += advColorDialog_OnUpdateColor;
         }
 
         void LoadAction()
@@ -167,8 +166,7 @@ namespace DS4Windows.Forms
                         string[] macs = dets[i].Split('/');
                         foreach (string s in macs)
                         {
-                            int v;
-                            if (int.TryParse(s, out v))
+                            if (int.TryParse(s, out var v))
                                 multiMacrostag[i].Add(v);
                         }
                         switch (i)
@@ -196,9 +194,10 @@ namespace DS4Windows.Forms
 
         private void btnRecordMacro_Click(object sender, EventArgs e)
         {
-            rb = new RecordBox(this);
-            rb.TopLevel = true;
-            rb.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            rb = new RecordBox(this) {
+                TopLevel = true,
+                FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle
+            };
             rb.ShowDialog();
         }
 
@@ -542,9 +541,10 @@ namespace DS4Windows.Forms
 
         void OpenRecordBox(int i)
         {
-            rb = new RecordBox(this, i);
-            rb.TopLevel = true;
-            rb.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            rb = new RecordBox(this, i) {
+                TopLevel = true,
+                FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle
+            };
             rb.ShowDialog();
         }
         private void cBBatt_CheckedChanged(object sender, EventArgs e)

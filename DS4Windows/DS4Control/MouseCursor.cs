@@ -27,20 +27,15 @@ namespace DS4Windows
         private const double TOUCHPAD_MOUSE_OFFSET = 0.015;
 
         private const int SMOOTH_BUFFER_LEN = 3;
-        private double[] xSmoothBuffer = new double[SMOOTH_BUFFER_LEN];
-        private double[] ySmoothBuffer = new double[SMOOTH_BUFFER_LEN];
+        private readonly double[] xSmoothBuffer = new double[SMOOTH_BUFFER_LEN];
+        private readonly double[] ySmoothBuffer = new double[SMOOTH_BUFFER_LEN];
         private int smoothBufferTail = 0;
         private int gyroCursorDeadZone = GYRO_MOUSE_DEADZONE;
         public int GyroCursorDeadZone { get => gyroCursorDeadZone; set => gyroCursorDeadZone = value; }
 
-
         double coefficient = 0.0;
         double verticalScale = 0.0;
         bool gyroSmooth = false;
-
-        int tempInt = 0;
-        double tempDouble = 0.0;
-        bool tempBool = false;
 
         public virtual void sixaxisMoved(SixAxisEventArgs arg)
         {
@@ -49,7 +44,7 @@ namespace DS4Windows
                 arg.sixAxis.gyroFull.Roll;
             deltaY = -arg.sixAxis.gyroFull.Pitch;
             //tempDouble = arg.sixAxis.elapsed * 0.001 * 200.0; // Base default speed on 5 ms
-            tempDouble = arg.sixAxis.elapsed * 200.0; // Base default speed on 5 ms
+            double tempDouble = arg.sixAxis.elapsed * 200.0; // Base default speed on 5 ms
 
             gyroSmooth = cfg.GyroSmoothing;
             double gyroSmoothWeight = 0.0;
@@ -289,7 +284,7 @@ namespace DS4Windows
 
             if (disableInvert == false)
             {
-                int touchpadInvert = tempInt = cfg.TouchpadInvert;
+                int touchpadInvert = cfg.TouchpadInvert;
                 if ((touchpadInvert & 0x02) == 2)
                     xAction *= -1;
 

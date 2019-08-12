@@ -392,8 +392,7 @@ namespace DS4Windows.Forms
                 KeyValuePair<object, string> tag = new KeyValuePair<object, string>(keytag, extras);
 
                 newaction = true;
-                int value;
-                bool tagisint = keytag != null && int.TryParse(keytag.ToString(), out value);
+                bool tagisint = keytag != null && int.TryParse(keytag.ToString(), out var value);
                 bool scanavail = tagisint;
                 bool toggleavil = tagisint;
                 if (ops != null)
@@ -467,10 +466,9 @@ namespace DS4Windows.Forms
                         extras = GetExtras();
                     }
 
-                    int value;
                     object tt = cfg.GetDS4Action(button.Name, rBShiftModifer.Checked);
                     bool tagisint = tt != null
-                        && int.TryParse(tt.ToString(), out value);
+                        && int.TryParse(tt.ToString(), out var unused);
                     bool scanavail = tagisint;
                     bool toggleavil = tagisint;
                     KeyValuePair<object, string> tag;
@@ -487,8 +485,7 @@ namespace DS4Windows.Forms
             {
                 if (button.Tag != null)
                 {
-                    int key;
-                    if (int.TryParse(button.Tag.ToString(), out key))
+                    if (int.TryParse(button.Tag.ToString(), out var key))
                         button.Text = ((Keys)key).ToString() +
                             (cBScanCode.Checked ? " (SC)" : "") +
                             (cBToggle.Checked ? " (Toggle)" : "");
@@ -559,10 +556,11 @@ namespace DS4Windows.Forms
         {
             gBExtras.Controls.Add(cBScanCode);
             cBScanCode.Location = new Point(lBTip.Location.X, lBTip.Location.Y + lBTip.Size.Height);
-            rb = new RecordBox(this);
-            rb.TopLevel = false;
-            rb.Dock = DockStyle.Fill;
-            rb.Visible = true;
+            rb = new RecordBox(this) {
+                TopLevel = false,
+                Dock = DockStyle.Fill,
+                Visible = true
+            };
             Controls.Add(rb);
             rb.BringToFront();
             rb.FormClosed += delegate { Controls.Add(cBScanCode); cBScanCode.Location = oldSC; ActiveControl = lBMacroOn; rb = null; };
@@ -749,12 +747,11 @@ namespace DS4Windows.Forms
                 if (tagO is int || tagO is ushort)
                 {
                     int tag = int.Parse(tagO.ToString());
-                    int i;
                     foreach (Control control in Controls)
                     {
                         if (control is Button)
                         {
-                            if (int.TryParse(control.Tag?.ToString(), out i) && i == tag)
+                            if (int.TryParse(control.Tag?.ToString(), out var i) && i == tag)
                             {
                                 ((Button)control).BackColor = Color.LightGreen;
                                 break;

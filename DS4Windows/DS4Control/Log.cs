@@ -9,22 +9,15 @@ namespace DS4Windows
 
         public static void LogToGui(string data, bool warning)
         {
-            if (GuiLog != null)
-            {
-                GuiLog(null, new DebugEventArgs(data, warning));
-            }
+            GuiLog?.Invoke(null, new DebugEventArgs(data, warning));
         }
 
         public static void LogToTray(string data, bool warning = false, bool ignoreSettings = false)
         {
-            if (TrayIconLog != null)
-            {
-                if (ignoreSettings)
-                    TrayIconLog(ignoreSettings, new DebugEventArgs(data, warning));
-                else
-                    TrayIconLog(null, new DebugEventArgs(data, warning));
-            }
+            if (ignoreSettings)
+                TrayIconLog?.Invoke(true, new DebugEventArgs(data, warning));
+            else
+                TrayIconLog?.Invoke(null, new DebugEventArgs(data, warning));
         }
     }
 }
-

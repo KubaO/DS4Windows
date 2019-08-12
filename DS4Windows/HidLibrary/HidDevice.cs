@@ -23,7 +23,6 @@ namespace DS4Windows
         private readonly HidDeviceAttributes _deviceAttributes;
 
         private readonly HidDeviceCapabilities _deviceCapabilities;
-        private bool _monitorDeviceEvents;
         private string serial = null;
         internal HidDevice(string devicePath, string description = null)
         {
@@ -226,8 +225,8 @@ namespace DS4Windows
                 safeReadHandle = OpenHandle(_devicePath, true);
             try
             {
-                uint bytesRead;
-                if (NativeMethods.ReadFile(safeReadHandle.DangerousGetHandle(), inputBuffer, (uint)inputBuffer.Length, out bytesRead, IntPtr.Zero))
+                if (NativeMethods.ReadFile(safeReadHandle.DangerousGetHandle(), inputBuffer,
+                    (uint) inputBuffer.Length, out var bytesRead, IntPtr.Zero))
                 {
                     return ReadStatus.Success;
                 }

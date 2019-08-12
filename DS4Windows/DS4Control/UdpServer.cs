@@ -70,13 +70,13 @@ namespace DS4Windows
         private uint serverId;
         private bool running;
         private byte[] recvBuffer = new byte[1024];
-        private SocketAsyncEventArgs[] argsList;
+        private readonly SocketAsyncEventArgs[] argsList;
         private int listInd = 0;
         private ReaderWriterLockSlim poolLock = new ReaderWriterLockSlim();
 
         public delegate void GetPadDetail(int padIdx, ref DualShockPadMeta meta);
 
-        private GetPadDetail portInfoGet;
+        private readonly GetPadDetail portInfoGet;
 
         public UdpServer(GetPadDetail getPadDetailDel)
         {
@@ -105,12 +105,12 @@ namespace DS4Windows
         class ClientRequestTimes
         {
             DateTime allPads;
-            DateTime[] padIds;
-            Dictionary<PhysicalAddress, DateTime> padMacs;
+            readonly DateTime[] padIds;
+            readonly Dictionary<PhysicalAddress, DateTime> padMacs;
 
-            public DateTime AllPadsTime { get { return allPads; } }
-            public DateTime[] PadIdsTime { get { return padIds; } }
-            public Dictionary<PhysicalAddress, DateTime> PadMacsTime { get { return padMacs; } }
+            public DateTime AllPadsTime { get  => allPads; }
+            public DateTime[] PadIdsTime { get => padIds; }
+            public Dictionary<PhysicalAddress, DateTime> PadMacsTime { get => padMacs; }
 
             public ClientRequestTimes()
             {
@@ -198,7 +198,7 @@ namespace DS4Windows
             try {
                 udpSock.SendToAsync(args);
             }
-            catch (Exception e) { }
+            catch (Exception) { }
         }
 
         private void ProcessIncoming(byte[] localMsg, IPEndPoint clientEP)
@@ -348,7 +348,7 @@ namespace DS4Windows
                     }
                 }
             }
-            catch (Exception e) { }
+            catch (Exception) { }
         }
 
         private void ReceiveCallback(IAsyncResult iar)
@@ -365,7 +365,7 @@ namespace DS4Windows
                 localMsg = new byte[msgLen];
                 Array.Copy(recvBuffer, localMsg, msgLen);
             }
-            catch (Exception e) { }
+            catch (Exception) { }
 
             //Start another receive as soon as we copied the data
             StartReceive();
@@ -385,7 +385,7 @@ namespace DS4Windows
                     udpSock.BeginReceiveFrom(recvBuffer, 0, recvBuffer.Length, SocketFlags.None, ref newClientEP, ReceiveCallback, udpSock);
                 }
             }
-            catch (SocketException ex)
+            catch (SocketException)
             {
                 uint IOC_IN = 0x80000000;
                 uint IOC_VENDOR = 0x18000000;
@@ -691,7 +691,7 @@ namespace DS4Windows
                     try {
                         udpSock.SendToAsync(args);
                     }
-                    catch (SocketException ex) { }
+                    catch (SocketException) { }
                 }
             }
 
