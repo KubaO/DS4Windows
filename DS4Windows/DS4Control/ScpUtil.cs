@@ -525,12 +525,14 @@ namespace DS4Windows
 
     public class DeviceConfig : IDeviceConfig
     {
+        private IDeviceAuxiliaryConfig aux;
         private readonly int devIndex;
         public int DevIndex { get => devIndex;  }
 
         public DeviceConfig(int devIndex)
         {
             this.devIndex = devIndex; // FIXME: This is a hack
+            aux = API.Aux(devIndex);
 
             Color tempColor = Color.Blue;
             switch (devIndex)
@@ -598,18 +600,17 @@ namespace DS4Windows
         public int GyroMouseDeadZone { get; private set; } = MouseCursor.GYRO_MOUSE_DEADZONE;
         public bool GyroMouseToggle { get; private set; } = false;
 
-        public void SetGyroMouseDeadZone(int value, ControlService control)
+        public void SetGyroMouseDeadZone(int value, Mouse touchPad)
         {
             GyroMouseDeadZone = value;
-            if (devIndex < 4 && control.touchPad[devIndex] != null)
-                control.touchPad[devIndex].CursorGyroDead = value;
+            if (touchPad != null) touchPad.CursorGyroDead = value;
         }
 
-        public void SetGyroMouseToggle(bool value, ControlService control)
+        public void SetGyroMouseToggle(bool value, Mouse touchPad)
         {
             GyroMouseToggle = value;
-            if (devIndex < 4 && control.touchPad[devIndex] != null)
-                control.touchPad[devIndex].ToggleGyroMouse = value;
+            if (touchPad != null)
+                touchPad.ToggleGyroMouse = value;
         }
 
         public int ButtonMouseSensitivity { get; set; } = 25;
@@ -1009,26 +1010,24 @@ namespace DS4Windows
 
         }
 
-        public bool LoadProfile(bool launchProgram, ControlService control,
+        public bool LoadProfile(bool launchProgram, DeviceControlService control,
             bool xinputChange = true, bool postLoad = true)
         {
-            var aux = API.Aux(devIndex);
             bool loaded = LoadProfile(launchProgram, control, null, xinputChange, postLoad);
             aux.TempProfileName = string.Empty;
             return loaded;
         }
 
         public bool LoadTempProfile(string name, bool launchProgram,
-            ControlService control, bool xinputChange = true)
+            DeviceControlService control, bool xinputChange = true)
         {
-            var aux = API.Aux(devIndex);
             var profilePath = $"{API.AppDataPath}\\Profiles\\{name}.xml";
             bool loaded = LoadProfile(launchProgram, control, profilePath, xinputChange, true);
             aux.TempProfileName = name;
             return loaded;
         }
 
-        private bool LoadProfile(bool launchProgram, ControlService control,
+        private bool LoadProfile(bool launchProgram, DeviceControlService control,
                     string profilePath, bool xinputChange, bool postLoad)
         {
             if (string.IsNullOrEmpty(profilePath))
@@ -1060,7 +1059,6 @@ namespace DS4Windows
 
         public bool Load(XmlDocument doc)
         {
-            var aux = API.Aux(devIndex);
             Loader ldr = new Loader();
             var def = new DeviceConfig(devIndex);
 
@@ -1287,6 +1285,7 @@ namespace DS4Windows
             load(false, normCustomMap);
             load(true, shiftCustomMap);
 
+            def = null;
             return !ldr.missingSetting;
         }
 
@@ -1299,7 +1298,7 @@ namespace DS4Windows
             public Dictionary<DS4Controls, DS4KeyType> KeyTypes = new Dictionary<DS4Controls, DS4KeyType>();
         }
 
-        public void PostLoad(bool launchProgram, ControlService control, bool xinputChange, bool postLoadTransfer)
+        public void PostLoad(bool launchProgram, DeviceControlService control, bool xinputChange, bool postLoadTransfer)
         {
             var aux = API.Aux(devIndex);
             bool oldUseDInputOnly = API.Aux(devIndex).UseDInputOnly;
@@ -1342,15 +1341,15 @@ namespace DS4Windows
                 }
             }
 
-            if (StartTouchpadOff) control.StartTPOff(devIndex);
-            SetGyroMouseDeadZone(GyroMouseDeadZone, control);
-            SetGyroMouseToggle(GyroMouseToggle, control);
+            if (StartTouchpadOff) control.StartTPOff();
+            SetGyroMouseDeadZone(GyroMouseDeadZone, control.touchPad);
+            SetGyroMouseToggle(GyroMouseToggle, control.touchPad);
             // Only change xinput devices under certain conditions. Avoid
             // performing this upon program startup before loading devices.
 
             if (xinputChange && devIndex < 4)
             {
-                DS4Device tempDevice = control.DS4Controllers[devIndex];
+                DS4Device tempDevice = control.DS4Controller;
                 bool exists = (tempDevice != null);
                 bool synced = exists ? tempDevice.isSynced() : false;
                 bool isAlive = exists ? tempDevice.IsAlive() : false;
@@ -1377,7 +1376,7 @@ namespace DS4Windows
             // If a device exists, make sure to transfer relevant profile device
             // options to device instance
             if (postLoadTransfer && devIndex < 4) { 
-                DS4Device tempDev = control.DS4Controllers[devIndex];
+                DS4Device tempDev = control.DS4Controller;
                 if (tempDev != null && tempDev.isSynced()) {
                     tempDev.queueEvent(() =>
                     {
@@ -1385,24 +1384,24 @@ namespace DS4Windows
                         tempDev.setBTPollRate(BTPollRate);
                         if (xinputStatus && xinputPlug)
                         {
-                            OutputDevice tempOutDev = control.outputDevices[devIndex];
+                            OutputDevice tempOutDev = control.outputDevice;
                             if (tempOutDev != null)
                             {
                                 string tempType = tempOutDev.GetDeviceType();
                                 AppLogger.LogToGui("Unplug " + tempType + " Controller #" + (devIndex + 1), false);
                                 tempOutDev.Disconnect();
                                 tempOutDev = null;
-                                control.outputDevices[devIndex] = null;
+                                control.outputDevice = null;
                             }
 
                             OutContType tempContType = OutputDevType;
                             if (tempContType == OutContType.X360)
                             {
                                 Xbox360OutDevice tempXbox = new Xbox360OutDevice(control.vigemTestClient);
-                                control.outputDevices[devIndex] = tempXbox;
+                                control.outputDevice = tempXbox;
                                 tempXbox.cont.FeedbackReceived += (eventsender, args) =>
                                 {
-                                    control.SetDevRumble(tempDev, args.LargeMotor, args.SmallMotor, devIndex);
+                                    control.SetDevRumble(tempDev, args.LargeMotor, args.SmallMotor);
                                 };
 
                                 tempXbox.Connect();
@@ -1411,10 +1410,10 @@ namespace DS4Windows
                             else if (tempContType == OutContType.DS4)
                             {
                                 DS4OutDevice tempDS4 = new DS4OutDevice(control.vigemTestClient);
-                                control.outputDevices[devIndex] = tempDS4;
+                                control.outputDevice = tempDS4;
                                 tempDS4.cont.FeedbackReceived += (eventsender, args) =>
                                 {
-                                    control.SetDevRumble(tempDev, args.LargeMotor, args.SmallMotor, devIndex);
+                                    control.SetDevRumble(tempDev, args.LargeMotor, args.SmallMotor);
                                 };
 
                                 tempDS4.Connect();
@@ -1425,9 +1424,9 @@ namespace DS4Windows
                         }
                         else if (xinputStatus && !xinputPlug)
                         {
-                            string tempType = control.outputDevices[devIndex].GetDeviceType();
-                            control.outputDevices[devIndex].Disconnect();
-                            control.outputDevices[devIndex] = null;
+                            string tempType = control.outputDevice.GetDeviceType();
+                            control.outputDevice.Disconnect();
+                            control.outputDevice = null;
                             aux.UseDInputOnly = true;
                             AppLogger.LogToGui(tempType + " Controller #" + (devIndex + 1) + " unplugged", false);
                         }
@@ -1435,7 +1434,7 @@ namespace DS4Windows
                         tempDev.setRumble(0, 0);
                     });
 
-                    Program.rootHub.touchPad[devIndex]?.ResetTrackAccel(TrackballFriction);
+                    control.touchPad?.ResetTrackAccel(TrackballFriction);
                 }
             }
         }
@@ -2350,9 +2349,9 @@ namespace DS4Windows
             if (device != null)
                 return SaveControllerConfigsForDevice(device);
 
-            for (int idx = 0; idx < ControlService.DS4_CONTROLLER_COUNT; idx++)
-                if (Program.rootHub.DS4Controllers[idx] != null)
-                    SaveControllerConfigsForDevice(Program.rootHub.DS4Controllers[idx]);
+            foreach (var dCS in Program.RootHubs())
+                if (dCS.DS4Controller != null)
+                    SaveControllerConfigsForDevice(dCS.DS4Controller);
 
             return true;
         }
@@ -2362,9 +2361,9 @@ namespace DS4Windows
             if (device != null)
                 return LoadControllerConfigsForDevice(device);
 
-            for (int idx = 0; idx < ControlService.DS4_CONTROLLER_COUNT; idx++)
-                if (Program.rootHub.DS4Controllers[idx] != null)
-                    LoadControllerConfigsForDevice(Program.rootHub.DS4Controllers[idx]);
+            foreach (var dCS in Program.RootHubs())
+                if (dCS.DS4Controller != null)
+                    LoadControllerConfigsForDevice(dCS.DS4Controller);
 
             return true;
         }

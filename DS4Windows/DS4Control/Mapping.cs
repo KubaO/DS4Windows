@@ -14,10 +14,11 @@ namespace DS4Windows
 {
     public class Mapping
     {
-        public readonly int devIndex;
+        private readonly int devIndex;
         private readonly IDeviceConfig cfg;
-        private IDeviceAuxiliaryConfig aux;
-        private DS4LightBar lightBar;
+        private readonly IDeviceAuxiliaryConfig aux;
+        private readonly DS4LightBar lightBar;
+        private readonly DeviceControlService ctrl;
 
         internal Mapping(int devIndex)
         {
@@ -25,6 +26,7 @@ namespace DS4Windows
             cfg = API.Cfg(devIndex);
             aux = API.Aux(devIndex);
             if (devIndex < 4) lightBar = API.Bar(devIndex);
+            ctrl = Program.RootHub(devIndex);
         }
 
         /*
@@ -1357,7 +1359,7 @@ namespace DS4Windows
         private int oldmouse = -1;
 
         public void MapCustom(DS4State cState, DS4State MappedState, DS4StateExposed eState,
-            Mouse tp, ControlService ctrl)
+            Mouse tp)
         {
             /* TODO: This method is slow sauce. Find ways to speed up action execution */
             double tempMouseDeltaX = 0.0;
@@ -1372,7 +1374,7 @@ namespace DS4Windows
             //DS4StateFieldMapping outputfieldMapping = new DS4StateFieldMapping(cState, eState, tp);
 
             if (cfg.ProfileActions.Count > 0 || aux.UseTempProfile)
-                MapCustomAction( cState, MappedState, eState, tp, ctrl);
+                MapCustomAction( cState, MappedState, eState, tp);
             //if (ctrl.DS4Controllers[device] == null) return;
 
             //cState.CopyTo(MappedState);
@@ -1425,7 +1427,7 @@ namespace DS4Windows
                         try
                         {
                             if (!(extras[0] == extras[1] && extras[1] == 0))
-                                ctrl.setRumble((byte)extras[0], (byte)extras[1], cfg.DevIndex);
+                                ctrl.setRumble((byte)extras[0], (byte)extras[1]);
 
                             if (extras[2] == 1)
                             {
@@ -1454,7 +1456,7 @@ namespace DS4Windows
                             oldmouse = -1;
                         }
 
-                        ctrl.setRumble(0, 0, cfg.DevIndex);
+                        ctrl.setRumble(0, 0);
                         held = false;
                         usingExtra = DS4Controls.None;
                     }
@@ -1622,7 +1624,7 @@ namespace DS4Windows
                                 {
                                     if (tempMouseDeltaY == 0)
                                     {
-                                        tempMouseDeltaY = getMouseMapping(dcs.Control, cState, eState, 0, ctrl);
+                                        tempMouseDeltaY = getMouseMapping(dcs.Control, cState, eState, 0);
                                         tempMouseDeltaY = -Math.Abs((tempMouseDeltaY == -2147483648 ? 0 : tempMouseDeltaY));
                                     }
 
@@ -1632,7 +1634,7 @@ namespace DS4Windows
                                 {
                                     if (tempMouseDeltaY == 0)
                                     {
-                                        tempMouseDeltaY = getMouseMapping(dcs.Control, cState, eState, 1, ctrl);
+                                        tempMouseDeltaY = getMouseMapping(dcs.Control, cState, eState, 1);
                                         tempMouseDeltaY = Math.Abs((tempMouseDeltaY == -2147483648 ? 0 : tempMouseDeltaY));
                                     }
 
@@ -1642,7 +1644,7 @@ namespace DS4Windows
                                 {
                                     if (tempMouseDeltaX == 0)
                                     {
-                                        tempMouseDeltaX = getMouseMapping(dcs.Control, cState, eState, 2, ctrl);
+                                        tempMouseDeltaX = getMouseMapping(dcs.Control, cState, eState, 2);
                                         tempMouseDeltaX = -Math.Abs((tempMouseDeltaX == -2147483648 ? 0 : tempMouseDeltaX));
                                     }
 
@@ -1652,7 +1654,7 @@ namespace DS4Windows
                                 {
                                     if (tempMouseDeltaX == 0)
                                     {
-                                        tempMouseDeltaX = getMouseMapping(dcs.Control, cState, eState, 3, ctrl);
+                                        tempMouseDeltaX = getMouseMapping(dcs.Control, cState, eState, 3);
                                         tempMouseDeltaX = Math.Abs((tempMouseDeltaX == -2147483648 ? 0 : tempMouseDeltaX));
                                     }
 
@@ -1771,7 +1773,7 @@ namespace DS4Windows
 
             if (cfg.SASteeringWheelEmulationAxis != SASteeringWheelEmulationAxisType.None)
             {
-                MappedState.SASteeringWheelEmulationUnit = Scale360degreeGyroAxis(eState, ctrl);
+                MappedState.SASteeringWheelEmulationUnit = Scale360degreeGyroAxis(eState);
             }
 
             calculateFinalMouseMovement(ref tempMouseDeltaX, ref tempMouseDeltaY,
@@ -1788,7 +1790,7 @@ namespace DS4Windows
         }
 
         private async void MapCustomAction(DS4State cState, DS4State MappedState,
-            DS4StateExposed eState, Mouse tp, ControlService ctrl)
+            DS4StateExposed eState, Mouse tp)
         {
             /* TODO: This method is slow sauce. Find ways to speed up action execution */
             try
@@ -2020,7 +2022,7 @@ namespace DS4Windows
                             {
                                 actionFound = true;
 
-                                DS4Device d = ctrl.DS4Controllers[devIndex];
+                                DS4Device d = ctrl.DS4Controller;
                                 bool synced = /*tempBool =*/ d.isSynced();
                                 if (synced && !d.isCharging())
                                 {
@@ -2063,11 +2065,11 @@ namespace DS4Windows
                                 if (bool.Parse(dets[1]) && !actionDone[index])
                                 {
                                     AppLogger.LogToTray("Controller " + (devIndex + 1) + ": " +
-                                        ctrl.getDS4Battery(devIndex), true);
+                                        ctrl.getDS4Battery(), true);
                                 }
                                 if (bool.Parse(dets[2]))
                                 {
-                                    DS4Device d = ctrl.DS4Controllers[devIndex];
+                                    DS4Device d = ctrl.DS4Controller;
                                     if (!actionDone[index])
                                     {
                                         lastColor = d.LightBarColor;
@@ -2085,7 +2087,7 @@ namespace DS4Windows
                             {
                                 actionFound = true;
 
-                                DS4Device d = ctrl.DS4Controllers[devIndex];
+                                DS4Device d = ctrl.DS4Controller;
                                 // If controller is not already in SASteeringWheelCalibration state then enable it now. If calibration is active then complete it (commit calibration values)
                                 if (d.WheelRecalibrateActiveState == 0 && DateTime.UtcNow > (action.firstTap + TimeSpan.FromMilliseconds(3000)))
                                 {
@@ -2166,7 +2168,7 @@ namespace DS4Windows
                                 if (getCustomKey(device, action.trigger[0]) != 0)
                                     getCustomMacros(device).Remove(action.trigger[0]);*/
                                     string[] dets = action.details.Split(',');
-                                DS4Device d = ctrl.DS4Controllers[devIndex];
+                                DS4Device d = ctrl.DS4Controller;
                                 //cus
 
                                 DS4State tempPrevState = d.getPreviousStateRef();
@@ -2448,7 +2450,7 @@ namespace DS4Windows
                         }
                         else if (i >= 1000000)
                         {
-                            DS4Device d = Program.rootHub.DS4Controllers[devIndex];
+                            DS4Device d = ctrl.DS4Controller;
                             string r = i.ToString().Substring(1);
                             byte heavy = (byte)(int.Parse(r[0].ToString()) * 100 + int.Parse(r[1].ToString()) * 10 + int.Parse(r[2].ToString()));
                             byte light = (byte)(int.Parse(r[3].ToString()) * 100 + int.Parse(r[4].ToString()) * 10 + int.Parse(r[5].ToString()));
@@ -2576,7 +2578,7 @@ namespace DS4Windows
 
                     lightBar.forcedFlash = 0;
                     lightBar.forcedLight = false;
-                    Program.rootHub.DS4Controllers[devIndex].setRumble(0, 0);
+                    ctrl.DS4Controller.setRumble(0, 0);
                     if (keyType.HasFlag(DS4KeyType.HoldMacro))
                     {
                         await Task.Delay(50);
@@ -2638,7 +2640,7 @@ namespace DS4Windows
             }
         }
 
-        private double getMouseMapping(DS4Controls control, DS4State cState, DS4StateExposed eState, int mnum, ControlService ctrl)
+        private double getMouseMapping(DS4Controls control, DS4State cState, DS4StateExposed eState, int mnum)
         {
             int controlnum = DS4ControltoInt(control);
 
@@ -2657,8 +2659,8 @@ namespace DS4Windows
 
             int controlNum = (int)control;
             DS4StateFieldMapping.ControlType controlType = DS4StateFieldMapping.mappedType[controlNum];
-            //long timeElapsed = ctrl.DS4Controllers[devIndex].getLastTimeElapsed();
-            double timeElapsed = ctrl.DS4Controllers[devIndex].lastTimeElapsedDouble;
+            //long timeElapsed = ctrl.DS4Controller.getLastTimeElapsed();
+            double timeElapsed = ctrl.DS4Controller.lastTimeElapsedDouble;
             //double mouseOffset = 0.025;
             double tempMouseOffsetX = 0.0, tempMouseOffsetY = 0.0;
 
@@ -3818,7 +3820,7 @@ namespace DS4Windows
         }
 
         // Calibrate sixaxis steering wheel emulation. Use DS4Windows configuration screen to start a calibration or press a special action key (if defined)
-        private void SAWheelEmulationCalibration(DS4StateExposed exposedState, ControlService ctrl, DS4State currentDeviceState, DS4Device controller)
+        private void SAWheelEmulationCalibration(DS4StateExposed exposedState, DS4State currentDeviceState, DS4Device controller)
         {
             int gyroAccelX, gyroAccelZ;
             int result;
@@ -3941,7 +3943,7 @@ namespace DS4Windows
             }
         }
 
-        private Int32 Scale360degreeGyroAxis(DS4StateExposed exposedState, ControlService ctrl)
+        private Int32 Scale360degreeGyroAxis(DS4StateExposed exposedState)
         {
             unchecked
             {
@@ -3951,7 +3953,7 @@ namespace DS4Windows
                 int gyroAccelX, gyroAccelZ;
                 int result;
 
-                controller = ctrl.DS4Controllers[devIndex];
+                controller = ctrl.DS4Controller;
                 if (controller == null) return 0;
 
                 currentDeviceState = controller.getCurrentStateRef();
@@ -3959,7 +3961,7 @@ namespace DS4Windows
                 // If calibration is active then do the calibration process instead of the normal "angle calculation"
                 if (controller.WheelRecalibrateActiveState > 0)
                 {
-                    SAWheelEmulationCalibration(exposedState, ctrl, currentDeviceState, controller);
+                    SAWheelEmulationCalibration(exposedState, currentDeviceState, controller);
 
                     // Return center wheel position while SA wheel emuation is being calibrated
                     return 0;

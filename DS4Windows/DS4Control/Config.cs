@@ -29,15 +29,15 @@ namespace DS4Windows
 
     public class API
     {
-        // That's our interface to the outside 
+        // That's our interface between modules.
+        // It used to be configuration-related, but isn't anymore. It's the glue that integrates
+        // the modules. It needs to be moved out of this file, probably to Program.cs
+        public const int DS4_CONTROLLER_COUNT = 4;
+
         private static AppState app = new AppState();
         private static GlobalConfig config = new GlobalConfig();
-        private static DS4LightBar[] lightBar = new DS4LightBar[4] {
-            new DS4LightBar(0), new DS4LightBar(1), new DS4LightBar(2), new DS4LightBar(3)
-        };
-        private static Mapping[] mappings = new Mapping[4] {
-            new Mapping(0), new Mapping(1), new Mapping(2), new Mapping(3)
-        };
+        private static DS4LightBar[] lightBar = makePerDevice(i => new DS4LightBar(i));
+        private static Mapping[] mappings = makePerDevice(i => new Mapping(i));
 
         public static IGlobalConfig Config = config;
         public static IDeviceConfig Cfg(int index) => Config.Cfg(index);
@@ -71,6 +71,14 @@ namespace DS4Windows
         public static bool IsFirstRun { get => app.IsFirstRun; }
         public static bool MultiSaveSpots { get => app.MultiSaveSpots; }
         public static bool RunHotPlug { get => app.RunHotPlug; set => app.RunHotPlug = value; }
+
+        public static T[] makePerDevice<T>(Func<int, T> maker) where T : class
+        {
+            T[] result = new T[DS4_CONTROLLER_COUNT];
+            for (int i = 0; i < result.Length; i++) result[i] = maker(i);
+            return result;
+        }
+
     }
 
     public interface IGlobalConfig
@@ -152,14 +160,14 @@ namespace DS4Windows
         string OlderProfilePath { get; set; }
         string LaunchProgram { get; set; }
 
-        bool LoadProfile(bool launchProgram, ControlService control, bool xinputChange = true, bool postLoad = true);
-        bool LoadTempProfile(string name, bool launchProgram, ControlService control, bool xinputChange = true);
+        bool LoadProfile(bool launchProgram, DeviceControlService control, bool xinputChange = true, bool postLoad = true);
+        bool LoadTempProfile(string name, bool launchProgram, DeviceControlService control, bool xinputChange = true);
         bool SaveProfile(string profilePath);
 
         bool Load(XmlDocument doc);
         void Save(XmlDocument doc);
         
-        void PostLoad(bool launchProgram, ControlService control,
+        void PostLoad(bool launchProgram, DeviceControlService control,
             bool xinputChange = true, bool postLoadTransfer = true);
         // TODO: A hack that doesn't belong here - it's the leftover old code
         // that should be moved somewhere else.
@@ -203,8 +211,8 @@ namespace DS4Windows
         int GyroMouseHorizontalAxis { get; set; }
         int GyroMouseDeadZone { get; }
         bool GyroMouseToggle { get; }
-        void SetGyroMouseDeadZone(int value, ControlService control);
-        void SetGyroMouseToggle(bool value, ControlService control);
+        void SetGyroMouseDeadZone(int value, Mouse touchPad);
+        void SetGyroMouseToggle(bool value, Mouse touchPad);
 
         int ButtonMouseSensitivity { get; set; }
         bool MouseAccel { get; set; }

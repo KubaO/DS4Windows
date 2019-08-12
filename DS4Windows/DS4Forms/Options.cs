@@ -14,6 +14,7 @@ namespace DS4Windows.Forms
         public int device { get => cfg.DevIndex;  }
         private IDeviceConfig cfg;
         private DS4LightBar lightBar;
+        private DeviceControlService dCS;
         public string filename;
         public Timer inputtimer = new Timer(), sixaxisTimer = new Timer();
         public List<Button> buttons = new List<Button>();
@@ -334,6 +335,7 @@ namespace DS4Windows.Forms
             cfg = API.Cfg(deviceNum);
             var aux = API.Aux(deviceNum);
             lightBar = (deviceNum < 4) ? API.Bar(deviceNum) : null;
+            dCS = Program.RootHub(deviceNum);
             loading = true;
             filename = name;
             lBControls.SelectedIndex = -1;
@@ -366,7 +368,7 @@ namespace DS4Windows.Forms
                 if (device == 4) //if temp device is called
                     cfg.ProfilePath = name;
 
-                cfg.LoadProfile(false, Program.rootHub);
+                cfg.LoadProfile(false, dCS);
 
                 //devOutContType = Global.OutContType[device];
                 aux.PreviousOutputDevType = cfg.OutputDevType;
@@ -521,7 +523,7 @@ namespace DS4Windows.Forms
                 trackFrictionNUD.Value = (decimal)cfg.TrackballFriction;
                 if (device < 4)
                 {
-                    Program.rootHub.touchPad[device]?.ResetTrackAccel(cfg.TrackballFriction);
+                    dCS.touchPad?.ResetTrackAccel(cfg.TrackballFriction);
                 }
 
                 for (int i = 0, arlen = cMGyroTriggers.Items.Count; i < arlen; i++)
@@ -708,7 +710,7 @@ namespace DS4Windows.Forms
                 trackFrictionNUD.Value = 10.0m;
                 if (device < 4)
                 {
-                    Program.rootHub.touchPad[device]?.ResetTrackAccel(10.0);
+                    dCS.touchPad?.ResetTrackAccel(10.0);
                 }
 
                 for (int i = 0, arlen = cMGyroTriggers.Items.Count - 1; i < arlen; i++)
@@ -822,7 +824,8 @@ namespace DS4Windows.Forms
             // Enough additional acceleration and we are no longer mostly measuring Earth's gravity...
             // We should try to indicate setpoints of the calibration when exposing this measurement....
             int tempDeviceNum = (int)nUDSixaxis.Value - 1;
-            DS4Device ds = Program.rootHub.DS4Controllers[tempDeviceNum];
+            var devCtlSvc = Program.RootHub(tempDeviceNum);
+            DS4Device ds = devCtlSvc.DS4Controller;
 
             if (ds == null)
             {
@@ -835,9 +838,9 @@ namespace DS4Windows.Forms
             {
                 EnableReadings(true);
 
-                DS4StateExposed exposeState = Program.rootHub.ExposedState[tempDeviceNum];
-                DS4State baseState = Program.rootHub.getDS4State(tempDeviceNum);
-                DS4State interState = Program.rootHub.getDS4StateTemp(tempDeviceNum);
+                DS4StateExposed exposeState = devCtlSvc.ExposedState;
+                DS4State baseState = devCtlSvc.getDS4State();
+                DS4State interState = devCtlSvc.getDS4StateTemp();
 
                 SetDynamicTrackBarValue(tBsixaxisGyroX, (exposeState.getGyroYaw() + tBsixaxisGyroX.Value * 2) / 3);
                 SetDynamicTrackBarValue(tBsixaxisGyroY, (exposeState.getGyroPitch() + tBsixaxisGyroY.Value * 2) / 3);
@@ -947,7 +950,7 @@ namespace DS4Windows.Forms
             if (Form.ActiveForm == root && cBControllerInput.Checked && tCControls.SelectedIndex < 1)
             {
                 int tempDeviceNum = (int)nUDSixaxis.Value - 1;
-                switch (Program.rootHub.GetActiveInputControl(tempDeviceNum))
+                switch (Program.RootHub(tempDeviceNum).GetActiveInputControl())
                 {
                     case DS4Controls.None: break;
                     case DS4Controls.Cross: Show_ControlsBn(bnCross, e); break;
@@ -1169,7 +1172,7 @@ namespace DS4Windows.Forms
             cfg.TrackballFriction = (double)trackFrictionNUD.Value;
             if (device < 4)
             {
-                Program.rootHub.touchPad[device]?.ResetTrackAccel(cfg.TrackballFriction);
+                dCS.touchPad?.ResetTrackAccel(cfg.TrackballFriction);
             }
 
             cfg.GyroSensitivity = (int)Math.Round(nUDGyroSensitivity.Value, 0);
@@ -1178,8 +1181,8 @@ namespace DS4Windows.Forms
             cfg.GyroSmoothing = cBGyroSmooth.Checked;
             cfg.GyroSmoothingWeight = (double)nUDGyroSmoothWeight.Value;
             cfg.GyroMouseHorizontalAxis = cBGyroMouseXAxis.SelectedIndex;
-            cfg.SetGyroMouseDeadZone((int)gyroMouseDzNUD.Value, Program.rootHub);
-            cfg.SetGyroMouseToggle(toggleGyroMCb.Checked, Program.rootHub);
+            cfg.SetGyroMouseDeadZone((int)gyroMouseDzNUD.Value, dCS.touchPad);
+            cfg.SetGyroMouseToggle(toggleGyroMCb.Checked, dCS.touchPad);
 
             int invert = 0;
             if (cBGyroInvertX.Checked)
@@ -1415,24 +1418,25 @@ namespace DS4Windows.Forms
                 byte l = (byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100));
                 bool hB = btnRumbleHeavyTest.Text == Properties.Resources.TestLText;
                 bool lB = btnRumbleLightTest.Text == Properties.Resources.TestLText;
-                Program.rootHub.setRumble((byte)(hB ? h : 0), (byte)(lB ? l : 0), device);
+                dCS.setRumble((byte)(hB ? h : 0), (byte)(lB ? l : 0));
             }
         }
 
         private void btnRumbleHeavyTest_Click(object sender, EventArgs e)
         {
             int tempDeviceNum = (int)nUDSixaxis.Value - 1;
-            DS4Device d = Program.rootHub.DS4Controllers[tempDeviceNum];
+            var tempDCS = Program.RootHub(tempDeviceNum);
+            DS4Device d = tempDCS.DS4Controller;
             if (d != null)
             {
                 if (((Button)sender).Text == Properties.Resources.TestHText)
                 {
-                    Program.rootHub.setRumble((byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100)), d.RightLightFastRumble, tempDeviceNum);
+                    tempDCS.setRumble((byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100)), d.RightLightFastRumble);
                     ((Button)sender).Text = Properties.Resources.StopHText;
                 }
                 else
                 {
-                    Program.rootHub.setRumble(0, d.RightLightFastRumble, tempDeviceNum);
+                    tempDCS.setRumble(0, d.RightLightFastRumble);
                     ((Button)sender).Text = Properties.Resources.TestHText;
                 }
             }
@@ -1441,17 +1445,18 @@ namespace DS4Windows.Forms
         private void btnRumbleLightTest_Click(object sender, EventArgs e)
         {
             int tempDeviceNum = (int)nUDSixaxis.Value - 1;
-            DS4Device d = Program.rootHub.DS4Controllers[tempDeviceNum];
+            var tempDCS = Program.RootHub(tempDeviceNum);
+            DS4Device d = tempDCS.DS4Controller;
             if (d != null)
             {
                 if (((Button)sender).Text == Properties.Resources.TestLText)
                 {
-                    Program.rootHub.setRumble(d.LeftHeavySlowRumble, (byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100)), tempDeviceNum);
+                    tempDCS.setRumble(d.LeftHeavySlowRumble, (byte)Math.Min(255, (255 * nUDRumbleBoost.Value / 100)));
                     ((Button)sender).Text = Properties.Resources.StopLText;
                 }
                 else
                 {
-                    Program.rootHub.setRumble(d.LeftHeavySlowRumble, 0, tempDeviceNum);
+                    tempDCS.setRumble(d.LeftHeavySlowRumble, 0);
                     ((Button)sender).Text = Properties.Resources.TestLText;
                 }
             }
@@ -1515,16 +1520,16 @@ namespace DS4Windows.Forms
         private void Options_FormClosing(object sender, FormClosingEventArgs e)
         {
             for (int i = 0; i < 4; i++)
-                API.Cfg(i).LoadProfile(false, Program.rootHub); // Refreshes all profiles in case other controllers are using the same profile
+                API.Cfg(i).LoadProfile(false, Program.RootHub(i)); // Refreshes all profiles in case other controllers are using the same profile
 
             if (btnRumbleHeavyTest.Text == Properties.Resources.StopText)
-                Program.rootHub.setRumble(0, 0, (int)nUDSixaxis.Value - 1);
+                Program.RootHub((int)nUDSixaxis.Value - 1).setRumble(0, 0);
 
             if (saving)
             {
                 if (device < 4)
                 {
-                    DS4Device tempDev = Program.rootHub.DS4Controllers[device];
+                    DS4Device tempDev = dCS.DS4Controller;
                     if (tempDev != null)
                     {
                         int discon = cfg.IdleDisconnectTimeout;
@@ -2753,7 +2758,7 @@ namespace DS4Windows.Forms
             {
                 cfg.GyroTriggerTurns = gyroTriggerBehavior.Checked;
                 if (device < 4)
-                    Program.rootHub.touchPad[device]?.ResetToggleGyroM();
+                    dCS.touchPad?.ResetToggleGyroM();
             }
         }
 
@@ -2977,7 +2982,7 @@ namespace DS4Windows.Forms
                 DS4Device d;
                 int tempDeviceNum = (int)nUDSixaxis.Value - 1;
 
-                d = Program.rootHub.DS4Controllers[tempDeviceNum];
+                d = Program.RootHub(tempDeviceNum).DS4Controller;
                 if (d != null)
                 {
                     Point origWheelCenterPoint = new Point(d.wheelCenterPoint.X, d.wheelCenterPoint.Y);
@@ -3029,7 +3034,7 @@ namespace DS4Windows.Forms
         {
             if (loading == false)
             {
-                cfg.SetGyroMouseDeadZone((int)gyroMouseDzNUD.Value, Program.rootHub);
+                cfg.SetGyroMouseDeadZone((int)gyroMouseDzNUD.Value, dCS.touchPad);
             }
         }
 
@@ -3039,7 +3044,7 @@ namespace DS4Windows.Forms
             {
                 if (device < 4)
                 {
-                    cfg.SetGyroMouseToggle(toggleGyroMCb.Checked, Program.rootHub);
+                    cfg.SetGyroMouseToggle(toggleGyroMCb.Checked, dCS.touchPad);
                 }
             }
         }
@@ -3202,7 +3207,7 @@ namespace DS4Windows.Forms
                 cfg.TrackballFriction = (double)trackFrictionNUD.Value;
                 if (device < 4)
                 {
-                    Program.rootHub.touchPad[device]?.ResetTrackAccel(cfg.TrackballFriction);
+                    dCS.touchPad?.ResetTrackAccel(cfg.TrackballFriction);
                 }
             }
         }

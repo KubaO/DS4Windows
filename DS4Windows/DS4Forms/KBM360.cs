@@ -14,6 +14,7 @@ namespace DS4Windows.Forms
         private IDeviceConfig cfg;
         private IDeviceAuxiliaryConfig aux;
         private DS4LightBar lightBar;
+        private DeviceControlService dCS, dCS0;
         private Button button;
         private Options ops;
         private SpecActions sA;
@@ -38,6 +39,9 @@ namespace DS4Windows.Forms
             cfg = API.Cfg(deviceNum);
             aux = API.Aux(deviceNum);
             lightBar = API.Bar(deviceNum);
+            dCS = Program.RootHub(deviceNum);
+            dCS0 = Program.RootHub(0);
+
             InitializeComponent();
             advColorDialog = new AdvancedColorDialog();
             this.advColorDialog.OnUpdateColor += new AdvancedColorDialog.ColorUpdateHandler(this.advColorDialog_OnUpdateColor);
@@ -1015,12 +1019,12 @@ namespace DS4Windows.Forms
             {
                 if (btn.Text == Properties.Resources.TestText)
                 {
-                    Program.rootHub.setRumble((byte)nUDHeavy.Value, (byte)nUDLight.Value, device);
+                    dCS.setRumble((byte)nUDHeavy.Value, (byte)nUDLight.Value);
                     btn.Text = Properties.Resources.StopText;
                 }
                 else
                 {
-                    Program.rootHub.setRumble(0, 0, device);
+                    dCS.setRumble(0, 0);
                     btn.Text = Properties.Resources.TestText;
                 }
             }
@@ -1028,12 +1032,12 @@ namespace DS4Windows.Forms
             {
                 if (btn.Text == Properties.Resources.TestText)
                 {
-                    Program.rootHub.setRumble((byte)nUDHeavy.Value, (byte)nUDLight.Value, 0);
+                    dCS0.setRumble((byte)nUDHeavy.Value, (byte)nUDLight.Value);
                     btn.Text = Properties.Resources.StopText;
                 }
                 else
                 {
-                    Program.rootHub.setRumble(0, 0, 0);
+                    dCS0.setRumble(0, 0);
                     btn.Text = Properties.Resources.TestText;
                 }
             }
@@ -1064,9 +1068,9 @@ namespace DS4Windows.Forms
             if (bnTest.Text != Properties.Resources.TestText)
             {
                 if (device < 4)
-                    Program.rootHub.setRumble((byte)nUDHeavy.Value, (byte)nUDLight.Value, device);
+                    dCS.setRumble((byte)nUDHeavy.Value, (byte)nUDLight.Value);
                 else
-                    Program.rootHub.setRumble((byte)nUDHeavy.Value, (byte)nUDLight.Value, 0);
+                    dCS0.setRumble((byte)nUDHeavy.Value, (byte)nUDLight.Value);
             }
 
             extraChanged = true;

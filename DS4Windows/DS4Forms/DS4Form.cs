@@ -13,6 +13,7 @@ using Microsoft.Win32.TaskScheduler;
 using System.Security.Principal;
 using System.Threading;
 using System.Drawing.Drawing2D;
+using System.Linq;
 using TaskRunner = System.Threading.Tasks.Task;
 using NonFormTimer = System.Timers.Timer;
 using static DS4Windows.Global;
@@ -536,7 +537,7 @@ namespace DS4Windows.Forms
             for (int Index = 0, PadsLen = Pads.Length;
                 Index < PadsLen; Index++)
             {
-                if (Index < ControlService.DS4_CONTROLLER_COUNT)
+                if (Index < API.DS4_CONTROLLER_COUNT)
                 {
                     statPB[Index].Visible = false;
                     toolTip1.SetToolTip(statPB[Index], "");
@@ -713,8 +714,8 @@ namespace DS4Windows.Forms
             {
                 for (int i = 0; i < 4; i++)
                 {
-                    string slide = Program.rootHub.TouchpadSlide(i);
-                    if (slide == "left")
+                    var slide = Program.RootHub(i).TouchpadSlide();
+                    if (slide == DeviceControlService.TouchpadSlideDir.left)
                     {
                         int ind = i;
                         this.BeginInvoke((System.Action)(() =>
@@ -725,7 +726,7 @@ namespace DS4Windows.Forms
                                 cbs[ind].SelectedIndex--;
                         }));
                     }
-                    else if (slide == "right")
+                    else if (slide == DeviceControlService.TouchpadSlideDir.right)
                     {
                         int ind = i;
                         this.BeginInvoke((System.Action)(() =>
@@ -737,7 +738,7 @@ namespace DS4Windows.Forms
                         }));
                     }
 
-                    if (slide.Contains("t"))
+                    if (DeviceControlService.isSlideLeftRight(slide))
                     {
                         int ind = i;
                         this.BeginInvoke((System.Action)(() =>
@@ -807,7 +808,7 @@ namespace DS4Windows.Forms
                                 if (DS4Form.autoProfileDebugLogLevel > 0)
                                     AppLogger.LogToGui($"DEBUG: Auto-Profile. LoadProfile Controller {j+1}={newProfileName[j]}", false);
 
-                                cfg.LoadTempProfile(newProfileName[j], true, Program.rootHub); // j is controller index, i is filename
+                                cfg.LoadTempProfile(newProfileName[j], true, Program.RootHub(j)); // j is controller index, i is filename
                             }
                             else
                             {
@@ -863,7 +864,7 @@ namespace DS4Windows.Forms
                             if (DS4Form.autoProfileDebugLogLevel > 0)
                                 AppLogger.LogToGui($"DEBUG: Auto-Profile. RestoreProfile Controller {j + 1}={cfg.ProfilePath} (default)", false);
 
-                            cfg.LoadProfile(false, Program.rootHub);
+                            cfg.LoadProfile(false, Program.RootHub(j));
                         }
                     }
 
@@ -1331,17 +1332,17 @@ namespace DS4Windows.Forms
                                     // Command syntax: LoadProfile.device#.profileName (fex LoadProfile.1.GameSnake or LoadTempProfile.1.WebBrowserSet)
                                     if(int.TryParse(strData[1], out tdevice)) tdevice--;
 
-                                    if (tdevice >= 0 && tdevice < ControlService.DS4_CONTROLLER_COUNT && File.Exists($"{API.AppDataPath}\\Profiles\\{strData[2]}.xml"))
+                                    if (tdevice >= 0 && tdevice < API.DS4_CONTROLLER_COUNT && File.Exists($"{API.AppDataPath}\\Profiles\\{strData[2]}.xml"))
                                     {
                                         var cfg = API.Cfg(tdevice);
                                         if (strData[0] == "loadprofile")
                                         {
                                             cfg.ProfilePath = strData[2];
-                                            cfg.LoadProfile(true, Program.rootHub);
+                                            cfg.LoadProfile(true, Program.RootHub(tdevice));
                                         }
                                         else
                                         {
-                                            cfg.LoadTempProfile(strData[2], true, Program.rootHub);
+                                            cfg.LoadTempProfile(strData[2], true, Program.RootHub(tdevice));
                                         }
 
                                         Program.rootHub.LogDebug(Properties.Resources.UsingProfile.Replace("*number*", (tdevice + 1).ToString()).Replace("*Profile name*", strData[2]));
@@ -1410,9 +1411,9 @@ namespace DS4Windows.Forms
 
         protected void populateFullNotifyText()
         {
-            for (int i = 0; i < ControlService.DS4_CONTROLLER_COUNT; i++)
+            for (int i = 0; i < API.DS4_CONTROLLER_COUNT; i++)
             {
-                string temp = Program.rootHub.getShortDS4ControllerInfo(i);
+                string temp = Program.RootHub(i).getShortDS4ControllerInfo();
                 if (temp != Properties.Resources.NoneText)
                 {
                     notifyText[i + 1] = (i + 1) + ": " + temp;
@@ -1428,7 +1429,7 @@ namespace DS4Windows.Forms
 
         protected void generateDeviceNotifyText(int index)
         {
-            string temp = Program.rootHub.getShortDS4ControllerInfo(index);
+            string temp = Program.RootHub(index).getShortDS4ControllerInfo();
             if (temp != Properties.Resources.NoneText)
             {
                 notifyText[index + 1] = (index + 1) + ": " + temp;
@@ -1466,8 +1467,8 @@ namespace DS4Windows.Forms
                 int devIndex = args.index;
                 var cfg = API.Cfg(devIndex);
                 string serial = args.serial;
-                DS4Device device = (devIndex >= 0 && devIndex < ControlService.DS4_CONTROLLER_COUNT) ?
-                    Program.rootHub.DS4Controllers[devIndex] : null;
+                DS4Device device = (devIndex >= 0 && devIndex < API.DS4_CONTROLLER_COUNT) ?
+                    Program.RootHub(devIndex).DS4Controller : null;
                 if (device != null)
                 {
                     Pads[devIndex].Text = serial;
@@ -1508,22 +1509,12 @@ namespace DS4Windows.Forms
             }
             else
             {
-                bool nocontrollers = true;
-                for (int i = 0, arlen = Program.rootHub.DS4Controllers.Length; nocontrollers && i < arlen; i++)
-                {
-                    DS4Device dev = Program.rootHub.DS4Controllers[i];
-                    if (dev != null)
-                    {
-                        nocontrollers = false;
-                    }
-                }
-
                 //string tooltip = "DS4Windows v" + FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
                 int Index = args.index;
-                if (Index >= 0 && Index < ControlService.DS4_CONTROLLER_COUNT)
+                if (Index >= 0 && Index < API.DS4_CONTROLLER_COUNT)
                 {
                     var cfg = API.Cfg(Index);
-                    Pads[Index].Text = Program.rootHub.getDS4MacAddress(Index);
+                    Pads[Index].Text = Program.RootHub(Index).getDS4MacAddress();
 
                     linkedProfileCB[Index].CheckedChanged -= linkCB_CheckedChanged;
                     if (DS4Device.isValidSerial(Pads[Index].Text))
@@ -1539,7 +1530,7 @@ namespace DS4Windows.Forms
 
                     linkedProfileCB[Index].CheckedChanged += linkCB_CheckedChanged;
 
-                    switch (Program.rootHub.getDS4Status(Index))
+                    switch (Program.RootHub(Index).getDS4Status())
                     {
                         case "USB": statPB[Index].Visible = true; statPB[Index].Image = Properties.Resources.USB; toolTip1.SetToolTip(statPB[Index], ""); break;
                         case "BT": statPB[Index].Visible = true; statPB[Index].Image = Properties.Resources.BT; toolTip1.SetToolTip(statPB[Index], "Right click to disconnect"); break;
@@ -1547,7 +1538,7 @@ namespace DS4Windows.Forms
                         default: statPB[Index].Visible = false; toolTip1.SetToolTip(statPB[Index], ""); break;
                     }
 
-                    Batteries[Index].Text = Program.rootHub.getDS4Battery(Index);
+                    Batteries[Index].Text = Program.RootHub(Index).getDS4Battery();
                     int profileIndex = cbs[Index].FindStringExact(cfg.ProfilePath);
                     if (profileIndex >= 0)
                     {
@@ -1585,6 +1576,7 @@ namespace DS4Windows.Forms
                     populateNotifyText();
                 }
 
+                bool nocontrollers = Program.NoControllers();
                 lbNoControllers.Visible = nocontrollers;
                 tLPControllers.Visible = !nocontrollers;
             }
@@ -1598,18 +1590,7 @@ namespace DS4Windows.Forms
             statPB[devIndex].Visible = false;
             toolTip1.SetToolTip(statPB[devIndex], "");
 
-            DS4Device[] devices = Program.rootHub.DS4Controllers;
-            int controllerLen = devices.Length;
-            bool nocontrollers = true;
-            for (Int32 i = 0, PadsLen = Pads.Length; nocontrollers && i < PadsLen; i++)
-            {
-                DS4Device d = devices[i];
-                if (d != null)
-                {
-                    nocontrollers = false;
-                }
-            }
-
+            bool nocontrollers = Program.NoControllers();
             lbNoControllers.Visible = nocontrollers;
             tLPControllers.Visible = !nocontrollers;
 
@@ -1621,15 +1602,16 @@ namespace DS4Windows.Forms
         private void pBStatus_MouseClick(object sender, MouseEventArgs e)
         {
             int i = Convert.ToInt32(((PictureBox)sender).Tag);
-            DS4Device d = Program.rootHub.DS4Controllers[i];
+            var dCS = Program.RootHub(i);
+            DS4Device d = dCS.DS4Controller;
             if (d != null)
             {
-                if (e.Button == MouseButtons.Right && Program.rootHub.getDS4Status(i) == "BT" && !d.Charging)
+                if (e.Button == MouseButtons.Right && dCS.getDS4Status() == "BT" && !d.Charging)
                 {
                     d.DisconnectBT();
                 }
                 else if (e.Button == MouseButtons.Right &&
-                    Program.rootHub.getDS4Status(i) == "SONYWA" && !d.Charging)
+                    dCS.getDS4Status() == "SONYWA" && !d.Charging)
                 {
                     d.DisconnectDongle();
                 }
@@ -1638,7 +1620,7 @@ namespace DS4Windows.Forms
 
         private void Enable_Controls(int device, bool on)
         {
-            DS4Device dev = Program.rootHub.DS4Controllers[device];
+            DS4Device dev = Program.RootHub(device).DS4Controller;
             ConnectionType conType = ConnectionType.USB;
             if (dev != null)
                 conType = dev.ConnectionType;
@@ -1945,6 +1927,7 @@ namespace DS4Windows.Forms
             ComboBox cb = (ComboBox)sender;
             int tdevice = Convert.ToInt32(cb.Tag);
             var cfg = API.Cfg(tdevice);
+            var dCS = Program.RootHub(tdevice);
             if (cb.Items[cb.Items.Count - 1].ToString() == "+" + Properties.Resources.PlusNewProfile)
             {
                 if (cb.SelectedIndex < cb.Items.Count - 1)
@@ -1960,7 +1943,7 @@ namespace DS4Windows.Forms
                     shortcuts[tdevice].Text = Properties.Resources.ContextEdit.Replace("*number*", (tdevice + 1).ToString());
                     cfg.ProfilePath = cb.Items[cb.SelectedIndex].ToString();
                     Config.Save();
-                    cfg.LoadProfile(true, Program.rootHub);
+                    cfg.LoadProfile(true, dCS);
                     if (cfg.UseCustomColor)
                         lights[tdevice].BackColor = cfg.CustomColor.ToColorA;
                     else
@@ -1968,7 +1951,7 @@ namespace DS4Windows.Forms
 
                     if (linkedProfileCB[tdevice].Checked)
                     {
-                        DS4Device device = Program.rootHub.DS4Controllers[tdevice];
+                        DS4Device device = dCS.DS4Controller;
                         if (device != null && device.isValidSerial())
                         {
                             Config.SetLinkedProfile(device.getMacAddress(), cfg.ProfilePath);
@@ -2435,18 +2418,10 @@ namespace DS4Windows.Forms
             bool closeMini = tempBool = cBCloseMini.Checked;
             bool userClosing = e.CloseReason == CloseReason.UserClosing;
             DS4Device d = null;
-            bool nocontrollers = tempBool = true;
             //in case user accidentally clicks on the close button whilst "Close Minimizes" checkbox is unchecked
             if (userClosing && !closeMini && !contextclose)
             {
-                for (int i = 0, PadsLen = Pads.Length; tempBool && i < PadsLen; i++)
-                {
-                    d = Program.rootHub.DS4Controllers[i];
-                    tempBool = (d != null) ? false : tempBool;
-                }
-
-                nocontrollers = tempBool;
-                if (!nocontrollers)
+                if (!Program.NoControllers())
                 {
                     if (MessageBox.Show(Properties.Resources.CloseConfirm, Properties.Resources.Confirm,
                         MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
@@ -2533,7 +2508,7 @@ namespace DS4Windows.Forms
         {
             Label lb = (Label)sender;
             int i = Convert.ToInt32(lb.Tag);
-            DS4Device d = Program.rootHub.DS4Controllers[i];
+            DS4Device d = Program.RootHub(i).DS4Controller;
             if (d != null)
             {
                 double latency = d.Latency;
@@ -2703,7 +2678,7 @@ namespace DS4Windows.Forms
             var cfg = API.Cfg(i);
             bool check = linkCb.Checked;
             aux.LinkedProfileCheck = check;
-            DS4Device device = Program.rootHub.DS4Controllers[i];
+            DS4Device device = Program.RootHub(i).DS4Controller;
             if (device != null && device.isSynced())
             {
                 if (check)
@@ -2786,7 +2761,7 @@ namespace DS4Windows.Forms
         {
             ToolStripMenuItem item = (ToolStripMenuItem)sender;
             int i = Convert.ToInt32(item.Tag);
-            DS4Device d = Program.rootHub.DS4Controllers[i];
+            DS4Device d = Program.RootHub(i).DS4Controller;
             if (d != null)
             {
                 if (d.ConnectionType == ConnectionType.BT && !d.Charging)

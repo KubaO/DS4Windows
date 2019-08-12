@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Windows.Forms;
 using System.Threading;
 using System.Runtime.InteropServices;
@@ -8,6 +9,8 @@ using System.Globalization;
 using Microsoft.Win32.TaskScheduler;
 using System.IO.MemoryMappedFiles;
 using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DS4Windows
 {
@@ -36,10 +39,14 @@ namespace DS4Windows
         private static string SingleAppComEventName = "{a52b5b20-d9ee-4f32-8518-307fa14aa0c6}";
         private static EventWaitHandle threadComEvent = null;
         private static bool exitComThread = false;
-        public static ControlService rootHub;
+        public static ControlService rootHub = null;
+        public static DeviceControlService RootHub(int i) => (i < API.DS4_CONTROLLER_COUNT) ? rootHub.CtlSvc(i) : null;
+        public static IEnumerable<DeviceControlService> RootHubs() => rootHub.CtlServices;
         private static Thread testThread;
         private static Thread controlThread;
         private static Form ds4form;
+
+        public static bool NoControllers() => RootHubs().All(d => d.DS4Controller == null);
 
         private static MemoryMappedFile ipcClassNameMMF = null; // MemoryMappedFile for inter-process communication used to hold className of DS4Form window
         private static MemoryMappedViewAccessor ipcClassNameMMA = null;

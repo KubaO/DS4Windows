@@ -130,16 +130,17 @@ namespace DS4Windows.Forms
         {
             var cfg0 = API.Cfg(0);
             var mapping0 = API.Mapping(0);
-            if (Program.rootHub.DS4Controllers[0] != null)
+            var dCS = Program.RootHub(0);
+            if (dCS.DS4Controller != null)
             {
-                cState = Program.rootHub.getDS4State(0);
+                cState = dCS.getDS4State();
                 this.BeginInvoke((Action)(() =>
                 {
                     if (btnRecord.Text == Properties.Resources.StopText)
                     {
                         if (cBRecordDelays.Checked)
                         {
-                            Mouse tP = Program.rootHub.touchPad[0];
+                            Mouse tP = dCS.touchPad;
                             if (tP.leftDown && !pTP[0])
                                 if (!btnRumble.Text.Contains("Stop"))
                                     btnRumble_Click(sender, e);
@@ -1361,7 +1362,7 @@ namespace DS4Windows.Forms
 
         private void advColorDialog_OnUpdateColor(Color color, EventArgs e)
         {
-            if (Program.rootHub.DS4Controllers[0] != null) {
+            if (Program.RootHub(0) != null) {
                 var lightBar = API.Bar(0);
                 DS4Color dcolor = new DS4Color { red = color.R, green = color.G, blue = color.B };
                 lightBar.forcedColor = dcolor;
