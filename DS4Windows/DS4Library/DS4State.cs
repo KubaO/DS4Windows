@@ -24,10 +24,10 @@ namespace DS4Windows
         public double LYUnit;
         public double RXUnit;
         public double RYUnit;
-        public double elapsedTime = 0.0;
-        public ulong totalMicroSec = 0;
+        public double elapsedTime;
+        public ulong totalMicroSec;
         public SixAxis Motion = null;
-        public static readonly int DEFAULT_AXISDIR_VALUE = 127;
+        public const int DEFAULT_AXISDIR_VALUE = 127;
         public Int32 SASteeringWheelEmulationUnit;
 
         public struct TrackPadTouch
@@ -43,92 +43,18 @@ namespace DS4Windows
 
         public DS4State()
         {
-            PacketCounter = 0;
-            Square = Triangle = Circle = Cross = false;
-            DpadUp = DpadDown = DpadLeft = DpadRight = false;
-            L1 = L2Btn = L3 = R1 = R2Btn = R3 = false;
-            Share = Options = PS = Touch1 = Touch2 = TouchButton = TouchRight = TouchLeft = false;
-            Touch1Finger = Touch2Fingers = false;
             LX = RX = LY = RY = 128;
-            L2 = R2 = 0;
             FrameCounter = 255; // only actually has 6 bits, so this is a null indicator
             TouchPacketCounter = 255; // 8 bits, no great junk value
-            Battery = 0;
-            LSAngle = 0.0;
-            LSAngleRad = 0.0;
-            RSAngle = 0.0;
-            RSAngleRad = 0.0;
-            LXUnit = 0.0;
-            LYUnit = 0.0;
-            RXUnit = 0.0;
-            RYUnit = 0.0;
-            elapsedTime = 0.0;
-            totalMicroSec = 0;
             Motion = new SixAxis(0, 0, 0, 0, 0, 0, 0.0);
-            TrackPadTouch0.IsActive = false;
-            TrackPadTouch1.IsActive = false;
-            SASteeringWheelEmulationUnit = 0;
         }
 
         public DS4State(DS4State state)
         {
-            PacketCounter = state.PacketCounter;
-            ReportTimeStamp = state.ReportTimeStamp;
-            Square = state.Square;
-            Triangle = state.Triangle;
-            Circle = state.Circle;
-            Cross = state.Cross;
-            DpadUp = state.DpadUp;
-            DpadDown = state.DpadDown;
-            DpadLeft = state.DpadLeft;
-            DpadRight = state.DpadRight;
-            L1 = state.L1;
-            L2 = state.L2;
-            L2Btn = state.L2Btn;
-            L3 = state.L3;
-            R1 = state.R1;
-            R2 = state.R2;
-            R2Btn = state.R2Btn;
-            R3 = state.R3;
-            Share = state.Share;
-            Options = state.Options;
-            PS = state.PS;
-            Touch1 = state.Touch1;
-            TouchRight = state.TouchRight;
-            TouchLeft = state.TouchLeft;
-            Touch1Identifier = state.Touch1Identifier;
-            Touch2 = state.Touch2;
-            Touch2Identifier = state.Touch2Identifier;
-            TouchButton = state.TouchButton;
-            TouchPacketCounter = state.TouchPacketCounter;
-            Touch1Finger = state.Touch1Finger;
-            Touch2Fingers = state.Touch2Fingers;
-            LX = state.LX;
-            RX = state.RX;
-            LY = state.LY;
-            RY = state.RY;
-            FrameCounter = state.FrameCounter;
-            Battery = state.Battery;
-            LSAngle = state.LSAngle;
-            LSAngleRad = state.LSAngleRad;
-            RSAngle = state.RSAngle;
-            RSAngleRad = state.RSAngleRad;
-            LXUnit = state.LXUnit;
-            LYUnit = state.LYUnit;
-            RXUnit = state.RXUnit;
-            RYUnit = state.RYUnit;
-            elapsedTime = state.elapsedTime;
-            totalMicroSec = state.totalMicroSec;
-            Motion = state.Motion;
-            TrackPadTouch0 = state.TrackPadTouch0;
-            TrackPadTouch1 = state.TrackPadTouch1;
-            SASteeringWheelEmulationUnit = state.SASteeringWheelEmulationUnit;
+            state.CopyTo(this);
         }
 
-        public DS4State Clone()
-        {
-            return new DS4State(this);
-        }
+        public DS4State Clone() => new DS4State(this);
 
         public void CopyTo(DS4State state)
         {
