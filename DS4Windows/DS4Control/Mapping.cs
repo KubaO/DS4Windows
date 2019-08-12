@@ -1297,61 +1297,6 @@ namespace DS4Windows
             return result;
         }
 
-        private static X360Controls getX360ControlsByName(string key)
-        {
-            X360Controls x3c;
-            if (Enum.TryParse(key, true, out x3c))
-                return x3c;
-
-            switch (key)
-            {
-                case "Back": return X360Controls.Back;
-                case "Left Stick": return X360Controls.LS;
-                case "Right Stick": return X360Controls.RS;
-                case "Start": return X360Controls.Start;
-                case "Up Button": return X360Controls.DpadUp;
-                case "Right Button": return X360Controls.DpadRight;
-                case "Down Button": return X360Controls.DpadDown;
-                case "Left Button": return X360Controls.DpadLeft;
-
-                case "Left Bumper": return X360Controls.LB;
-                case "Right Bumper": return X360Controls.RB;
-                case "Y Button": return X360Controls.Y;
-                case "B Button": return X360Controls.B;
-                case "A Button": return X360Controls.A;
-                case "X Button": return X360Controls.X;
-
-                case "Guide": return X360Controls.Guide;
-                case "Left X-Axis-": return X360Controls.LXNeg;
-                case "Left Y-Axis-": return X360Controls.LYNeg;
-                case "Right X-Axis-": return X360Controls.RXNeg;
-                case "Right Y-Axis-": return X360Controls.RYNeg;
-
-                case "Left X-Axis+": return X360Controls.LXPos;
-                case "Left Y-Axis+": return X360Controls.LYPos;
-                case "Right X-Axis+": return X360Controls.RXPos;
-                case "Right Y-Axis+": return X360Controls.RYPos;
-                case "Left Trigger": return X360Controls.LT;
-                case "Right Trigger": return X360Controls.RT;
-
-                case "Left Mouse Button": return X360Controls.LeftMouse;
-                case "Right Mouse Button": return X360Controls.RightMouse;
-                case "Middle Mouse Button": return X360Controls.MiddleMouse;
-                case "4th Mouse Button": return X360Controls.FourthMouse;
-                case "5th Mouse Button": return X360Controls.FifthMouse;
-                case "Mouse Wheel Up": return X360Controls.WUP;
-                case "Mouse Wheel Down": return X360Controls.WDOWN;
-                case "Mouse Up": return X360Controls.MouseUp;
-                case "Mouse Down": return X360Controls.MouseDown;
-                case "Mouse Left": return X360Controls.MouseLeft;
-                case "Mouse Right": return X360Controls.MouseRight;
-                case "Unbound": return X360Controls.Unbound;
-                default: break;
-            }
-
-            return X360Controls.Unbound;
-        }
-
         /// <summary>
         /// Map DS4 Buttons/Axes to other DS4 Buttons/Axes (largely the same as Xinput ones) and to keyboard and mouse buttons.
         /// </summary>
@@ -1532,7 +1477,7 @@ namespace DS4Windows
                         }
                         else if (action is string)
                         {
-                            xboxControl = getX360ControlsByName(action.ToString());
+                            xboxControl = AppState.GetX360ControlsByName(action.ToString());
                         }
 
                         if (xboxControl >= X360Controls.LXNeg && xboxControl <= X360Controls.Start)
