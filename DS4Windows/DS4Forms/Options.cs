@@ -835,12 +835,12 @@ namespace DS4Windows.Forms
                 DS4State baseState = devCtlSvc.getDS4State();
                 DS4State interState = devCtlSvc.getDS4StateTemp();
 
-                SetDynamicTrackBarValue(tBsixaxisGyroX, (exposeState.getGyroYaw() + tBsixaxisGyroX.Value * 2) / 3);
-                SetDynamicTrackBarValue(tBsixaxisGyroY, (exposeState.getGyroPitch() + tBsixaxisGyroY.Value * 2) / 3);
-                SetDynamicTrackBarValue(tBsixaxisGyroZ, (exposeState.getGyroRoll() + tBsixaxisGyroZ.Value * 2) / 3);
-                SetDynamicTrackBarValue(tBsixaxisAccelX, (exposeState.getAccelX() + tBsixaxisAccelX.Value * 2) / 3);
-                SetDynamicTrackBarValue(tBsixaxisAccelY, (exposeState.getAccelY() + tBsixaxisAccelY.Value * 2) / 3);
-                SetDynamicTrackBarValue(tBsixaxisAccelZ, (exposeState.getAccelZ() + tBsixaxisAccelZ.Value * 2) / 3);
+                SetDynamicTrackBarValue(tBsixaxisGyroX, (exposeState.GyroYaw + tBsixaxisGyroX.Value * 2) / 3);
+                SetDynamicTrackBarValue(tBsixaxisGyroY, (exposeState.GyroPitch + tBsixaxisGyroY.Value * 2) / 3);
+                SetDynamicTrackBarValue(tBsixaxisGyroZ, (exposeState.GyroRoll + tBsixaxisGyroZ.Value * 2) / 3);
+                SetDynamicTrackBarValue(tBsixaxisAccelX, (exposeState.AccelX + tBsixaxisAccelX.Value * 2) / 3);
+                SetDynamicTrackBarValue(tBsixaxisAccelY, (exposeState.AccelY + tBsixaxisAccelY.Value * 2) / 3);
+                SetDynamicTrackBarValue(tBsixaxisAccelZ, (exposeState.AccelZ + tBsixaxisAccelZ.Value * 2) / 3);
 
                 int x = baseState.LX;
                 int y = baseState.LY;
@@ -868,17 +868,17 @@ namespace DS4Windows.Forms
                     btnRSTrackS.Location = new Point((int)(dpix * interState.RX / 2.09), (int)(dpiy * interState.RY / 2.09));
                 }
 
-                x = exposeState.getAccelX() + 127;
-                y = exposeState.getAccelZ() + 127;
+                x = exposeState.AccelX + 127;
+                y = exposeState.AccelZ + 127;
                 btnSATrack.Location = new Point((int)(dpix * Util.Clamp(0, x / 2.09, pnlSATrack.Size.Width)),
                     (int)(dpiy * Util.Clamp(0, y / 2.09, pnlSATrack.Size.Height)));
 
-                bool mappedSix = interState.Motion.accelX != 0 || interState.Motion.accelZ != 0;
+                bool mappedSix = interState.Motion.accel.X != 0 || interState.Motion.accel.Z != 0;
                 btnSATrackS.Visible = mappedSix;
                 if (mappedSix)
                 {
-                    btnSATrackS.Location = new Point((int)(dpix * Util.Clamp(0, (interState.Motion.accelX + 127) / 2.09, pnlSATrack.Size.Width)),
-                        (int)(dpiy * Util.Clamp(0, (interState.Motion.accelZ + 127) / 2.09, pnlSATrack.Size.Height)));
+                    btnSATrackS.Location = new Point((int)(dpix * Util.Clamp(0, (interState.Motion.accel.X + 127) / 2.09, pnlSATrack.Size.Width)),
+                        (int)(dpiy * Util.Clamp(0, (interState.Motion.accel.Z + 127) / 2.09, pnlSATrack.Size.Height)));
                 }
 
                 tBL2.Value = baseState.L2;
@@ -1524,10 +1524,10 @@ namespace DS4Windows.Forms
 
                     tempDev.queueEvent(() =>
                     {
-                        tempDev.setIdleTimeout(discon);
+                        tempDev.IdleTimeout = discon;
                         if (btCurrentIndex >= 0)
                         {
-                            tempDev.setBTPollRate(btCurrentIndex);
+                            tempDev.BTPollRate = btCurrentIndex;
                         }
                     });
                 }

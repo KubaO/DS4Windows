@@ -46,7 +46,7 @@ namespace DS4Windows
             LX = RX = LY = RY = 128;
             FrameCounter = 255; // only actually has 6 bits, so this is a null indicator
             TouchPacketCounter = 255; // 8 bits, no great junk value
-            Motion = new SixAxis(0, 0, 0, 0, 0, 0, 0.0);
+            Motion = new SixAxis();
         }
 
         public DS4State(DS4State state)

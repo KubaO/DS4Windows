@@ -45,9 +45,9 @@ namespace DS4Windows
         public virtual void sixaxisMoved(SixAxisEventArgs arg)
         {
             int deltaX = 0, deltaY = 0;
-            deltaX = cfg.GyroMouseHorizontalAxis == 0 ? arg.sixAxis.gyroYawFull :
-                arg.sixAxis.gyroRollFull;
-            deltaY = -arg.sixAxis.gyroPitchFull;
+            deltaX = cfg.GyroMouseHorizontalAxis == 0 ? arg.sixAxis.gyroFull.Yaw :
+                arg.sixAxis.gyroFull.Roll;
+            deltaY = -arg.sixAxis.gyroFull.Pitch;
             //tempDouble = arg.sixAxis.elapsed * 0.001 * 200.0; // Base default speed on 5 ms
             tempDouble = arg.sixAxis.elapsed * 200.0; // Base default speed on 5 ms
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace DS4Windows
 {
@@ -22,238 +23,201 @@ namespace DS4Windows
         public const int GYRO_RES_IN_DEG_SEC = 16;
         private const float F_GYRO_RES_IN_DEG_SEC = GYRO_RES_IN_DEG_SEC;
 
-        public int gyroYaw, gyroPitch, gyroRoll, accelX, accelY, accelZ;
-        public int outputAccelX, outputAccelY, outputAccelZ;
-        public double accelXG, accelYG, accelZG;
-        public double angVelYaw, angVelPitch, angVelRoll;
-        public int gyroYawFull, gyroPitchFull, gyroRollFull;
-        public int accelXFull, accelYFull, accelZFull;
+        public YawPitchRollInt gyroFull;
+        public Vector3Int accelFull;
+        public YawPitchRollInt gyro;
+        public Vector3Int accel, outputAccel;
+        public YawPitchRollDouble angVel;
+        public Vector3Double accelG;
         public double elapsed;
         public SixAxis previousAxis = null;
 
-        private double tempDouble = 0d;
+        public SixAxis() { } // default values are OK
 
         public SixAxis(int X, int Y, int Z,
             int aX, int aY, int aZ,
             double elapsedDelta, SixAxis prevAxis = null)
         {
-            populate(X, Y, Z, aX, aY, aZ, elapsedDelta, prevAxis);
+            populate(new YawPitchRollInt { Yaw = X, Pitch = Y, Roll = Z },
+                new Vector3Int { X = aX, Y = aY, Z = aZ }, elapsedDelta, prevAxis);
         }
 
-        public void copy(SixAxis src)
-        {
-            gyroYaw = src.gyroYaw;
-            gyroPitch = src.gyroPitch;
-            gyroRoll = src.gyroRoll;
-
-            gyroYawFull = src.gyroYawFull;
-            accelXFull = src.accelXFull; accelYFull = src.accelYFull; accelZFull = src.accelZFull;
-
-            angVelYaw = src.angVelYaw;
-            angVelPitch = src.angVelPitch;
-            angVelRoll = src.angVelRoll;
-
-            accelXG = src.accelXG;
-            accelYG = src.accelYG;
-            accelZG = src.accelZG;
-
-            // Put accel ranges between 0 - 128 abs
-            accelX = src.accelX;
-            accelY = src.accelY;
-            accelZ = src.accelZ;
-            outputAccelX = accelX;
-            outputAccelY = accelY;
-            outputAccelZ = accelZ;
-
-            elapsed = src.elapsed;
-            previousAxis = src.previousAxis;
-        }
-
-        public void populate(int X, int Y, int Z,
-            int aX, int aY, int aZ,
+        public void populate(YawPitchRollInt gyroIn, Vector3Int accelIn,
             double elapsedDelta, SixAxis prevAxis = null)
         {
-            gyroYaw = -X / 256;
-            gyroPitch = Y / 256;
-            gyroRoll = -Z / 256;
-
-            gyroYawFull = -X; gyroPitchFull = Y; gyroRollFull = -Z;
-            accelXFull = -aX; accelYFull = -aY; accelZFull = aZ;
-
-            angVelYaw = gyroYawFull / F_GYRO_RES_IN_DEG_SEC;
-            angVelPitch = gyroPitchFull / F_GYRO_RES_IN_DEG_SEC;
-            angVelRoll = gyroRollFull / F_GYRO_RES_IN_DEG_SEC;
-
-            accelXG = tempDouble = accelXFull / F_ACC_RES_PER_G;
-            accelYG = tempDouble = accelYFull / F_ACC_RES_PER_G;
-            accelZG = tempDouble = accelZFull / F_ACC_RES_PER_G;
+            gyroFull.Yaw   = -gyroIn.Yaw;
+            gyroFull.Pitch =  gyroIn.Pitch;
+            gyroFull.Roll  = -gyroIn.Roll;
+            gyro = gyroFull / 256;
 
             // Put accel ranges between 0 - 128 abs
-            accelX = -aX / 64;
-            accelY = -aY / 64;
-            accelZ = aZ / 64;
-            outputAccelX = accelX;
-            outputAccelY = accelY;
-            outputAccelZ = accelZ;
+            accelFull.X = -accelIn.X;
+            accelFull.Y = -accelIn.Y;
+            accelFull.Z =  accelIn.Z;
+            accel = accelFull / 64;
+            outputAccel = accel;
+
+            angVel = gyroFull / F_GYRO_RES_IN_DEG_SEC;
+            accelG = accelFull / F_ACC_RES_PER_G;
 
             elapsed = elapsedDelta;
             previousAxis = prevAxis;
         }
     }
 
-    internal class CalibData
+    internal struct CalibData
     {
         public int bias;
-        public int sensNumer;
-        public int sensDenom;
+        public Int64 sensitivity; // 32.32 format
         public const int GyroPitchIdx = 0, GyroYawIdx = 1, GyroRollIdx = 2,
         AccelXIdx = 3, AccelYIdx = 4, AccelZIdx = 5;
     }
 
     public class DS4SixAxis
     {
-        //public event EventHandler<SixAxisEventArgs> SixAccelMoved = null;
         public event SixAxisHandler<SixAxisEventArgs> SixAccelMoved = null;
-        private SixAxis sPrev = null, now = null;
-        private CalibData[] calibrationData = new CalibData[6] { new CalibData(), new CalibData(),
-            new CalibData(), new CalibData(), new CalibData(), new CalibData()
-        };
-        private bool calibrationDone = false;
+        private SixAxis sPrev = new SixAxis(), now = new SixAxis();
+        private CalibData[] calibrationData = new CalibData[6];
+        private bool calibrationDone;
 
-        public DS4SixAxis()
+        public DS4SixAxis() { }
+
+        private struct PlusMinus
         {
-            sPrev = new SixAxis(0, 0, 0, 0, 0, 0, 0.0);
-            now = new SixAxis(0, 0, 0, 0, 0, 0, 0.0);
+            public int Plus, Minus;
+            public int Range { get => Plus - Minus;  }
         }
 
-        int temInt = 0;
+        private struct Frac
+        {
+            // 32.32 / 32.0
+            public Int64 Numer { get => Numer; set => Numer = ((Int64)value) << 32; }
+            public int Denom;
+        }
+
         public void setCalibrationData(ref byte[] calibData, bool fromUSB)
         {
-            int pitchPlus, pitchMinus, yawPlus, yawMinus, rollPlus, rollMinus,
-                accelXPlus, accelXMinus, accelYPlus, accelYMinus, accelZPlus, accelZMinus,
-                gyroSpeedPlus, gyroSpeedMinus;
+            PlusMinus pitch, yaw, roll, accelX, accelY, accelZ, gyroSpeed;
 
-            calibrationData[0].bias = (short)((ushort)(calibData[2] << 8) | calibData[1]);
-            calibrationData[1].bias = (short)((ushort)(calibData[4] << 8) | calibData[3]);
-            calibrationData[2].bias = (short)((ushort)(calibData[6] << 8) | calibData[5]);
+            short getShort(ref byte[] data, int index)
+                => (short)((ushort)(data[index * 2 + 2] << 8) | data[index * 2 + 1]);
+
+            calibrationData[0].bias = getShort(ref calibData, 0);
+            calibrationData[1].bias = getShort(ref calibData, 1);
+            calibrationData[2].bias = getShort(ref calibData, 2);
 
             if (!fromUSB)
             {
-                pitchPlus = temInt = (short)((ushort)(calibData[8] << 8) | calibData[7]);
-                yawPlus = temInt = (short)((ushort)(calibData[10] << 8) | calibData[9]);
-                rollPlus = temInt = (short)((ushort)(calibData[12] << 8) | calibData[11]);
-                pitchMinus = temInt = (short)((ushort)(calibData[14] << 8) | calibData[13]);
-                yawMinus = temInt = (short)((ushort)(calibData[16] << 8) | calibData[15]);
-                rollMinus = temInt = (short)((ushort)(calibData[18] << 8) | calibData[17]);
+                pitch.Plus = getShort(ref calibData, 3);
+                yaw.Plus = getShort(ref calibData, 4);
+                roll.Plus = getShort(ref calibData, 5);
+                pitch.Minus = getShort(ref calibData, 6);
+                yaw.Minus = getShort(ref calibData, 7);
+                roll.Minus = getShort(ref calibData, 8);
             }
             else
             {
-                pitchPlus = temInt = (short)((ushort)(calibData[8] << 8) | calibData[7]);
-                pitchMinus = temInt = (short)((ushort)(calibData[10] << 8) | calibData[9]);
-                yawPlus = temInt = (short)((ushort)(calibData[12] << 8) | calibData[11]);
-                yawMinus = temInt = (short)((ushort)(calibData[14] << 8) | calibData[13]);
-                rollPlus = temInt = (short)((ushort)(calibData[16] << 8) | calibData[15]);
-                rollMinus = temInt = (short)((ushort)(calibData[18] << 8) | calibData[17]);
+                pitch.Plus = getShort(ref calibData, 3);
+                pitch.Minus = getShort(ref calibData, 4);
+                yaw.Plus = getShort(ref calibData, 5);
+                yaw.Minus = getShort(ref calibData, 6);
+                roll.Plus = getShort(ref calibData, 7);
+                roll.Minus = getShort(ref calibData, 8);
             }
 
-            gyroSpeedPlus = temInt = (short)((ushort)(calibData[20] << 8) | calibData[19]);
-            gyroSpeedMinus = temInt = (short)((ushort)(calibData[22] << 8) | calibData[21]);
-            accelXPlus = temInt = (short)((ushort)(calibData[24] << 8) | calibData[23]);
-            accelXMinus = temInt = (short)((ushort)(calibData[26] << 8) | calibData[25]);
+            gyroSpeed.Plus = getShort(ref calibData, 9);
+            gyroSpeed.Minus = getShort(ref calibData, 10);
 
-            accelYPlus = temInt = (short)((ushort)(calibData[28] << 8) | calibData[27]);
-            accelYMinus = temInt = (short)((ushort)(calibData[30] << 8) | calibData[29]);
+            accelX.Plus = getShort(ref calibData, 11);
+            accelX.Minus = getShort(ref calibData, 12);
+            accelY.Plus = getShort(ref calibData, 13);
+            accelY.Minus = getShort(ref calibData, 14);
+            accelZ.Plus = getShort(ref calibData, 15);
+            accelZ.Minus = getShort(ref calibData, 16);
 
-            accelZPlus = temInt = (short)((ushort)(calibData[32] << 8) | calibData[31]);
-            accelZMinus = temInt = (short)((ushort)(calibData[34] << 8) | calibData[33]);
+            Frac[] fractions = new Frac[6];
+            int gyroSpeed2x = gyroSpeed.Range;
 
-            int gyroSpeed2x = temInt = (gyroSpeedPlus + gyroSpeedMinus);
-            calibrationData[0].sensNumer = gyroSpeed2x* SixAxis.GYRO_RES_IN_DEG_SEC;
-            calibrationData[0].sensDenom = pitchPlus - pitchMinus;
+            fractions[0].Numer = gyroSpeed2x * SixAxis.GYRO_RES_IN_DEG_SEC;
+            fractions[0].Denom = pitch.Range;
 
-            calibrationData[1].sensNumer = gyroSpeed2x* SixAxis.GYRO_RES_IN_DEG_SEC;
-            calibrationData[1].sensDenom = yawPlus - yawMinus;
+            fractions[1].Numer = gyroSpeed2x * SixAxis.GYRO_RES_IN_DEG_SEC;
+            fractions[1].Denom = yaw.Range;
 
-            calibrationData[2].sensNumer = gyroSpeed2x* SixAxis.GYRO_RES_IN_DEG_SEC;
-            calibrationData[2].sensDenom = rollPlus - rollMinus;
+            fractions[2].Numer = gyroSpeed2x * SixAxis.GYRO_RES_IN_DEG_SEC;
+            fractions[2].Denom = roll.Range;
 
-            int accelRange = temInt = accelXPlus - accelXMinus;
-            calibrationData[3].bias = accelXPlus - accelRange / 2;
-            calibrationData[3].sensNumer = 2 * SixAxis.ACC_RES_PER_G;
-            calibrationData[3].sensDenom = accelRange;
+            calibrationData[3].bias = accelX.Plus - accelX.Range / 2;
+            fractions[3].Numer = 2 * SixAxis.ACC_RES_PER_G;
+            fractions[3].Denom = accelX.Range;
 
-            accelRange = temInt = accelYPlus - accelYMinus;
-            calibrationData[4].bias = accelYPlus - accelRange / 2;
-            calibrationData[4].sensNumer = 2 * SixAxis.ACC_RES_PER_G;
-            calibrationData[4].sensDenom = accelRange;
+            calibrationData[4].bias = accelY.Plus - accelY.Range / 2;
+            fractions[4].Numer = 2 * SixAxis.ACC_RES_PER_G;
+            fractions[4].Denom = accelY.Range;
 
-            accelRange = temInt = accelZPlus - accelZMinus;
-            calibrationData[5].bias = accelZPlus - accelRange / 2;
-            calibrationData[5].sensNumer = 2 * SixAxis.ACC_RES_PER_G;
-            calibrationData[5].sensDenom = accelRange;
+            calibrationData[5].bias = accelZ.Plus - accelZ.Range / 2;
+            fractions[5].Numer = 2 * SixAxis.ACC_RES_PER_G;
+            fractions[5].Denom = accelZ.Range;
 
-            // Check that denom will not be zero.
-            calibrationDone = calibrationData[0].sensDenom != 0 &&
-                calibrationData[1].sensDenom != 0 &&
-                calibrationData[2].sensDenom != 0 &&
-                accelRange != 0;
-        }
-
-        private void applyCalibs(ref int yaw, ref int pitch, ref int roll,
-            ref int accelX, ref int accelY, ref int accelZ)
-        {
-            CalibData current = calibrationData[0];
-            temInt = pitch - current.bias;
-            pitch = temInt = (int)(temInt * (current.sensNumer / (float)current.sensDenom));
-
-            current = calibrationData[1];
-            temInt = yaw - current.bias;
-            yaw = temInt = (int)(temInt * (current.sensNumer / (float)current.sensDenom));
-
-            current = calibrationData[2];
-            temInt = roll - current.bias;
-            roll = temInt = (int)(temInt * (current.sensNumer / (float)current.sensDenom));
-
-            current = calibrationData[3];
-            temInt = accelX - current.bias;
-            accelX = temInt = (int)(temInt * (current.sensNumer / (float)current.sensDenom));
-
-            current = calibrationData[4];
-            temInt = accelY - current.bias;
-            accelY = temInt = (int)(temInt * (current.sensNumer / (float)current.sensDenom));
-
-            current = calibrationData[5];
-            temInt = accelZ - current.bias;
-            accelZ = temInt = (int)(temInt * (current.sensNumer / (float)current.sensDenom));
-        }
-
-        public unsafe void handleSixaxis(byte* gyro, byte* accel, DS4State state,
-            double elapsedDelta)
-        {
-            int currentYaw = (short)((ushort)(gyro[3] << 8) | gyro[2]);
-            int currentPitch = (short)((ushort)(gyro[1] << 8) | gyro[0]);
-            int currentRoll = (short)((ushort)(gyro[5] << 8) | gyro[4]);
-            int AccelX = (short)((ushort)(accel[1] << 8) | accel[0]);
-            int AccelY = (short)((ushort)(accel[3] << 8) | accel[2]);
-            int AccelZ = (short)((ushort)(accel[5] << 8) | accel[4]);
-
-            if (calibrationDone)
-                applyCalibs(ref currentYaw, ref currentPitch, ref currentRoll, ref AccelX, ref AccelY, ref AccelZ);
-
-            SixAxisEventArgs args = null;
-            if (AccelX != 0 || AccelY != 0 || AccelZ != 0)
-            {
-                if (SixAccelMoved != null)
+            calibrationDone = fractions.All(frac => frac.Denom != 0);
+            if (calibrationDone) {
+                // Pre-divide the sensitivity values into 32.32 format:
+                // 32.32 / 32.0 = 32.32
+                for (int i = 0; i < calibrationData.Length; i++)
                 {
-                    sPrev.copy(now);
-                    now.populate(currentYaw, currentPitch, currentRoll,
-                        AccelX, AccelY, AccelZ, elapsedDelta, sPrev);
-
-                    args = new SixAxisEventArgs(state.ReportTimeStamp, now);
-                    state.Motion = now;
-                    SixAccelMoved(this, args);
+                    calibrationData[i].sensitivity = fractions[i].Numer / fractions[i].Denom;
                 }
             }
+        }
+
+        private void applyCalibs(ref YawPitchRollInt gyro, ref Vector3Int accel)
+        {
+            ref var cal = ref calibrationData;
+
+            gyro.Pitch = (int)(((gyro.Pitch - cal[0].bias) * cal[0].sensitivity) >> 32);
+            gyro.Yaw   = (int)(((gyro.Yaw   - cal[1].bias) * cal[1].sensitivity) >> 32);
+            gyro.Roll  = (int)(((gyro.Roll  - cal[2].bias) * cal[2].sensitivity) >> 32);
+
+            accel.X = (int)(((accel.X - cal[3].bias) * cal[3].sensitivity) >> 32);
+            accel.Y = (int)(((accel.Y - cal[4].bias) * cal[4].sensitivity) >> 32);
+            accel.Z = (int)(((accel.Z - cal[5].bias) * cal[5].sensitivity) >> 32);
+        }
+
+        public unsafe void handleSixaxis(byte* gyroRaw, byte* accelRaw, DS4State state,
+            double elapsedDelta)
+        {
+            short getShort(byte* data, int index)
+                => (short)((ushort)(data[index * 2 + 1] << 8) | data[index * 2 + 0]);
+
+            YawPitchRollInt gyro;
+            gyro.Yaw = getShort(gyroRaw, 1);
+            gyro.Pitch = getShort(gyroRaw, 0);
+            gyro.Roll = getShort(gyroRaw, 2);
+            Vector3Int accel;
+            accel.X = getShort(accelRaw, 0);
+            accel.Y = getShort(accelRaw, 1);
+            accel.Z = getShort(accelRaw, 2);
+
+            if (calibrationDone)
+                applyCalibs(ref gyro, ref accel);
+
+            if (accel.isNonZero && SixAccelMoved != null)
+            {
+                swap(ref sPrev, ref now);
+
+                now.populate(gyro, accel, elapsedDelta, sPrev);
+
+                var args = new SixAxisEventArgs(state.ReportTimeStamp, now);
+                state.Motion = now;
+                SixAccelMoved(this, args);
+            }
+        }
+
+        private static void swap<T>(ref T l, ref T r) where T : class
+        {
+            ref T temp = ref l;
+            l = r;
+            r = temp;
         }
     }
 }

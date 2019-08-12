@@ -548,11 +548,11 @@ namespace DS4Windows
                 //accelerometer
                 if (hidReport.Motion != null)
                 {
-                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.accelXG), 0, outputData, outIdx, 4);
+                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.accelG.X), 0, outputData, outIdx, 4);
                     outIdx += 4;
-                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.accelYG), 0, outputData, outIdx, 4);
+                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.accelG.Y), 0, outputData, outIdx, 4);
                     outIdx += 4;
-                    Array.Copy(BitConverter.GetBytes((float)-hidReport.Motion.accelZG), 0, outputData, outIdx, 4);
+                    Array.Copy(BitConverter.GetBytes((float)-hidReport.Motion.accelG.Z), 0, outputData, outIdx, 4);
                     outIdx += 4;
                 }
                 else
@@ -564,11 +564,11 @@ namespace DS4Windows
                 //gyroscope
                 if (hidReport.Motion != null)
                 {
-                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.angVelPitch), 0, outputData, outIdx, 4);
+                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.angVel.Pitch), 0, outputData, outIdx, 4);
                     outIdx += 4;
-                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.angVelYaw), 0, outputData, outIdx, 4);
+                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.angVel.Yaw), 0, outputData, outIdx, 4);
                     outIdx += 4;
-                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.angVelRoll), 0, outputData, outIdx, 4);
+                    Array.Copy(BitConverter.GetBytes((float)hidReport.Motion.angVel.Roll), 0, outputData, outIdx, 4);
                     outIdx += 4;
                 }
                 else

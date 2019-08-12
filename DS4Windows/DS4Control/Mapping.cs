@@ -1113,7 +1113,7 @@ namespace DS4Windows
                 double szsens = sz.Sensitivity;
                 int result = 0;
 
-                int gyroX = cState.Motion.accelX, gyroZ = cState.Motion.accelZ;
+                int gyroX = cState.Motion.accel.X, gyroZ = cState.Motion.accel.Z;
                 int absx = Math.Abs(gyroX), absz = Math.Abs(gyroZ);
 
                 if (SXD > 0 || SXMax < 1.0 || sxAntiDead > 0)
@@ -1122,17 +1122,17 @@ namespace DS4Windows
                     if (absx > SXD)
                     {
                         double ratioX = absx < maxValue ? (absx - SXD) / (double)(maxValue - SXD) : 1.0;
-                        dState.Motion.outputAccelX = Math.Sign(gyroX) *
+                        dState.Motion.outputAccel.X = Math.Sign(gyroX) *
                             (int)Math.Min(128d, sxsens * 128d * ((1.0 - sxAntiDead) * ratioX + sxAntiDead));
                     }
                     else
                     {
-                        dState.Motion.outputAccelX = 0;
+                        dState.Motion.outputAccel.X = 0;
                     }
                 }
                 else
                 {
-                    dState.Motion.outputAccelX = Math.Sign(gyroX) *
+                    dState.Motion.outputAccel.X = Math.Sign(gyroX) *
                         (int)Math.Min(128d, sxsens * 128d * (absx / 128d));
                 }
 
@@ -1142,24 +1142,24 @@ namespace DS4Windows
                     if (absz > SZD)
                     {
                         double ratioZ = absz < maxValue ? (absz - SZD) / (double)(maxValue - SZD) : 1.0;
-                        dState.Motion.outputAccelZ = Math.Sign(gyroZ) *
+                        dState.Motion.outputAccel.Z = Math.Sign(gyroZ) *
                             (int)Math.Min(128d, szsens * 128d * ((1.0 - szAntiDead) * ratioZ + szAntiDead));
                     }
                     else
                     {
-                        dState.Motion.outputAccelZ = 0;
+                        dState.Motion.outputAccel.Z = 0;
                     }
                 }
                 else
                 {
-                    dState.Motion.outputAccelZ = Math.Sign(gyroZ) *
+                    dState.Motion.outputAccel.Z = Math.Sign(gyroZ) *
                         (int)Math.Min(128d, szsens * 128d * (absz / 128d));
                 }
 
                 int sxOutCurveMode = (int)sx.OutCurvePreset;
                 if (sxOutCurveMode > 0)
                 {
-                    double temp = dState.Motion.outputAccelX / 128.0;
+                    double temp = dState.Motion.outputAccel.X / 128.0;
                     double sign = Math.Sign(temp);
                     if (sxOutCurveMode == 1)
                     {
@@ -1172,44 +1172,44 @@ namespace DS4Windows
                             output = abs - 0.18;
                         else // if (abs > 0.75)
                             output = (abs * 1.72) - 0.72;
-                        dState.Motion.outputAccelX = (byte)(output * sign * 128.0);
+                        dState.Motion.outputAccel.X = (byte)(output * sign * 128.0);
                     }
                     else if (sxOutCurveMode == 2)
                     {
                         double output = temp * temp;
                         result = (int)(output * sign * 128.0);
-                        dState.Motion.outputAccelX = result;
+                        dState.Motion.outputAccel.X = result;
                     }
                     else if (sxOutCurveMode == 3)
                     {
                         double output = temp * temp * temp;
                         result = (int)(output * 128.0);
-                        dState.Motion.outputAccelX = result;
+                        dState.Motion.outputAccel.X = result;
                     }
                     else if (sxOutCurveMode == 4)
                     {
                         double abs = Math.Abs(temp);
                         double output = abs * (abs - 2.0);
-                        dState.Motion.outputAccelX = (byte)(-1.0 * output *
+                        dState.Motion.outputAccel.X = (byte)(-1.0 * output *
                             sign * 128.0);
                     }
                     else if (sxOutCurveMode == 5)
                     {
                         double inner = Math.Abs(temp) - 1.0;
                         double output = inner * inner * inner + 1.0;
-                        dState.Motion.outputAccelX = (byte)(-1.0 * output * 255.0);
+                        dState.Motion.outputAccel.X = (byte)(-1.0 * output * 255.0);
                     }
                     else if (sxOutCurveMode == 6)
                     {
-                        int signSA = Math.Sign(dState.Motion.outputAccelX);
-                        dState.Motion.outputAccelX = sx.OutBezierCurve.LUT[Math.Min(Math.Abs(dState.Motion.outputAccelX), 128)] * signSA;
+                        int signSA = Math.Sign(dState.Motion.outputAccel.X);
+                        dState.Motion.outputAccel.X = sx.OutBezierCurve.LUT[Math.Min(Math.Abs(dState.Motion.outputAccel.X), 128)] * signSA;
                     }
                 }
 
                 int szOutCurveMode = (int)sz.OutCurvePreset;
-                if (szOutCurveMode > 0 && dState.Motion.outputAccelZ != 0)
+                if (szOutCurveMode > 0 && dState.Motion.outputAccel.Z != 0)
                 {
-                    double temp = dState.Motion.outputAccelZ / 128.0;
+                    double temp = dState.Motion.outputAccel.Z / 128.0;
                     double sign = Math.Sign(temp);
                     if (szOutCurveMode == 1)
                     {
@@ -1222,37 +1222,37 @@ namespace DS4Windows
                             output = abs - 0.18;
                         else // if (abs > 0.75)
                             output = (abs * 1.72) - 0.72;
-                        dState.Motion.outputAccelZ = (byte)(output * sign * 128.0);
+                        dState.Motion.outputAccel.Z = (byte)(output * sign * 128.0);
                     }
                     else if (szOutCurveMode == 2)
                     {
                         double output = temp * temp;
                         result = (int)(output * sign * 128.0);
-                        dState.Motion.outputAccelZ = result;
+                        dState.Motion.outputAccel.Z = result;
                     }
                     else if (szOutCurveMode == 3)
                     {
                         double output = temp * temp * temp;
                         result = (int)(output * 128.0);
-                        dState.Motion.outputAccelZ = result;
+                        dState.Motion.outputAccel.Z = result;
                     }
                     else if (szOutCurveMode == 4)
                     {
                         double abs = Math.Abs(temp);
                         double output = abs * (abs - 2.0);
-                        dState.Motion.outputAccelZ = (byte)(-1.0 * output *
+                        dState.Motion.outputAccel.Z = (byte)(-1.0 * output *
                             sign * 128.0);
                     }
                     else if (szOutCurveMode == 5)
                     {
                         double inner = Math.Abs(temp) - 1.0;
                         double output = inner * inner * inner + 1.0;
-                        dState.Motion.outputAccelZ = (byte)(-1.0 * output * 255.0);
+                        dState.Motion.outputAccel.Z = (byte)(-1.0 * output * 255.0);
                     }
                     else if (szOutCurveMode == 6)
                     {
-                        int signSA = Math.Sign(dState.Motion.outputAccelZ);
-                        dState.Motion.outputAccelZ = sz.OutBezierCurve.LUT[Math.Min(Math.Abs(dState.Motion.outputAccelZ), 128)] * signSA;
+                        int signSA = Math.Sign(dState.Motion.outputAccel.Z);
+                        dState.Motion.outputAccel.Z = sz.OutBezierCurve.LUT[Math.Min(Math.Abs(dState.Motion.outputAccel.Z), 128)] * signSA;
                     }
                 }
             }
@@ -3755,11 +3755,9 @@ namespace DS4Windows
         // Calibrate sixaxis steering wheel emulation. Use DS4Windows configuration screen to start a calibration or press a special action key (if defined)
         private void SAWheelEmulationCalibration(DS4StateExposed exposedState, DS4State currentDeviceState, DS4Device controller)
         {
-            int gyroAccelX, gyroAccelZ;
             int result;
-
-            gyroAccelX = exposedState.getAccelX();
-            gyroAccelZ = exposedState.getAccelZ();
+            int gyroAccelX = exposedState.AccelX;
+            int gyroAccelZ = exposedState.AccelZ;
 
             // State 0=Normal mode (ie. calibration process is not running), 1=Activating calibration, 2=Calibration process running, 3=Completing calibration, 4=Cancelling calibration
             if (controller.WheelRecalibrateActiveState == 1)
@@ -3811,7 +3809,7 @@ namespace DS4Windows
                 if (currentDeviceState.Cross == true) controller.wheelPrevRecalibrateTime = DateTime.Now;
 
                 // Make sure controller is hold steady (velocity of gyro axis) to avoid misaligments and set calibration few secs after the "X" key was released
-                if (Math.Abs(currentDeviceState.Motion.angVelPitch) < 0.5 && Math.Abs(currentDeviceState.Motion.angVelYaw) < 0.5 && Math.Abs(currentDeviceState.Motion.angVelRoll) < 0.5
+                if (Math.Abs(currentDeviceState.Motion.angVel.Pitch) < 0.5 && Math.Abs(currentDeviceState.Motion.angVel.Yaw) < 0.5 && Math.Abs(currentDeviceState.Motion.angVel.Roll) < 0.5
                     && ((TimeSpan)(DateTime.Now - controller.wheelPrevRecalibrateTime)).TotalSeconds > 1)
                 {
                     controller.wheelPrevRecalibrateTime = new DateTime(2500, 1, 1);
@@ -3904,8 +3902,8 @@ namespace DS4Windows
                 if (!controller.Synced)
                     return 0;
 
-                gyroAccelX = exposedState.getAccelX();
-                gyroAccelZ = exposedState.getAccelZ();
+                gyroAccelX = exposedState.AccelX;
+                gyroAccelZ = exposedState.AccelZ;
 
                 // If calibration values are missing then use "educated guesses" about good starting values
                 if (controller.wheelCenterPoint.IsEmpty)
